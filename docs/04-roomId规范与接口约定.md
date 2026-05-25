@@ -268,9 +268,9 @@ GameScreen(GameEngine engine);  // 禁止直接改 Room
 
 | 分支 | 职责 |
 |------|------|
-| world-data | tmx、tileset、dialogue、WorldFactory |
-| commands-gameplay | GameEngine、Quest、单测 |
-| persistence-ui | client、Save/Load |
+| `feature/worldAndMap` | tmx、tileset、dialogue、WorldFactory |
+| `feature/engineAndPlay` | GameEngine、Quest、单测 |
+| `feature/clientAndDocu` | client、Save/Load |
 
 ---
 

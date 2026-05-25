@@ -1,7 +1,10 @@
 package cn.edu.whut.sept.zuul.client.screen;
 
 import cn.edu.whut.sept.zuul.client.RpgMain;
+import cn.edu.whut.sept.zuul.client.ui.GameUiSkin;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
+import cn.edu.whut.sept.zuul.infra.GameState;
+import cn.edu.whut.sept.zuul.infra.SaveGameService;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
@@ -17,23 +20,31 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
  */
 public class TitleScreen implements Screen
 {
+    private static final String LOG_TAG = "TitleScreen";
     private static final String DEFAULT_NAME = "编年史者";
     private static final int MAX_NAME_LENGTH = 12;
+    private static final Color LIGHT_TEXT = new Color(1f, 0.96f, 0.84f, 1f);
+    private static final Color DARK_TEXT = new Color(0.28f, 0.19f, 0.1f, 1f);
 
     private final RpgMain game;
     private final SpriteBatch batch;
     private final BitmapFont font;
+    private final GameUiSkin uiSkin;
     private final GlyphLayout layout;
     private final InputAdapter inputAdapter;
     private String playerName;
+    private String statusMessage;
+    private boolean screenChanged;
 
     public TitleScreen(RpgMain game, SpriteBatch batch)
     {
         this.game = game;
         this.batch = batch;
         this.font = game.getFonts().copyDefault(1.2f);
+        this.uiSkin = new GameUiSkin();
         this.layout = new GlyphLayout();
         this.playerName = DEFAULT_NAME;
+        this.statusMessage = SaveGameService.hasSave() ? "按 L 读取存档" : "暂无存档";
         this.inputAdapter = new InputAdapter()
         {
             @Override
@@ -57,6 +68,10 @@ public class TitleScreen implements Screen
                     startGame();
                     return true;
                 }
+                if (keycode == Input.Keys.L) {
+                    loadGame();
+                    return true;
+                }
                 return false;
             }
         };
@@ -71,15 +86,37 @@ public class TitleScreen implements Screen
     @Override
     public void render(float delta)
     {
+        if (screenChanged) {
+            return;
+        }
+
         Gdx.gl.glClearColor(0.08f, 0.08f, 0.14f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        float width = Gdx.graphics.getWidth();
+        float height = Gdx.graphics.getHeight();
+        float panelWidth = Math.min(520f, width - 96f);
+        float panelHeight = Math.min(360f, height - 88f);
+        float panelX = (width - panelWidth) / 2f;
+        float panelY = (height - panelHeight) / 2f - 4f;
+        float centerX = width / 2f;
+
         batch.begin();
-        font.setColor(Color.WHITE);
-        drawCentered("Chronicle of the Lost Realms", Gdx.graphics.getHeight() - 80);
-        drawCentered("失落 Realm 编年史", Gdx.graphics.getHeight() - 110);
-        drawCentered("姓名: " + playerName, Gdx.graphics.getHeight() / 2f);
-        drawCentered("直接输入文字修改姓名，Enter 开始", 120);
+        uiSkin.drawWindow(batch, panelX, panelY, panelWidth, panelHeight);
+        uiSkin.drawInset(batch, panelX + 46, panelY + 164, panelWidth - 92, 62);
+        uiSkin.drawLightButton(batch, panelX + 78, panelY + 82, panelWidth - 156, 46);
+
+        font.setColor(LIGHT_TEXT);
+        drawCentered("Chronicle of the Lost Realms", centerX, panelY + panelHeight - 46);
+        drawCentered("失落 Realm 编年史", centerX, panelY + panelHeight - 78);
+
+        font.setColor(DARK_TEXT);
+        drawCentered("姓名: " + playerName, centerX, panelY + 202);
+        drawCenteredInBox("Enter 开始新游戏", panelX + 78, panelY + 82, panelWidth - 156, 46);
+
+        font.setColor(LIGHT_TEXT);
+        drawCentered("直接输入文字修改姓名", centerX, panelY + 150);
+        drawCentered(statusMessage, centerX, panelY + 54);
         batch.end();
     }
 
@@ -89,13 +126,56 @@ public class TitleScreen implements Screen
             playerName = DEFAULT_NAME;
         }
         GameEngine engine = new GameEngine(playerName);
-        game.setScreen(new GameScreen(game, batch, engine));
+        Gdx.app.log(LOG_TAG, "Start new game as " + engine.getPlayer().getName());
+        switchToGame(new GameScreen(game, batch, engine));
     }
 
-    private void drawCentered(String text, float y)
+    private void loadGame()
+    {
+        try {
+            GameState state = SaveGameService.load();
+            GameEngine engine = new GameEngine(state.getPlayerName());
+            engine.restoreState(state);
+            Gdx.app.log(LOG_TAG, "Loaded game from title: " + SaveGameService.defaultSavePath());
+            switchToGame(new GameScreen(game, batch, engine,
+                state.getPlayerX(), state.getPlayerY(), "已读取存档"));
+        } catch (Exception e) {
+            Gdx.app.error(LOG_TAG, "Load from title failed", e);
+            statusMessage = "读档失败: " + e.getClass().getSimpleName();
+        }
+    }
+
+    private void switchToGame(GameScreen screen)
+    {
+        screenChanged = true;
+        game.setScreen(screen);
+        disposeLater();
+    }
+
+    private void disposeLater()
+    {
+        final TitleScreen oldScreen = this;
+        Gdx.app.postRunnable(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                oldScreen.dispose();
+            }
+        });
+    }
+
+    private void drawCentered(String text, float centerX, float y)
     {
         layout.setText(font, text);
-        font.draw(batch, text, (Gdx.graphics.getWidth() - layout.width) / 2f, y);
+        font.draw(batch, text, centerX - layout.width / 2f, y);
+    }
+
+    private void drawCenteredInBox(String text, float x, float y, float width, float height)
+    {
+        layout.setText(font, text);
+        font.draw(batch, text, x + (width - layout.width) / 2f,
+            y + (height + layout.height) / 2f + 1f);
     }
 
     @Override
@@ -123,5 +203,6 @@ public class TitleScreen implements Screen
     public void dispose()
     {
         font.dispose();
+        uiSkin.dispose();
     }
 }

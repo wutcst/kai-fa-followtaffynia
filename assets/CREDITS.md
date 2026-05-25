@@ -7,7 +7,8 @@
 | `tilesets/realm-tiles.png` | （待填） | | CC0 / CC-BY / 自制 | |
 | `sprites/player.png` | | | | |
 | `sprites/npc-*.png` | | | | |
-| `ui/*.png` | | | | |
+| `ui/kenney-rpg/*.png` | UI Pack: RPG Expansion | Kenney Vleugels | CC0 | https://kenney.nl/assets/ui-pack-rpg-expansion |
+| `fonts/game.ttf` | Fusion Pixel Font 10px Proportional zh_hans | TakWolf | SIL Open Font License 1.1 | https://github.com/TakWolf/fusion-pixel-font |
 
 **AI 生成说明**（若使用）：模型名称、生成日期、人工修改内容。
 
