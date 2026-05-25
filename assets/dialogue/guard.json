@@ -1,0 +1,22 @@
+{
+  "npcId": "guard",
+  "startNode": "greeting",
+  "nodes": {
+    "greeting": {
+      "text": "站住！前方是王座大厅，外人不得入内。",
+      "options": [
+        {"text": "我是编年史者，请让我通过。", "next": "friendly"},
+        {"text": "让开，否则后果自负。", "next": "hostile"}
+      ]
+    },
+    "friendly": {
+      "text": "原来是你……久仰大名。请进。",
+      "action": "unlock:guard-gate",
+      "next": null
+    },
+    "hostile": {
+      "text": "哼，今天你别想从这里过去。",
+      "next": null
+    }
+  }
+}

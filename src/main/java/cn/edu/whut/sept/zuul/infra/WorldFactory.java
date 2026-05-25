@@ -6,19 +6,26 @@ import cn.edu.whut.sept.zuul.domain.Room;
 import cn.edu.whut.sept.zuul.domain.RoomScene;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.logging.Logger;
 
 /**
- * 集中构建游戏世界。第一步：5 个原版房间 + 场景元数据骨架。
+ * 集中构建游戏世界。当前 15 房，含完整拓扑、物品放置、cookie 随机注入。
  */
 public final class WorldFactory
 {
+    private static final Logger LOG = GameLogger.get();
     private static final Map<String, Room> ROOMS = new HashMap<>();
     private static final Random RANDOM = new Random();
+
+    /** cookie 候选房间 */
+    private static final List<String> COOKIE_CANDIDATES =
+        Arrays.asList("cellar", "library", "hidden-shrine");
 
     private WorldFactory()
     {
@@ -27,7 +34,8 @@ public final class WorldFactory
     public static Room build(String playerName)
     {
         ROOMS.clear();
-        buildPrototypeWorld();
+        buildWorld();
+        placeMagicCookie();
         return ROOMS.get("outside");
     }
 
@@ -61,36 +69,183 @@ public final class WorldFactory
         return Collections.unmodifiableMap(ROOMS);
     }
 
-    private static void buildPrototypeWorld()
+    // ======================== 世界构建 ========================
+
+    private static void buildWorld()
     {
+        // -- outside: 主门外广场 --
         Room outside = createRoom("outside", "outside the main entrance of the university");
+        setSpawns(outside, 15,8, 15,3, 15,13, 27,8, 3,8);
+        outside.addItem(createItem("welcome-note", "note",
+            "A crumpled welcome note.", 1, null));
+
+        // -- theatre: 讲堂 --
         Room theatre = createRoom("theatre", "in a lecture theater");
+        setSpawns(theatre, 15,14, 15,14, 15,3, 15,14, 15,14);
+        theatre.addItem(createItem("torch", "Torch",
+            "A flickering torch. Useful in dark places.", 3, "light"));
+
+        // -- pub: 酒馆 --
         Room pub = createRoom("pub", "in the campus pub");
+        setSpawns(pub, 4,8, 4,8, 4,8, 4,8, 4,8);
+        pub.addItem(createItem("ale-mug", "Ale Mug",
+            "A half-empty mug of ale.", 2, null));
+
+        // -- lab: 机房 --
         Room lab = createRoom("lab", "in a computing lab");
+        setSpawns(lab, 15,8, 15,13, 15,3, 4,8, 4,8);
+        lab.addItem(createItem("key-vault", "Rusty Key",
+            "A rusty key, inscribed 'Vault'.", 1, "unlock:vault-door"));
+
+        // -- office: 行政办公室 --
         Room office = createRoom("office", "in the computing admin office");
+        setSpawns(office, 4,8, 4,8, 4,8, 4,8, 4,8);
+        office.addItem(createItem("key-guard", "Iron Key",
+            "A heavy iron key, marked 'Guard Gate'.", 2, "unlock:guard-gate"));
 
-        link(outside, "east", theatre);
+        // -- library: 图书馆 --
+        Room library = createRoom("library", "in an ancient library");
+        setSpawns(library, 15,8, 15,3, 15,14, 4,8, 4,8);
+        library.addItem(createItem("ancient-tome", "Ancient Tome",
+            "A heavy tome bound in cracked leather.", 15, "lore"));
+
+        // -- cellar: 地窖 --
+        Room cellar = createRoom("cellar", "in a dark, damp cellar");
+        setSpawns(cellar, 15,14, 15,14, 15,3, 15,14, 15,14);
+        cellar.addItem(createItem("old-barrel", "Old Barrel",
+            "A rotting barrel. It might contain something.", 20, null));
+
+        // -- vault: 金库（上锁） --
+        Room vault = createRoom("vault", "in a gleaming vault");
+        vault.setLockId("vault-door");
+        setSpawns(vault, 27,8, 27,8, 27,8, 4,8, 27,8);
+        vault.addItem(createItem("gem-light", "Light Gem",
+            "A radiant gem pulsing with pure light.", 5, "light:full"));
+        vault.addItem(createItem("gold-coins", "Gold Coins",
+            "A small pile of gold coins.", 10, null));
+
+        // -- hidden-shrine: 隐士神龛 --
+        Room hiddenShrine = createRoom("hidden-shrine", "in a hidden shrine");
+        setSpawns(hiddenShrine, 15,14, 15,14, 15,14, 15,14, 15,14);
+        hiddenShrine.addItem(createItem("crystal-shard", "Crystal Shard",
+            "A fragment of crystal that hums softly.", 3, "reputation:+5"));
+
+        // -- garden: 庭院 --
+        Room garden = createRoom("garden", "in a serene garden");
+        setSpawns(garden, 15,8, 15,14, 15,3, 15,8, 15,8);
+        garden.addItem(createItem("healing-herb", "Healing Herb",
+            "A fragrant herb that restores vitality.", 2, "heal:20"));
+
+        // -- guard-room: 守卫哨站 --
+        Room guardRoom = createRoom("guard-room", "in a guard station");
+        guardRoom.setLockId("guard-gate");
+        setSpawns(guardRoom, 15,8, 15,14, 15,3, 27,8, 4,8);
+
+        // -- armory: 军械库 --
+        Room armory = createRoom("armory", "in the armory");
+        setSpawns(armory, 4,8, 15,14, 4,8, 4,8, 4,8);
+        armory.addItem(createItem("sword-rusty", "Rusty Sword",
+            "An old sword, still sharp enough.", 25, null));
+        armory.addItem(createItem("shield-wooden", "Wooden Shield",
+            "A battered wooden shield.", 18, null));
+
+        // -- forge: 铁匠铺 --
+        Room forge = createRoom("forge", "in a blazing forge");
+        setSpawns(forge, 15,14, 15,14, 15,3, 15,14, 15,14);
+
+        // -- teleport-alcove: 传送密室 --
+        Room teleportAlcove = createRoom("teleport-alcove", "in an unstable teleport alcove");
+        teleportAlcove.setTeleport(true);
+        setSpawns(teleportAlcove, 27,8, 27,8, 27,8, 4,8, 27,8);
+        teleportAlcove.addItem(createItem("warp-dust", "Warp Dust",
+            "Fine dust that sparkles with teleport energy.", 2, null));
+
+        // -- throne-hall: 王座大厅（结局） --
+        Room throneHall = createRoom("throne-hall", "in the great throne hall");
+        setSpawns(throneHall, 15,14, 15,14, 15,14, 15,14, 15,14);
+
+        // =================== 拓扑连接 ===================
+        link(outside, "north", theatre);
+        link(outside, "east", pub);
         link(outside, "south", lab);
-        link(outside, "west", pub);
+        link(outside, "west", office);
 
-        link(theatre, "west", outside);
-        link(pub, "east", outside);
+        link(theatre, "south", outside);
+        link(theatre, "east", library);
+
+        link(pub, "west", outside);
+        link(pub, "south", cellar);
+
         link(lab, "north", outside);
-        link(lab, "east", office);
-        link(office, "west", lab);
+        link(lab, "east", vault);
 
-        outside.addItem(new Item("welcome-note", "note", "A crumpled welcome note.", 1, null));
+        link(office, "east", outside);
+
+        link(library, "west", theatre);
+        link(library, "north", hiddenShrine);
+        link(library, "east", teleportAlcove);
+
+        link(cellar, "north", pub);
+
+        link(vault, "west", lab);
+
+        link(hiddenShrine, "south", library);
+
+        link(garden, "north", outside);
+        link(garden, "south", guardRoom);
+
+        link(guardRoom, "north", garden);
+        link(guardRoom, "south", throneHall);
+        link(guardRoom, "west", armory);
+
+        link(armory, "east", guardRoom);
+        link(armory, "south", forge);
+
+        link(forge, "north", armory);
+
+        link(teleportAlcove, "west", library);
+
+        link(throneHall, "north", guardRoom);
+    }
+
+    /** 随机 cookie 放置：从 cellar/library/hidden-shrine 中随机选 1 间 */
+    private static void placeMagicCookie()
+    {
+        String picked = COOKIE_CANDIDATES.get(RANDOM.nextInt(COOKIE_CANDIDATES.size()));
+        Room room = ROOMS.get(picked);
+        if (room != null) {
+            room.addItem(new Item("magic-cookie", "Magic Cookie",
+                "A glowing cookie. Eating it makes you feel stronger.", 1, "maxWeight:+20"));
+            LOG.info("WorldFactory: magic-cookie placed in [" + picked + "]");
+        }
+    }
+
+    // ======================== 工具方法 ========================
+
+    private static Item createItem(String id, String name, String desc, int weight, String effect)
+    {
+        return new Item(id, name, desc, weight, effect);
+    }
+
+    /**
+     * 按 default / north / south / east / west 顺序设置 spawn 坐标（格子索引）。
+     */
+    private static void setSpawns(Room room,
+        float dx, float dy, float nx, float ny, float sx, float sy,
+        float ex, float ey, float wx, float wy)
+    {
+        RoomScene scene = room.getScene();
+        scene.addSpawn(Direction.DEFAULT, dx, dy);
+        scene.addSpawn(Direction.NORTH, nx, ny);
+        scene.addSpawn(Direction.SOUTH, sx, sy);
+        scene.addSpawn(Direction.EAST, ex, ey);
+        scene.addSpawn(Direction.WEST, wx, wy);
     }
 
     private static Room createRoom(String roomId, String description)
     {
         Room room = new Room(roomId, description);
         RoomScene scene = new RoomScene("maps/" + roomId + ".tmx");
-        scene.addSpawn(Direction.DEFAULT, 2f, 2f);
-        scene.addSpawn(Direction.NORTH, 2f, 1f);
-        scene.addSpawn(Direction.SOUTH, 2f, 4f);
-        scene.addSpawn(Direction.EAST, 1f, 2f);
-        scene.addSpawn(Direction.WEST, 4f, 2f);
         room.setScene(scene);
         ROOMS.put(roomId, room);
         return room;

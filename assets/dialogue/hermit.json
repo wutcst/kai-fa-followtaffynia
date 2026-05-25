@@ -1,0 +1,24 @@
+{
+  "npcId": "hermit",
+  "startNode": "greeting",
+  "nodes": {
+    "greeting": {
+      "text": "你终于来了……我已在此等候多年。",
+      "options": [
+        {"text": "你是谁？", "next": "who"},
+        {"text": "你知道关于 Realm 的秘密吗？", "next": "secret"}
+      ]
+    },
+    "who": {
+      "text": "我是最后的守秘者。这片土地曾经辉煌，如今只剩下破碎的记忆。",
+      "options": [
+        {"text": "告诉我关于 Realm 的秘密。", "next": "secret"}
+      ]
+    },
+    "secret": {
+      "text": "光明宝石藏在金库深处，暗影之力潜伏于地窖之下。你的抉择将决定 Realm 的命运。",
+      "action": "reputation:+5",
+      "next": null
+    }
+  }
+}

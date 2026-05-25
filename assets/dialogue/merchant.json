@@ -1,0 +1,27 @@
+{
+  "npcId": "merchant",
+  "startNode": "greeting",
+  "nodes": {
+    "greeting": {
+      "text": "欢迎来到我的铁匠铺！需要什么尽管说。",
+      "options": [
+        {"text": "看看你的货物。", "next": "trade"},
+        {"text": "这把剑怎么卖？", "next": "sword_talk"},
+        {"text": "我只是路过看看。", "next": "farewell"}
+      ]
+    },
+    "trade": {
+      "text": "我有最优质的武器和护甲。虽然现在存货不多……",
+      "action": "open:shop",
+      "next": null
+    },
+    "sword_talk": {
+      "text": "好眼力！这是用 Realm 陨铁锻造的。不过你需要先证明自己的实力。",
+      "next": "greeting"
+    },
+    "farewell": {
+      "text": "随时欢迎再来！",
+      "next": null
+    }
+  }
+}
