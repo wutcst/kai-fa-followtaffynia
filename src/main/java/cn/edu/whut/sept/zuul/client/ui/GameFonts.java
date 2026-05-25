@@ -14,11 +14,14 @@ import com.badlogic.gdx.utils.Disposable;
 public class GameFonts implements Disposable
 {
     private static final int FONT_SIZE = 18;
+    private static final String CJK_PUNCTUATION =
+        "，。！？；：“”‘’（）【】《》、·—…「」『』￥→←↑↓≥≤×☆";
 
     /** 界面固定文案 + 常用汉字（姓名输入等）。 */
     private static final String UI_TEXT =
         "失落Realm编年史姓名直接输入文字修改Enter开始玩家房间移动方向键切换调查拾取回退标题"
             + "无法前进已回退至进入该方向这里没有可拾取的物品拾取了失败可能超重负重编年史者"
+            + "读取读档存档保存暂无成功暂停菜单继续探索背包打开关闭地面随身物品声望快捷键返回"
             + "的一是在不了有和人这中大为上个国我以要他时来用们生到作地于出就分对成会可主发年动同工也能"
             + "下过子说产种面而方后多定行学法所民得经十三之进着等部度家电力里如水化高自二理起小物现实加"
             + "量都两体制机当使点从业本去把性好应开它合还因由其些然前外天政四日那社义事平形相全表间样与关"
@@ -58,11 +61,25 @@ public class GameFonts implements Disposable
     {
         FreeTypeFontParameter parameter = new FreeTypeFontParameter();
         parameter.size = size;
-        parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + UI_TEXT;
+        parameter.characters = buildInitialCharacters();
+        parameter.incremental = true;
         parameter.minFilter = Texture.TextureFilter.Linear;
         parameter.magFilter = Texture.TextureFilter.Linear;
         parameter.genMipMaps = false;
         return generator.generateFont(parameter);
+    }
+
+    private static String buildInitialCharacters()
+    {
+        String source = FreeTypeFontGenerator.DEFAULT_CHARS + CJK_PUNCTUATION + UI_TEXT;
+        StringBuilder characters = new StringBuilder(source.length());
+        for (int i = 0; i < source.length(); i++) {
+            char ch = source.charAt(i);
+            if (characters.indexOf(String.valueOf(ch)) < 0) {
+                characters.append(ch);
+            }
+        }
+        return characters.toString();
     }
 
     private static FileHandle resolveFontFile()

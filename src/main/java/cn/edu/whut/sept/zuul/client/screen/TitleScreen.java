@@ -2,6 +2,8 @@ package cn.edu.whut.sept.zuul.client.screen;
 
 import cn.edu.whut.sept.zuul.client.RpgMain;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
+import cn.edu.whut.sept.zuul.infra.GameState;
+import cn.edu.whut.sept.zuul.infra.SaveGameService;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
@@ -17,6 +19,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
  */
 public class TitleScreen implements Screen
 {
+    private static final String LOG_TAG = "TitleScreen";
     private static final String DEFAULT_NAME = "编年史者";
     private static final int MAX_NAME_LENGTH = 12;
 
@@ -26,6 +29,7 @@ public class TitleScreen implements Screen
     private final GlyphLayout layout;
     private final InputAdapter inputAdapter;
     private String playerName;
+    private String statusMessage;
 
     public TitleScreen(RpgMain game, SpriteBatch batch)
     {
@@ -34,6 +38,7 @@ public class TitleScreen implements Screen
         this.font = game.getFonts().copyDefault(1.2f);
         this.layout = new GlyphLayout();
         this.playerName = DEFAULT_NAME;
+        this.statusMessage = SaveGameService.hasSave() ? "按 L 读取存档" : "暂无存档";
         this.inputAdapter = new InputAdapter()
         {
             @Override
@@ -55,6 +60,10 @@ public class TitleScreen implements Screen
                 }
                 if (keycode == Input.Keys.ENTER) {
                     startGame();
+                    return true;
+                }
+                if (keycode == Input.Keys.L) {
+                    loadGame();
                     return true;
                 }
                 return false;
@@ -79,7 +88,8 @@ public class TitleScreen implements Screen
         drawCentered("Chronicle of the Lost Realms", Gdx.graphics.getHeight() - 80);
         drawCentered("失落 Realm 编年史", Gdx.graphics.getHeight() - 110);
         drawCentered("姓名: " + playerName, Gdx.graphics.getHeight() / 2f);
-        drawCentered("直接输入文字修改姓名，Enter 开始", 120);
+        drawCentered("直接输入文字修改姓名，Enter 开始新游戏", 130);
+        drawCentered(statusMessage, 95);
         batch.end();
     }
 
@@ -89,7 +99,23 @@ public class TitleScreen implements Screen
             playerName = DEFAULT_NAME;
         }
         GameEngine engine = new GameEngine(playerName);
+        Gdx.app.log(LOG_TAG, "Start new game as " + engine.getPlayer().getName());
         game.setScreen(new GameScreen(game, batch, engine));
+    }
+
+    private void loadGame()
+    {
+        try {
+            GameState state = SaveGameService.load();
+            GameEngine engine = new GameEngine(state.getPlayerName());
+            engine.restoreState(state);
+            Gdx.app.log(LOG_TAG, "Loaded game from title: " + SaveGameService.defaultSavePath());
+            game.setScreen(new GameScreen(game, batch, engine,
+                state.getPlayerX(), state.getPlayerY(), "已读取存档"));
+        } catch (Exception e) {
+            Gdx.app.error(LOG_TAG, "Load from title failed", e);
+            statusMessage = "读档失败: " + e.getClass().getSimpleName();
+        }
     }
 
     private void drawCentered(String text, float y)
