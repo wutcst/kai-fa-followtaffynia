@@ -5,3 +5,5 @@
 # 忽略以下文件
 *.iml
 .DS_Store
+hs_err_pid*.log
+replay_pid*.log

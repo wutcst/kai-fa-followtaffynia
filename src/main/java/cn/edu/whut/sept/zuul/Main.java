@@ -1,9 +1,14 @@
 package cn.edu.whut.sept.zuul;
 
-public class Main {
+import cn.edu.whut.sept.zuul.client.DesktopLauncher;
 
-    public static void main(String[] args) {
-        Game game = new Game();
-        game.play();
+/**
+ * 项目入口：启动 LibGDX 像素客户端。
+ */
+public class Main
+{
+    public static void main(String[] args)
+    {
+        DesktopLauncher.main(args);
     }
 }
