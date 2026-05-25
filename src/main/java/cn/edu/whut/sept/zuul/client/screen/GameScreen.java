@@ -1,6 +1,7 @@
 package cn.edu.whut.sept.zuul.client.screen;
 
 import cn.edu.whut.sept.zuul.client.RpgMain;
+import cn.edu.whut.sept.zuul.client.ui.GameUiSkin;
 import cn.edu.whut.sept.zuul.domain.Direction;
 import cn.edu.whut.sept.zuul.domain.RoomScene;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
@@ -12,6 +13,7 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
@@ -21,15 +23,34 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 public class GameScreen implements Screen
 {
     private static final float TILE_SIZE = 32f;
+    private static final float PLAY_LEFT = 24f;
+    private static final float PLAY_RIGHT_MARGIN = 24f;
+    private static final float PLAY_BOTTOM = 116f;
+    private static final float PLAY_TOP_MARGIN = 80f;
+    private static final float TOP_BAR_HEIGHT = 64f;
+    private static final float FOOTER_HEIGHT = 96f;
+    private static final int ICON_MOVE = 0;
+    private static final int ICON_ROOM = 1;
+    private static final int ICON_LOOK = 2;
+    private static final int ICON_TAKE = 3;
+    private static final int ICON_INVENTORY = 4;
+    private static final int ICON_BACK = 5;
+    private static final int ICON_SAVE = 6;
+    private static final int ICON_LOAD = 7;
+    private static final int ICON_MENU = 8;
+    private static final int ICON_TITLE = 9;
     private static final String LOG_TAG = "GameScreen";
-    private static final String CONTROL_HINT =
-        "WASD 移动 | 方向键切换房间 | Q 调查 | E 拾取 | I 背包 | B 回退 | F5 存档 | F9 读档 | ESC 菜单";
+    private static final Color UI_LIGHT_TEXT = new Color(1f, 0.96f, 0.82f, 1f);
+    private static final Color UI_DARK_TEXT = new Color(0.26f, 0.18f, 0.1f, 1f);
 
     private final RpgMain game;
     private final SpriteBatch batch;
     private final GameEngine engine;
     private final BitmapFont font;
+    private final BitmapFont smallFont;
     private final ShapeRenderer shapes;
+    private final GameUiSkin uiSkin;
+    private final GlyphLayout layout;
 
     private float playerX;
     private float playerY;
@@ -50,7 +71,10 @@ public class GameScreen implements Screen
         this.batch = batch;
         this.engine = engine;
         this.font = game.getFonts().getDefault();
+        this.smallFont = game.getFonts().copyDefault(0.85f);
         this.shapes = new ShapeRenderer();
+        this.uiSkin = new GameUiSkin();
+        this.layout = new GlyphLayout();
         this.actionMessage = initialStatus;
 
         if (Float.isNaN(savedPlayerX) || Float.isNaN(savedPlayerY)) {
@@ -80,14 +104,9 @@ public class GameScreen implements Screen
 
         drawPlaceholderMap();
         drawPlayer();
-        if (paused) {
-            drawPauseOverlay();
-        }
-        if (inventoryOpen) {
-            drawInventoryOverlay();
-        }
 
         batch.begin();
+        drawUiPanels();
         font.setColor(Color.WHITE);
         drawHud();
         drawFooter();
@@ -189,8 +208,9 @@ public class GameScreen implements Screen
     private void snapToSpawn()
     {
         RoomScene.SpawnPoint spawn = engine.resolveCurrentSpawn();
-        playerX = spawn.tileX * TILE_SIZE;
-        playerY = spawn.tileY * TILE_SIZE;
+        playerX = playLeft() + spawn.tileX * TILE_SIZE;
+        playerY = playBottom() + spawn.tileY * TILE_SIZE;
+        clampPlayer();
     }
 
     private String tryTakeFirstItem()
@@ -247,46 +267,41 @@ public class GameScreen implements Screen
 
     private void clampPlayer()
     {
-        playerX = Math.max(TILE_SIZE, Math.min(playerX, Gdx.graphics.getWidth() - TILE_SIZE * 2));
-        playerY = Math.max(TILE_SIZE, Math.min(playerY, Gdx.graphics.getHeight() - TILE_SIZE * 2));
+        playerX = Math.max(playLeft(), Math.min(playerX, playRight() - TILE_SIZE));
+        playerY = Math.max(playBottom(), Math.min(playerY, playTop() - TILE_SIZE));
     }
 
     private void drawPlaceholderMap()
     {
+        float x = playLeft();
+        float y = playBottom();
+        float width = playWidth();
+        float height = playHeight();
+
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(0.25f, 0.35f, 0.22f, 1f);
-        shapes.rect(TILE_SIZE, TILE_SIZE, Gdx.graphics.getWidth() - TILE_SIZE * 2,
-            Gdx.graphics.getHeight() - TILE_SIZE * 2);
-        shapes.setColor(0.18f, 0.18f, 0.22f, 1f);
-        for (int x = 0; x < Gdx.graphics.getWidth(); x += (int) TILE_SIZE) {
-            for (int y = 0; y < Gdx.graphics.getHeight(); y += (int) TILE_SIZE) {
-                if (x < TILE_SIZE || y < TILE_SIZE
-                    || x > Gdx.graphics.getWidth() - TILE_SIZE * 2
-                    || y > Gdx.graphics.getHeight() - TILE_SIZE * 2) {
-                    shapes.rect(x, y, TILE_SIZE, TILE_SIZE);
-                }
-            }
+        shapes.setColor(0.15f, 0.17f, 0.2f, 1f);
+        shapes.rect(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        shapes.setColor(0.23f, 0.36f, 0.22f, 1f);
+        shapes.rect(x, y, width, height);
+        shapes.setColor(0.28f, 0.43f, 0.27f, 1f);
+        for (float tileX = x; tileX < x + width; tileX += TILE_SIZE * 2f) {
+            shapes.rect(tileX, y, TILE_SIZE, height);
+        }
+        for (float tileY = y; tileY < y + height; tileY += TILE_SIZE * 2f) {
+            shapes.rect(x, tileY, width, TILE_SIZE);
         }
         shapes.end();
-    }
 
-    private void drawPauseOverlay()
-    {
-        shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(0.08f, 0.08f, 0.12f, 1f);
-        shapes.rect(260, 155, 440, 230);
-        shapes.setColor(0.18f, 0.20f, 0.28f, 1f);
-        shapes.rect(268, 163, 424, 214);
-        shapes.end();
-    }
-
-    private void drawInventoryOverlay()
-    {
-        shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(0.08f, 0.08f, 0.12f, 1f);
-        shapes.rect(80, 76, Gdx.graphics.getWidth() - 160, 150);
-        shapes.setColor(0.16f, 0.18f, 0.24f, 1f);
-        shapes.rect(88, 84, Gdx.graphics.getWidth() - 176, 134);
+        shapes.begin(ShapeRenderer.ShapeType.Line);
+        shapes.setColor(0.55f, 0.42f, 0.28f, 1f);
+        shapes.rect(x, y, width, height);
+        shapes.setColor(0.18f, 0.28f, 0.18f, 0.8f);
+        for (float tileX = x + TILE_SIZE; tileX < x + width; tileX += TILE_SIZE) {
+            shapes.line(tileX, y, tileX, y + height);
+        }
+        for (float tileY = y + TILE_SIZE; tileY < y + height; tileY += TILE_SIZE) {
+            shapes.line(x, tileY, x + width, tileY);
+        }
         shapes.end();
     }
 
@@ -298,31 +313,232 @@ public class GameScreen implements Screen
         shapes.end();
     }
 
-    private void drawHud()
+    private void drawUiPanels()
     {
-        font.draw(batch, "玩家: " + engine.getPlayer().getName(), 16, Gdx.graphics.getHeight() - 20);
-        font.draw(batch, "房间: " + engine.getCurrentRoom().getRoomId(), 16, Gdx.graphics.getHeight() - 45);
-        font.draw(batch, "HP: " + engine.getPlayer().getHp() + " / " + engine.getPlayer().getMaxHp(),
-            16, Gdx.graphics.getHeight() - 70);
-        font.draw(batch, "声望: " + engine.getPlayer().getReputation(), 16, Gdx.graphics.getHeight() - 95);
-        font.draw(batch, "负重: " + engine.getPlayer().totalWeight() + " / "
-            + engine.getPlayer().getMaxWeight(), 16, Gdx.graphics.getHeight() - 120);
+        float width = Gdx.graphics.getWidth();
+        float height = Gdx.graphics.getHeight();
+        uiSkin.drawWindow(batch, 12, height - TOP_BAR_HEIGHT - 8, width - 24, TOP_BAR_HEIGHT);
+        uiSkin.drawWindow(batch, 12, 8, width - 24, FOOTER_HEIGHT);
+        uiSkin.drawInset(batch, 30, 64, width - 60, 28);
 
         if (paused) {
-            font.draw(batch, "暂停菜单", 410, 340);
-            font.draw(batch, "ESC 继续  |  F5 存档  |  F9 读档  |  T 返回标题", 300, 290);
+            float panelWidth = Math.min(660f, width - 72f);
+            float panelHeight = Math.min(380f, height - 86f);
+            float panelX = (width - panelWidth) / 2f;
+            float panelY = (height - panelHeight) / 2f;
+            uiSkin.drawWindow(batch, panelX, panelY, panelWidth, panelHeight);
+            uiSkin.drawInset(batch, panelX + 30, panelY + 72, panelWidth - 60, panelHeight - 138);
+            uiSkin.drawButton(batch, panelX + panelWidth / 2f - 92, panelY + 24, 184, 42);
         }
         if (inventoryOpen) {
-            font.draw(batch, "背包", 104, 196);
-            font.draw(batch, "地面物品: " + engine.getRoomItemsWithWeight(), 104, 166);
-            font.draw(batch, "随身物品: " + engine.getPlayerItemsWithWeight(), 104, 136);
+            float panelWidth = Math.min(360f, width - 56f);
+            float panelHeight = Math.min(190f, playHeight() - 24f);
+            float panelX = Math.max(24f, width - panelWidth - 28f);
+            float panelY = Math.max(playBottom() + 12f, playTop() - panelHeight - 12f);
+            uiSkin.drawWindow(batch, panelX, panelY, panelWidth, panelHeight);
+            uiSkin.drawInset(batch, panelX + 20, panelY + 42, panelWidth - 40, panelHeight - 74);
+        }
+    }
+
+    private void drawHud()
+    {
+        float width = Gdx.graphics.getWidth();
+        float height = Gdx.graphics.getHeight();
+        smallFont.setColor(UI_LIGHT_TEXT);
+        smallFont.draw(batch, "玩家 " + engine.getPlayer().getName(), 30, height - 28);
+        smallFont.draw(batch, "房间 " + engine.getCurrentRoom().getRoomId(), 250, height - 28);
+        smallFont.draw(batch, "声望 " + engine.getPlayer().getReputation(), width - 132, height - 28);
+
+        drawStatusBar("HP", engine.getPlayer().getHp(), engine.getPlayer().getMaxHp(),
+            30, height - 58, 210, true);
+        drawStatusBar("负重", engine.getPlayer().totalWeight(), engine.getPlayer().getMaxWeight(),
+            360, height - 58, 210, false);
+
+        if (paused) {
+            drawPauseMenu();
+        }
+        if (inventoryOpen) {
+            drawInventoryPanel();
         }
     }
 
     private void drawFooter()
     {
-        drawMultiline(actionMessage, 16, 86);
-        font.draw(batch, CONTROL_HINT, 16, 24);
+        smallFont.setColor(UI_DARK_TEXT);
+        drawClampedLine(smallFont, actionMessage, 44, 84, Gdx.graphics.getWidth() - 88);
+
+        float gap = 10f;
+        float totalWidth = 78 + 82 + 60 + 60 + 60 + 60 + 66 + 66 + 72 + gap * 8f;
+        float x = Math.max(28f, (Gdx.graphics.getWidth() - totalWidth) / 2f);
+        float y = 15f;
+        x = drawHintChip("WASD", x, y, 78, 42, ICON_MOVE, 42) + gap;
+        x = drawHintChip("↑↓←→", x, y, 82, 42, ICON_ROOM, 46) + gap;
+        x = drawHintChip("Q", x, y, 60, 42, ICON_LOOK, 28) + gap;
+        x = drawHintChip("E", x, y, 60, 42, ICON_TAKE, 28) + gap;
+        x = drawHintChip("I", x, y, 60, 42, ICON_INVENTORY, 28) + gap;
+        x = drawHintChip("B", x, y, 60, 42, ICON_BACK, 28) + gap;
+        x = drawHintChip("F5", x, y, 66, 42, ICON_SAVE, 34) + gap;
+        x = drawHintChip("F9", x, y, 66, 42, ICON_LOAD, 34) + gap;
+        drawHintChip("ESC", x, y, 72, 42, ICON_MENU, 38);
+    }
+
+    private void drawStatusBar(String label, int value, int maxValue, float x, float y, float width,
+        boolean hpBar)
+    {
+        smallFont.setColor(UI_LIGHT_TEXT);
+        smallFont.draw(batch, label, x, y + 16);
+        float barX = x + 54;
+        float ratio = maxValue <= 0 ? 0f : (float) value / maxValue;
+        if (hpBar) {
+            uiSkin.drawRedBar(batch, barX, y, width, 18, ratio);
+        } else {
+            uiSkin.drawYellowBar(batch, barX, y, width, 18, ratio);
+        }
+        smallFont.draw(batch, value + " / " + maxValue, barX + width + 12, y + 16);
+    }
+
+    private void drawPauseMenu()
+    {
+        float width = Gdx.graphics.getWidth();
+        float height = Gdx.graphics.getHeight();
+        float panelWidth = Math.min(660f, width - 72f);
+        float panelHeight = Math.min(380f, height - 86f);
+        float panelX = (width - panelWidth) / 2f;
+        float panelY = (height - panelHeight) / 2f;
+        float centerX = panelX + panelWidth / 2f;
+
+        font.setColor(UI_LIGHT_TEXT);
+        drawCentered("暂停菜单", centerX, panelY + panelHeight - 36);
+        smallFont.setColor(UI_LIGHT_TEXT);
+        drawCenteredWithSmallFont("按键说明", centerX, panelY + panelHeight - 64);
+
+        float leftX = panelX + 50;
+        float rightX = panelX + panelWidth / 2f + 22;
+        float rowY = panelY + panelHeight - 116;
+        float rowGap = 36f;
+        drawShortcutRow("ESC", "继续探索 / 打开菜单", ICON_MENU, leftX, rowY);
+        drawShortcutRow("WASD", "移动角色", ICON_MOVE, leftX, rowY - rowGap);
+        drawShortcutRow("↑↓←→", "切换房间", ICON_ROOM, leftX, rowY - rowGap * 2f);
+        drawShortcutRow("Q", "调查当前房间", ICON_LOOK, leftX, rowY - rowGap * 3f);
+        drawShortcutRow("E", "拾取地面物品", ICON_TAKE, leftX, rowY - rowGap * 4f);
+
+        drawShortcutRow("I", "打开 / 关闭背包", ICON_INVENTORY, rightX, rowY);
+        drawShortcutRow("B", "回退上一个房间", ICON_BACK, rightX, rowY - rowGap);
+        drawShortcutRow("F5", "保存当前进度", ICON_SAVE, rightX, rowY - rowGap * 2f);
+        drawShortcutRow("F9", "读取存档", ICON_LOAD, rightX, rowY - rowGap * 3f);
+        drawShortcutRow("T", "返回标题画面", ICON_TITLE, rightX, rowY - rowGap * 4f);
+
+        smallFont.setColor(UI_DARK_TEXT);
+        drawCenteredInBoxWithSmallFont("ESC 继续", centerX - 92, panelY + 24, 184, 42);
+    }
+
+    private void drawInventoryPanel()
+    {
+        float width = Gdx.graphics.getWidth();
+        float panelWidth = Math.min(360f, width - 56f);
+        float panelHeight = Math.min(190f, playHeight() - 24f);
+        float panelX = Math.max(24f, width - panelWidth - 28f);
+        float panelY = Math.max(playBottom() + 12f, playTop() - panelHeight - 12f);
+
+        font.setColor(UI_LIGHT_TEXT);
+        font.draw(batch, "背包", panelX + 24, panelY + panelHeight - 26);
+        font.setColor(UI_DARK_TEXT);
+        drawMultiline("地面物品: " + engine.getRoomItemsWithWeight(),
+            panelX + 32, panelY + panelHeight - 70, 22);
+        drawMultiline("随身物品: " + engine.getPlayerItemsWithWeight(),
+            panelX + 32, panelY + panelHeight - 102, 22);
+    }
+
+    private float drawHintChip(String key, float x, float y, float width, float height, int icon,
+        float keyWidth)
+    {
+        uiSkin.drawLightButton(batch, x, y, width, height);
+        uiSkin.drawButton(batch, x + 6, y + 7, keyWidth, height - 14);
+        drawIcon(icon, x + keyWidth + 13, y + 8, height - 16);
+
+        smallFont.setColor(Color.WHITE);
+        drawCenteredInBoxWithSmallFont(key, x + 6, y + 7, keyWidth, height - 14);
+        return x + width;
+    }
+
+    private void drawIcon(int icon, float x, float y, float size)
+    {
+        if (icon == ICON_MOVE) {
+            uiSkin.drawMoveIcon(batch, x, y, size);
+        } else if (icon == ICON_ROOM) {
+            uiSkin.drawRoomIcon(batch, x, y, size);
+        } else if (icon == ICON_LOOK) {
+            uiSkin.drawLookIcon(batch, x, y, size);
+        } else if (icon == ICON_TAKE) {
+            uiSkin.drawHandIcon(batch, x, y, size);
+        } else if (icon == ICON_INVENTORY) {
+            uiSkin.drawInventoryIcon(batch, x, y, size);
+        } else if (icon == ICON_BACK) {
+            uiSkin.drawBackIcon(batch, x, y, size);
+        } else if (icon == ICON_SAVE) {
+            uiSkin.drawSaveIcon(batch, x, y, size);
+        } else if (icon == ICON_LOAD) {
+            uiSkin.drawLoadIcon(batch, x, y, size);
+        } else if (icon == ICON_MENU) {
+            uiSkin.drawMenuIcon(batch, x, y, size);
+        } else if (icon == ICON_TITLE) {
+            uiSkin.drawTitleIcon(batch, x, y, size);
+        } else {
+            uiSkin.drawCircleIcon(batch, x, y, size);
+        }
+    }
+
+    private void drawCentered(String text, float centerX, float y)
+    {
+        layout.setText(font, text);
+        font.draw(batch, text, centerX - layout.width / 2f, y);
+    }
+
+    private void drawCenteredWithSmallFont(String text, float centerX, float y)
+    {
+        layout.setText(smallFont, text);
+        smallFont.draw(batch, text, centerX - layout.width / 2f, y);
+    }
+
+    private void drawCenteredInBoxWithSmallFont(String text, float x, float y, float width,
+        float height)
+    {
+        layout.setText(smallFont, text);
+        smallFont.draw(batch, text, x + (width - layout.width) / 2f,
+            y + (height + layout.height) / 2f + 1f);
+    }
+
+    private void drawShortcutRow(String key, String label, int icon, float x, float y)
+    {
+        drawIcon(icon, x, y + 3, 24);
+        float keyWidth = key.length() >= 4 ? 54f : key.length() >= 3 ? 42f : 34f;
+        uiSkin.drawButton(batch, x + 34, y, keyWidth, 28);
+        smallFont.setColor(Color.WHITE);
+        drawCenteredInBoxWithSmallFont(key, x + 34, y, keyWidth, 28);
+        smallFont.setColor(UI_DARK_TEXT);
+        smallFont.draw(batch, label, x + keyWidth + 78, y + 20);
+    }
+
+    private void drawClampedLine(BitmapFont activeFont, String text, float x, float y,
+        float maxWidth)
+    {
+        String line = text == null ? "" : text.replace('\n', ' ');
+        layout.setText(activeFont, line);
+        if (layout.width <= maxWidth) {
+            activeFont.draw(batch, line, x, y);
+            return;
+        }
+
+        String suffix = "...";
+        while (line.length() > 1) {
+            line = line.substring(0, line.length() - 1);
+            layout.setText(activeFont, line + suffix);
+            if (layout.width <= maxWidth) {
+                activeFont.draw(batch, line + suffix, x, y);
+                return;
+            }
+        }
+        activeFont.draw(batch, suffix, x, y);
     }
 
     private void disposeLater()
@@ -338,14 +554,44 @@ public class GameScreen implements Screen
         });
     }
 
-    private void drawMultiline(String text, float x, float y)
+    private void drawMultiline(String text, float x, float y, float lineHeight)
     {
         String[] lines = text.split("\\n");
         float lineY = y;
         for (String line : lines) {
             font.draw(batch, line, x, lineY);
-            lineY -= 22;
+            lineY -= lineHeight;
         }
+    }
+
+    private float playLeft()
+    {
+        return PLAY_LEFT;
+    }
+
+    private float playRight()
+    {
+        return playLeft() + playWidth();
+    }
+
+    private float playBottom()
+    {
+        return PLAY_BOTTOM;
+    }
+
+    private float playTop()
+    {
+        return playBottom() + playHeight();
+    }
+
+    private float playWidth()
+    {
+        return Math.max(TILE_SIZE * 3f, Gdx.graphics.getWidth() - PLAY_LEFT - PLAY_RIGHT_MARGIN);
+    }
+
+    private float playHeight()
+    {
+        return Math.max(TILE_SIZE * 3f, Gdx.graphics.getHeight() - PLAY_BOTTOM - PLAY_TOP_MARGIN);
     }
 
     @Override
@@ -372,5 +618,7 @@ public class GameScreen implements Screen
     public void dispose()
     {
         shapes.dispose();
+        uiSkin.dispose();
+        smallFont.dispose();
     }
 }

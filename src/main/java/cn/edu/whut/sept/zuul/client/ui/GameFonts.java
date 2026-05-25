@@ -22,6 +22,7 @@ public class GameFonts implements Disposable
         "失落Realm编年史姓名直接输入文字修改Enter开始玩家房间移动方向键切换调查拾取回退标题"
             + "无法前进已回退至进入该方向这里没有可拾取的物品拾取了失败可能超重负重编年史者"
             + "读取读档存档保存暂无成功暂停菜单继续探索背包打开关闭地面随身物品声望快捷键返回"
+            + "生命体力行动负载操作状态地图菜单图标按钮像素"
             + "的一是在不了有和人这中大为上个国我以要他时来用们生到作地于出就分对成会可主发年动同工也能"
             + "下过子说产种面而方后多定行学法所民得经十三之进着等部度家电力里如水化高自二理起小物现实加"
             + "量都两体制机当使点从业本去把性好应开它合还因由其些然前外天政四日那社义事平形相全表间样与关"
@@ -52,9 +53,7 @@ public class GameFonts implements Disposable
 
     public BitmapFont copyDefault(float scale)
     {
-        BitmapFont copy = new BitmapFont(defaultFont.getData(), defaultFont.getRegion(), true);
-        copy.getData().setScale(scale);
-        return copy;
+        return createFont(Math.max(1, Math.round(FONT_SIZE * scale)));
     }
 
     private BitmapFont createFont(int size)
@@ -63,8 +62,8 @@ public class GameFonts implements Disposable
         parameter.size = size;
         parameter.characters = buildInitialCharacters();
         parameter.incremental = true;
-        parameter.minFilter = Texture.TextureFilter.Linear;
-        parameter.magFilter = Texture.TextureFilter.Linear;
+        parameter.minFilter = Texture.TextureFilter.Nearest;
+        parameter.magFilter = Texture.TextureFilter.Nearest;
         parameter.genMipMaps = false;
         return generator.generateFont(parameter);
     }
@@ -84,7 +83,15 @@ public class GameFonts implements Disposable
 
     private static FileHandle resolveFontFile()
     {
-        FileHandle bundled = Gdx.files.internal("fonts/game.ttf");
+        FileHandle bundled = Gdx.files.internal("assets/fonts/game.ttf");
+        if (bundled.exists()) {
+            return bundled;
+        }
+        bundled = Gdx.files.internal("assets/fonts/NotoSansSC-Regular.ttf");
+        if (bundled.exists()) {
+            return bundled;
+        }
+        bundled = Gdx.files.internal("fonts/game.ttf");
         if (bundled.exists()) {
             return bundled;
         }
