@@ -6,8 +6,11 @@ import cn.edu.whut.sept.zuul.domain.Direction;
 import cn.edu.whut.sept.zuul.domain.Room;
 import cn.edu.whut.sept.zuul.domain.RoomScene;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
+import cn.edu.whut.sept.zuul.infra.GameLogger;
 import cn.edu.whut.sept.zuul.infra.GameState;
 import cn.edu.whut.sept.zuul.infra.SaveGameService;
+
+import java.util.logging.Logger;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
@@ -56,6 +59,7 @@ public class GameScreen implements Screen
     private static final String LOG_TAG = "GameScreen";
     private static final Color UI_LIGHT_TEXT = new Color(1f, 0.96f, 0.82f, 1f);
     private static final Color UI_DARK_TEXT = new Color(0.26f, 0.18f, 0.1f, 1f);
+    private static final Logger LOG = GameLogger.get();
 
     private final RpgMain game;
     private final SpriteBatch batch;
@@ -165,19 +169,34 @@ public class GameScreen implements Screen
         disposeMap();
 
         try {
+            String roomId = engine.getCurrentRoom().getRoomId();
+            LOG.info("loadMap: room=" + roomId
+                + " | tmx=" + tmxPath
+                + " | entryDir=" + engine.getEntryDirection().toExitKey());
             map = new TmxMapLoader().load(tmxPath);
             mapRenderer = new OrthogonalTiledMapRenderer(map, 1f, batch);
             wallLayer = (TiledMapTileLayer) map.getLayers().get("wall");
             MapLayer objectLayer = map.getLayers().get("objects");
             objectsLayer = objectLayer == null ? null : objectLayer.getObjects();
+            if (objectsLayer != null) {
+                int exitCount = 0;
+                for (MapObject obj : objectsLayer) {
+                    if ("exit".equals(obj.getProperties().get("type", String.class))) {
+                        exitCount++;
+                    }
+                }
+                LOG.info("loadMap: " + tmxPath + " loaded | exits=" + exitCount
+                    + " | objects=" + objectsLayer.getCount());
+            } else {
+                LOG.info("loadMap: " + tmxPath + " loaded | NO objects layer");
+            }
             currentMapPath = tmxPath;
             exitCooldown = 0.3f;
-            Gdx.app.log(LOG_TAG, "Loaded map: " + tmxPath);
             if (snapAfterLoad) {
                 snapToSpawn();
             }
         } catch (Exception e) {
-            Gdx.app.error(LOG_TAG, "Failed to load map: " + tmxPath, e);
+            LOG.warning("loadMap: FAILED " + tmxPath + " | " + e.getMessage());
             map = null;
             mapRenderer = null;
             wallLayer = null;
@@ -192,6 +211,9 @@ public class GameScreen implements Screen
         playerX = spawn.tileX * TILE + TILE / 2f - PLAYER_W / 2f;
         playerY = tileRowToGdxY(spawn.tileY);
         clampPlayerToMap();
+        LOG.info("spawn: tile=(" + spawn.tileX + "," + spawn.tileY
+            + ") | pixel=(" + (int)playerX + "," + (int)playerY + ")"
+            + " | entryDir=" + engine.getEntryDirection().toExitKey());
     }
 
     /** Tiled 格子行号（0=地图顶部）→ LibGDX 玩家左下角 y */
@@ -347,13 +369,26 @@ public class GameScreen implements Screen
                 if (direction == Direction.DEFAULT) {
                     String directionValue = props.get("direction", String.class);
                     direction = Direction.fromExitKey(directionValue);
+                    LOG.info("exit: overlap target=" + targetRoomId
+                        + " | fallback to TMX direction=" + directionValue
+                        + " | resolved=" + direction.toExitKey());
                 }
+                LOG.info("exit: trigger target=" + targetRoomId
+                    + " | direction=" + direction.toExitKey()
+                    + " | from=" + engine.getCurrentRoom().getRoomId());
                 if (direction != Direction.DEFAULT && engine.movePlayer(direction)) {
+                    LOG.info("exit: MOVE OK -> " + engine.getCurrentRoom().getRoomId());
                     loadCurrentRoom(true);
                     actionMessage = "进入 " + engine.getCurrentRoom().getRoomId();
                     exitCooldown = 0.5f;
                 } else if (direction != Direction.DEFAULT) {
+                    LOG.warning("exit: MOVE FAILED target=" + targetRoomId
+                        + " | " + engine.getLastMessage());
                     actionMessage = engine.getLastMessage();
+                    exitCooldown = 0.5f;
+                } else {
+                    LOG.warning("exit: SKIP target=" + targetRoomId
+                        + " | direction=DEFAULT (unresolved)");
                 }
                 return;
             }
@@ -371,9 +406,14 @@ public class GameScreen implements Screen
         for (Direction direction : directions) {
             Room room = engine.getCurrentRoom().getExit(direction.toExitKey());
             if (room != null && targetRoomId.equals(room.getRoomId())) {
+                LOG.info("exit: resolve target=" + targetRoomId
+                    + " -> direction=" + direction.toExitKey()
+                    + " (engine match)");
                 return direction;
             }
         }
+        LOG.info("exit: resolve target=" + targetRoomId
+            + " -> DEFAULT (no engine exit matches, will try TMX direction property)");
         return Direction.DEFAULT;
     }
 
