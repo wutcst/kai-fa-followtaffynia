@@ -284,22 +284,33 @@ public class GameScreen implements Screen
         }
     }
 
+    private int moveLogFrame;
+
     private void movePlayer(float delta)
     {
         float dx = 0f;
         float dy = 0f;
-        if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
-            dy = SPEED * delta;
+        boolean wDown = Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP);
+        boolean sDown = Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN);
+        boolean aDown = Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT);
+        boolean dDown = Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT);
+
+        if (wDown) dy = SPEED * delta;
+        if (sDown) dy = -SPEED * delta;
+        if (aDown) dx = -SPEED * delta;
+        if (dDown) dx = SPEED * delta;
+
+        if ((wDown || sDown || aDown || dDown) && moveLogFrame % 30 == 0) {
+            String dir = "";
+            if (wDown) dir = "W/UP(往屏幕上方)";
+            if (sDown) dir = "S/DOWN(往屏幕下方)";
+            if (aDown) dir = "A/LEFT(往屏幕左)";
+            if (dDown) dir = "D/RIGHT(往屏幕右)";
+            LOG.info("moveKey: " + dir
+                + " | pixel=(" + (int)playerX + "," + (int)playerY + ")"
+                + " | tile=(" + (int)(playerX/TILE) + "," + gdxYToTiledRow(playerY) + ")");
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-            dy = -SPEED * delta;
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-            dx = -SPEED * delta;
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-            dx = SPEED * delta;
-        }
+        moveLogFrame++;
 
         if (dx != 0f && canMove(playerX + dx, playerY)) {
             playerX += dx;
@@ -308,6 +319,12 @@ public class GameScreen implements Screen
             playerY += dy;
         }
         clampPlayerToMap();
+    }
+
+    private int gdxYToTiledRow(float gdxY)
+    {
+        int mapRows = map == null ? 17 : (int)(mapPixelHeight() / TILE);
+        return mapRows - 1 - (int)((gdxY + PLAYER_H / 2f) / TILE);
     }
 
     private boolean canMove(float newX, float newY)
@@ -360,7 +377,9 @@ public class GameScreen implements Screen
                 ? TILE : props.get("width", Float.class);
             float objectHeight = props.get("height", Float.class) == null
                 ? TILE : props.get("height", Float.class);
-            float gdxObjectY = tiledTopYToGdxY(objectY, objectHeight);
+            // LibGDX TmxMapLoader 已自动将 TMX 的 Y(top-down) 转为 GDX Y(bottom-up)，
+            // objectY 直接就是 GDX 坐标，不需要再调用 tiledTopYToGdxY 转换。
+            float gdxObjectY = objectY;
             Rectangle exitRect = new Rectangle(objectX, gdxObjectY, objectWidth, objectHeight);
 
             if (playerRect.overlaps(exitRect)) {
