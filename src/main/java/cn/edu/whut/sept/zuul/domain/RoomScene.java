@@ -27,14 +27,16 @@ public class RoomScene
         spawns.put(direction, new SpawnPoint(tileX, tileY));
     }
 
-  /**
-   * 根据进入方向选取复活点：从北侧进入时使用 direction=south 的 spawn。
-   */
-    public SpawnPoint resolveSpawn(Direction entryDirection)
+    /**
+     * 按房间某一侧的 spawn 落点选取坐标。
+     *
+     * @param side 房间边界：north/south/east/west；与 {@link Direction} 一致
+     */
+    public SpawnPoint getSpawnAt(Direction side)
     {
-        Direction spawnKey = entryDirection == Direction.DEFAULT
+        Direction spawnKey = side == null || side == Direction.DEFAULT
             ? Direction.DEFAULT
-            : entryDirection.opposite();
+            : side;
         SpawnPoint point = spawns.get(spawnKey);
         if (point == null) {
             point = spawns.get(Direction.DEFAULT);

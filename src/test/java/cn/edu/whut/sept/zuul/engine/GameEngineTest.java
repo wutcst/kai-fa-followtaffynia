@@ -28,7 +28,7 @@ class GameEngineTest
     @Test
     void movePlayer_validExit_changesRoom()
     {
-        // outside N→theatre
+        // outside 上方(N) → theatre（与 docs/04 一致）
         assertTrue(engine.movePlayer(Direction.NORTH));
         assertEquals("theatre", engine.getCurrentRoom().getRoomId());
     }
@@ -197,17 +197,18 @@ class GameEngineTest
     void lockedRoom_blocksMovement()
     {
         // vault 有 lockId=vault-door，未解锁前不能进入
-        engine.movePlayer(Direction.SOUTH);  // outside → lab
+        goToLab();
         assertFalse(engine.movePlayer(Direction.EAST),
             "vault should be locked, cannot enter");
         assertEquals("lab", engine.getCurrentRoom().getRoomId());
+        assertTrue(engine.getLastMessage().contains("vault-door"));
     }
 
     @Test
     void unlockItem_thenEnterLockedRoom()
     {
         // Step 1: 走到 lab，拾取 key-vault
-        engine.movePlayer(Direction.SOUTH);  // outside → lab
+        goToLab();
         assertTrue(engine.takeItem("key-vault"));
         assertTrue(engine.getPlayer().getInventory().stream()
             .anyMatch(i -> i.getItemId().equals("key-vault")));
@@ -256,5 +257,11 @@ class GameEngineTest
         engine.takeItem("welcome-note");
         String result = engine.useItem("welcome-note");
         assertTrue(result.contains("没有特殊效果"));
+    }
+
+  /** outside 下方(south) → lab */
+    private void goToLab()
+    {
+        engine.movePlayer(Direction.SOUTH);
     }
 }

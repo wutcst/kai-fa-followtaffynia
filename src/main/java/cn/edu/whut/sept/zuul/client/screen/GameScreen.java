@@ -190,8 +190,16 @@ public class GameScreen implements Screen
     {
         RoomScene.SpawnPoint spawn = engine.resolveCurrentSpawn();
         playerX = spawn.tileX * TILE + TILE / 2f - PLAYER_W / 2f;
-        playerY = spawn.tileY * TILE + TILE / 2f - PLAYER_H / 2f;
+        playerY = tileRowToGdxY(spawn.tileY);
         clampPlayerToMap();
+    }
+
+    /** Tiled 格子行号（0=地图顶部）→ LibGDX 玩家左下角 y */
+    private float tileRowToGdxY(float tileRowFromTop)
+    {
+        int mapRows = (int) (mapPixelHeight() / TILE);
+        float rowFromBottom = mapRows - 1 - tileRowFromTop;
+        return rowFromBottom * TILE + (TILE - PLAYER_H) / 2f;
     }
 
     private void handleInput(float delta)
@@ -330,20 +338,22 @@ public class GameScreen implements Screen
                 ? TILE : props.get("width", Float.class);
             float objectHeight = props.get("height", Float.class) == null
                 ? TILE : props.get("height", Float.class);
-            float gdxObjectY = mapPixelHeight() - objectY - objectHeight;
+            float gdxObjectY = tiledTopYToGdxY(objectY, objectHeight);
             Rectangle exitRect = new Rectangle(objectX, gdxObjectY, objectWidth, objectHeight);
 
             if (playerRect.overlaps(exitRect)) {
                 String targetRoomId = props.get("targetRoomId", String.class);
-                String directionValue = props.get("direction", String.class);
-                Direction direction = directionValue == null
-                    ? resolveDirectionToTarget(targetRoomId)
-                    : Direction.fromExitKey(directionValue);
-                if (direction != null && direction != Direction.DEFAULT
-                    && engine.movePlayer(direction)) {
+                Direction direction = resolveDirectionToTarget(targetRoomId);
+                if (direction == Direction.DEFAULT) {
+                    String directionValue = props.get("direction", String.class);
+                    direction = Direction.fromExitKey(directionValue);
+                }
+                if (direction != Direction.DEFAULT && engine.movePlayer(direction)) {
                     loadCurrentRoom(true);
                     actionMessage = "进入 " + engine.getCurrentRoom().getRoomId();
                     exitCooldown = 0.5f;
+                } else if (direction != Direction.DEFAULT) {
+                    actionMessage = engine.getLastMessage();
                 }
                 return;
             }
@@ -707,6 +717,12 @@ public class GameScreen implements Screen
             return 960f;
         }
         return width * tileWidth;
+    }
+
+    /** Tiled 对象 y（自上向下）→ LibGDX 世界 y（自下向上），与出口检测一致。 */
+    private float tiledTopYToGdxY(float tiledTopY, float objectHeight)
+    {
+        return mapPixelHeight() - tiledTopY - objectHeight;
     }
 
     private float mapPixelHeight()

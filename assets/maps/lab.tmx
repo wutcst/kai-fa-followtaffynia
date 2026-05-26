@@ -72,7 +72,7 @@
     <property name="direction" value="default"/>
    </properties>
   </object>
-  <object id="2" name="spawn-north" type="spawn" x="480" y="416" width="32" height="32">
+  <object id="2" name="spawn-north" type="spawn" x="480" y="96" width="32" height="32">
    <properties>
     <property name="direction" value="north"/>
    </properties>

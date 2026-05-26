@@ -50,11 +50,16 @@ public final class WorldFactory
         return ROOMS.get(roomId);
     }
 
+    /** 随机传送禁止落入的房间（进入后可能无法离开）。 */
+    private static final List<String> TELEPORT_EXCLUDED =
+        Collections.singletonList("throne-hall");
+
     public static Room randomRoomExcept(String excludeRoomId)
     {
         List<Room> candidates = new ArrayList<>();
         for (Room room : ROOMS.values()) {
-            if (!room.getRoomId().equals(excludeRoomId)) {
+            if (!room.getRoomId().equals(excludeRoomId)
+                && !TELEPORT_EXCLUDED.contains(room.getRoomId())) {
                 candidates.add(room);
             }
         }
@@ -81,7 +86,7 @@ public final class WorldFactory
 
         // -- theatre: 讲堂 --
         Room theatre = createRoom("theatre", "in a lecture theater");
-        setSpawns(theatre, 15,14, 15,14, 15,3, 15,14, 15,14);
+        setSpawns(theatre, 15,8, 15,6, 15,13, 27,8, 3,8);
         theatre.addItem(createItem("torch", "Torch",
             "A flickering torch. Useful in dark places.", 3, "light"));
 
@@ -93,7 +98,7 @@ public final class WorldFactory
 
         // -- lab: 机房 --
         Room lab = createRoom("lab", "in a computing lab");
-        setSpawns(lab, 15,8, 15,13, 15,3, 4,8, 4,8);
+        setSpawns(lab, 15,8, 15,3, 15,14, 27,8, 3,8);
         lab.addItem(createItem("key-vault", "Rusty Key",
             "A rusty key, inscribed 'Vault'.", 1, "unlock:vault-door"));
 
@@ -111,7 +116,7 @@ public final class WorldFactory
 
         // -- cellar: 地窖 --
         Room cellar = createRoom("cellar", "in a dark, damp cellar");
-        setSpawns(cellar, 15,14, 15,14, 15,3, 15,14, 15,14);
+        setSpawns(cellar, 15,8, 15,3, 15,13, 27,8, 3,8);
         cellar.addItem(createItem("old-barrel", "Old Barrel",
             "A rotting barrel. It might contain something.", 20, null));
 
@@ -126,24 +131,24 @@ public final class WorldFactory
 
         // -- hidden-shrine: 隐士神龛 --
         Room hiddenShrine = createRoom("hidden-shrine", "in a hidden shrine");
-        setSpawns(hiddenShrine, 15,14, 15,14, 15,14, 15,14, 15,14);
+        setSpawns(hiddenShrine, 15,8, 15,3, 15,13, 27,8, 3,8);
         hiddenShrine.addItem(createItem("crystal-shard", "Crystal Shard",
             "A fragment of crystal that hums softly.", 3, "reputation:+5"));
 
         // -- garden: 庭院 --
         Room garden = createRoom("garden", "in a serene garden");
-        setSpawns(garden, 15,8, 15,14, 15,3, 15,8, 15,8);
+        setSpawns(garden, 15,8, 15,3, 15,13, 27,8, 3,8);
         garden.addItem(createItem("healing-herb", "Healing Herb",
             "A fragrant herb that restores vitality.", 2, "heal:20"));
 
         // -- guard-room: 守卫哨站 --
         Room guardRoom = createRoom("guard-room", "in a guard station");
         guardRoom.setLockId("guard-gate");
-        setSpawns(guardRoom, 15,8, 15,14, 15,3, 27,8, 4,8);
+        setSpawns(guardRoom, 15,8, 15,3, 15,13, 27,8, 3,8);
 
         // -- armory: 军械库 --
         Room armory = createRoom("armory", "in the armory");
-        setSpawns(armory, 4,8, 15,14, 4,8, 4,8, 4,8);
+        setSpawns(armory, 4,8, 15,3, 15,13, 27,8, 3,8);
         armory.addItem(createItem("sword-rusty", "Rusty Sword",
             "An old sword, still sharp enough.", 25, null));
         armory.addItem(createItem("shield-wooden", "Wooden Shield",
@@ -151,7 +156,7 @@ public final class WorldFactory
 
         // -- forge: 铁匠铺 --
         Room forge = createRoom("forge", "in a blazing forge");
-        setSpawns(forge, 15,14, 15,14, 15,3, 15,14, 15,14);
+        setSpawns(forge, 15,8, 15,3, 15,13, 27,8, 3,8);
 
         // -- teleport-alcove: 传送密室 --
         Room teleportAlcove = createRoom("teleport-alcove", "in an unstable teleport alcove");
@@ -162,50 +167,30 @@ public final class WorldFactory
 
         // -- throne-hall: 王座大厅（结局） --
         Room throneHall = createRoom("throne-hall", "in the great throne hall");
-        setSpawns(throneHall, 15,14, 15,14, 15,14, 15,14, 15,14);
+        setSpawns(throneHall, 15,8, 15,3, 15,13, 27,8, 3,8);
 
-        // =================== 拓扑连接 ===================
-        link(outside, "north", theatre);
-        link(outside, "east", pub);
-        link(outside, "south", lab);
-        link(outside, "west", office);
+        // =================== 拓扑连接（双向成对，与 assets/maps 出口一致） ===================
+        linkBidirectional(outside, "north", theatre, "south");
+        linkBidirectional(outside, "east", pub, "west");
+        linkBidirectional(outside, "south", lab, "north");
+        linkBidirectional(outside, "west", office, "east");
 
-        link(theatre, "south", outside);
-        link(theatre, "east", library);
+        linkBidirectional(theatre, "east", library, "west");
+        linkBidirectional(pub, "south", cellar, "north");
+        linkBidirectional(pub, "east", garden, "west");
 
-        link(pub, "west", outside);
-        link(pub, "south", cellar);
+        linkBidirectional(lab, "east", vault, "west");
 
-        link(lab, "north", outside);
-        link(lab, "east", vault);
+        linkBidirectional(library, "north", hiddenShrine, "south");
+        linkBidirectional(library, "east", teleportAlcove, "west");
 
-        link(office, "east", outside);
+        linkBidirectional(garden, "south", guardRoom, "north");
+        linkBidirectional(garden, "east", armory, "west");
 
-        link(library, "west", theatre);
-        link(library, "north", hiddenShrine);
-        link(library, "east", teleportAlcove);
+        linkBidirectional(guardRoom, "south", throneHall, "north");
+        linkBidirectional(guardRoom, "west", armory, "east");
 
-        link(cellar, "north", pub);
-
-        link(vault, "west", lab);
-
-        link(hiddenShrine, "south", library);
-
-        link(garden, "north", outside);
-        link(garden, "south", guardRoom);
-
-        link(guardRoom, "north", garden);
-        link(guardRoom, "south", throneHall);
-        link(guardRoom, "west", armory);
-
-        link(armory, "east", guardRoom);
-        link(armory, "south", forge);
-
-        link(forge, "north", armory);
-
-        link(teleportAlcove, "west", library);
-
-        link(throneHall, "north", guardRoom);
+        linkBidirectional(armory, "south", forge, "north");
     }
 
     /** 随机 cookie 放置：从 cellar/library/hidden-shrine 中随机选 1 间 */
@@ -254,5 +239,11 @@ public final class WorldFactory
     private static void link(Room from, String direction, Room to)
     {
         from.setExit(direction, to);
+    }
+
+    private static void linkBidirectional(Room fromA, String dirA, Room roomB, String dirB)
+    {
+        link(fromA, dirA, roomB);
+        link(roomB, dirB, fromA);
     }
 }
