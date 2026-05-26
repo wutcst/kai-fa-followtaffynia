@@ -40,12 +40,13 @@ public class GameScreen implements Screen
     private static final float PLAYER_W = 16f;
     private static final float PLAYER_H = 16f;
     private static final float SPEED = 128f;
-    private static final float PLAY_LEFT = 24f;
-    private static final float PLAY_RIGHT_MARGIN = 24f;
-    private static final float PLAY_BOTTOM = 116f;
-    private static final float PLAY_TOP_MARGIN = 80f;
-    private static final float TOP_BAR_HEIGHT = 64f;
+    private static final int WORLD_MARGIN_LEFT = 12;
+    private static final int WORLD_MARGIN_RIGHT = 12;
+    private static final int WORLD_MARGIN_BOTTOM = 112;
+    private static final int WORLD_MARGIN_TOP = 82;
+    private static final float TOP_BAR_HEIGHT = 66f;
     private static final float FOOTER_HEIGHT = 96f;
+    private static final float SIDE_PANEL_MIN_WIDTH = 132f;
     private static final int ICON_MOVE = 0;
     private static final int ICON_ROOM = 1;
     private static final int ICON_LOOK = 2;
@@ -82,6 +83,10 @@ public class GameScreen implements Screen
     private String actionMessage;
     private String currentMapPath;
     private float exitCooldown;
+    private int worldViewportX;
+    private int worldViewportY;
+    private int worldViewportWidth;
+    private int worldViewportHeight;
     private boolean inventoryOpen;
     private boolean paused;
     private boolean screenChanged;
@@ -144,11 +149,13 @@ public class GameScreen implements Screen
             return;
         }
 
+        applyWorldViewport();
         worldCamera.update();
         mapRenderer.setView(worldCamera);
         mapRenderer.render();
         drawPlayer();
 
+        applyFullViewport();
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
         drawUiPanels();
@@ -195,6 +202,7 @@ public class GameScreen implements Screen
             if (snapAfterLoad) {
                 snapToSpawn();
             }
+            updateCameras(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         } catch (Exception e) {
             LOG.warning("loadMap: FAILED " + tmxPath + " | " + e.getMessage());
             map = null;
@@ -447,6 +455,7 @@ public class GameScreen implements Screen
 
     private void drawMapLoadError()
     {
+        applyFullViewport();
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
         font.setColor(Color.RED);
@@ -521,9 +530,10 @@ public class GameScreen implements Screen
     {
         float width = Gdx.graphics.getWidth();
         float height = Gdx.graphics.getHeight();
-        uiSkin.drawWindow(batch, 12, height - TOP_BAR_HEIGHT - 8, width - 24, TOP_BAR_HEIGHT);
-        uiSkin.drawWindow(batch, 12, 8, width - 24, FOOTER_HEIGHT);
-        uiSkin.drawInset(batch, 30, 64, width - 60, 28);
+        uiSkin.drawWindow(batch, 10, height - TOP_BAR_HEIGHT - 8, width - 20, TOP_BAR_HEIGHT);
+        uiSkin.drawWindow(batch, 10, 8, width - 20, FOOTER_HEIGHT);
+        uiSkin.drawInset(batch, 28, 64, width - 56, 28);
+        drawSidePanels();
 
         if (paused) {
             float panelWidth = Math.min(660f, width - 72f);
@@ -536,9 +546,10 @@ public class GameScreen implements Screen
         }
         if (inventoryOpen) {
             float panelWidth = Math.min(360f, width - 56f);
-            float panelHeight = Math.min(190f, playHeight() - 24f);
+            float panelHeight = Math.min(190f, Math.max(120f, worldViewportHeight - 24f));
             float panelX = Math.max(24f, width - panelWidth - 28f);
-            float panelY = Math.max(playBottom() + 12f, playTop() - panelHeight - 12f);
+            float panelY = Math.max(WORLD_MARGIN_BOTTOM + 12f,
+                height - WORLD_MARGIN_TOP - panelHeight - 12f);
             uiSkin.drawWindow(batch, panelX, panelY, panelWidth, panelHeight);
             uiSkin.drawInset(batch, panelX + 20, panelY + 42, panelWidth - 40, panelHeight - 74);
         }
@@ -548,15 +559,28 @@ public class GameScreen implements Screen
     {
         float width = Gdx.graphics.getWidth();
         float height = Gdx.graphics.getHeight();
-        smallFont.setColor(UI_LIGHT_TEXT);
-        smallFont.draw(batch, "玩家 " + engine.getPlayer().getName(), 30, height - 28);
-        smallFont.draw(batch, "房间 " + engine.getCurrentRoom().getRoomId(), 250, height - 28);
-        smallFont.draw(batch, "声望 " + engine.getPlayer().getReputation(), width - 132, height - 28);
+        float contentX = 28f;
+        float contentRight = width - 28f;
+        float topY = height - 25f;
+        float barY = height - 58f;
+        float barWidth = Math.max(120f, Math.min(220f, (width - 260f) / 2f));
+        float hpX = contentX;
+        float weightX = hpX + barWidth + 146f;
 
-        drawStatusBar("HP", engine.getPlayer().getHp(), engine.getPlayer().getMaxHp(),
-            30, height - 58, 210, true);
-        drawStatusBar("负重", engine.getPlayer().totalWeight(), engine.getPlayer().getMaxWeight(),
-            360, height - 58, 210, false);
+        smallFont.setColor(UI_LIGHT_TEXT);
+        drawClampedLine(smallFont, "玩家 " + engine.getPlayer().getName(), contentX, topY, 180f);
+        drawClampedLine(smallFont, "房间 " + engine.getCurrentRoom().getRoomId(),
+            contentX + 210f, topY, Math.max(160f, contentRight - contentX - 370f));
+        drawRightAligned("声望 " + engine.getPlayer().getReputation(), contentRight, topY);
+
+        if (hasSidePanels()) {
+            drawSidePanelContent();
+        } else {
+            drawStatusBar("生命", engine.getPlayer().getHp(), engine.getPlayer().getMaxHp(),
+                hpX, barY, barWidth, true);
+            drawStatusBar("负重", engine.getPlayer().totalWeight(), engine.getPlayer().getMaxWeight(),
+                weightX, barY, barWidth, false);
+        }
 
         if (paused) {
             drawPauseMenu();
@@ -572,16 +596,15 @@ public class GameScreen implements Screen
         drawClampedLine(smallFont, actionMessage, 44, 84, Gdx.graphics.getWidth() - 88);
 
         float gap = 9f;
-        float totalWidth = 78 + 82 + 60 + 60 + 60 + 60 + 60 + 66 + 66 + 72 + gap * 9f;
+        float totalWidth = 78 + 60 + 60 + 60 + 60 + 60 + 66 + 66 + 72 + gap * 8f;
         float x = Math.max(20f, (Gdx.graphics.getWidth() - totalWidth) / 2f);
         float y = 15f;
         x = drawHintChip("WASD", x, y, 78, 42, ICON_MOVE, 42) + gap;
-        x = drawHintChip("↑↓←→", x, y, 82, 42, ICON_MOVE, 46) + gap;
-        x = drawHintChip("出口", x, y, 60, 42, ICON_ROOM, 28) + gap;
         x = drawHintChip("Q", x, y, 60, 42, ICON_LOOK, 28) + gap;
         x = drawHintChip("E", x, y, 60, 42, ICON_TAKE, 28) + gap;
         x = drawHintChip("U", x, y, 60, 42, ICON_TAKE, 28) + gap;
         x = drawHintChip("I", x, y, 60, 42, ICON_INVENTORY, 28) + gap;
+        x = drawHintChip("B", x, y, 60, 42, ICON_BACK, 28) + gap;
         x = drawHintChip("F5", x, y, 66, 42, ICON_SAVE, 34) + gap;
         x = drawHintChip("F9", x, y, 66, 42, ICON_LOAD, 34) + gap;
         drawHintChip("ESC", x, y, 72, 42, ICON_MENU, 38);
@@ -592,14 +615,92 @@ public class GameScreen implements Screen
     {
         smallFont.setColor(UI_LIGHT_TEXT);
         smallFont.draw(batch, label, x, y + 16);
-        float barX = x + 54;
+        float barX = x + 42;
         float ratio = maxValue <= 0 ? 0f : (float) value / maxValue;
         if (hpBar) {
             uiSkin.drawRedBar(batch, barX, y, width, 18, ratio);
         } else {
             uiSkin.drawYellowBar(batch, barX, y, width, 18, ratio);
         }
-        smallFont.draw(batch, value + " / " + maxValue, barX + width + 12, y + 16);
+        smallFont.draw(batch, value + "/" + maxValue, barX + width + 10, y + 16);
+    }
+
+    private void drawSidePanels()
+    {
+        if (!hasSidePanels()) {
+            return;
+        }
+        float panelY = WORLD_MARGIN_BOTTOM;
+        float panelHeight = Gdx.graphics.getHeight() - WORLD_MARGIN_TOP - WORLD_MARGIN_BOTTOM;
+        float leftX = 10f;
+        float leftWidth = worldViewportX - 18f;
+        float rightX = worldViewportX + worldViewportWidth + 8f;
+        float rightWidth = Gdx.graphics.getWidth() - rightX - 10f;
+
+        uiSkin.drawWindow(batch, leftX, panelY, leftWidth, panelHeight);
+        uiSkin.drawInset(batch, leftX + 12f, panelY + 18f, leftWidth - 24f, panelHeight - 48f);
+        uiSkin.drawWindow(batch, rightX, panelY, rightWidth, panelHeight);
+        uiSkin.drawInset(batch, rightX + 12f, panelY + 18f, rightWidth - 24f, panelHeight - 48f);
+    }
+
+    private void drawSidePanelContent()
+    {
+        if (!hasSidePanels()) {
+            return;
+        }
+        float panelY = WORLD_MARGIN_BOTTOM;
+        float panelHeight = Gdx.graphics.getHeight() - WORLD_MARGIN_TOP - WORLD_MARGIN_BOTTOM;
+        float leftX = 10f;
+        float leftWidth = worldViewportX - 18f;
+        float rightX = worldViewportX + worldViewportWidth + 8f;
+        float rightWidth = Gdx.graphics.getWidth() - rightX - 10f;
+        float textInset = 22f;
+
+        smallFont.setColor(UI_LIGHT_TEXT);
+        smallFont.draw(batch, "状态", leftX + textInset, panelY + panelHeight - 18f);
+        smallFont.draw(batch, "行动", rightX + textInset, panelY + panelHeight - 18f);
+
+        smallFont.setColor(UI_DARK_TEXT);
+        float leftTextX = leftX + textInset;
+        float leftTextWidth = leftWidth - textInset * 2f;
+        drawClampedLine(smallFont, "房间 " + engine.getCurrentRoom().getRoomId(),
+            leftTextX, panelY + panelHeight - 52f, leftTextWidth);
+        drawCompactStatusBar("生命", engine.getPlayer().getHp(), engine.getPlayer().getMaxHp(),
+            leftTextX, panelY + panelHeight - 100f, leftTextWidth, true);
+        drawCompactStatusBar("负重", engine.getPlayer().totalWeight(), engine.getPlayer().getMaxWeight(),
+            leftTextX, panelY + panelHeight - 148f, leftTextWidth, false);
+        drawClampedLine(smallFont, "声望 " + engine.getPlayer().getReputation(),
+            leftTextX, panelY + panelHeight - 190f, leftTextWidth);
+
+        float rightTextX = rightX + textInset;
+        float rightTextWidth = rightWidth - textInset * 2f;
+        drawMultilineClamped(smallFont, actionMessage, rightTextX, panelY + panelHeight - 52f,
+            rightTextWidth, 17f, 4);
+        float hintY = panelY + 116f;
+        drawClampedLine(smallFont, "WASD 移动", rightTextX, hintY + 68f, rightTextWidth);
+        drawClampedLine(smallFont, "出口 切换房间", rightTextX, hintY + 46f, rightTextWidth);
+        drawClampedLine(smallFont, "Q 调查  E 拾取", rightTextX, hintY + 24f, rightTextWidth);
+        drawClampedLine(smallFont, "U 使用  I 背包", rightTextX, hintY + 2f, rightTextWidth);
+        drawClampedLine(smallFont, "F5 存档  F9 读档", rightTextX, hintY - 20f, rightTextWidth);
+    }
+
+    private void drawCompactStatusBar(String label, int value, int maxValue, float x, float y,
+        float width, boolean hpBar)
+    {
+        smallFont.setColor(UI_DARK_TEXT);
+        drawClampedLine(smallFont, label + " " + value + "/" + maxValue, x, y + 26f, width);
+        float ratio = maxValue <= 0 ? 0f : (float) value / maxValue;
+        if (hpBar) {
+            uiSkin.drawRedBar(batch, x, y, width, 14f, ratio);
+        } else {
+            uiSkin.drawYellowBar(batch, x, y, width, 14f, ratio);
+        }
+    }
+
+    private boolean hasSidePanels()
+    {
+        return worldViewportX - 20f >= SIDE_PANEL_MIN_WIDTH
+            && Gdx.graphics.getWidth() - (worldViewportX + worldViewportWidth) - 20f >= SIDE_PANEL_MIN_WIDTH;
     }
 
     private void drawPauseMenu()
@@ -619,13 +720,14 @@ public class GameScreen implements Screen
 
         float leftX = panelX + 50;
         float rightX = panelX + panelWidth / 2f + 22;
-        float rowY = panelY + panelHeight - 116;
-        float rowGap = 36f;
+        float rowY = panelY + panelHeight - 104;
+        float rowGap = 31f;
         drawShortcutRow("ESC", "继续探索 / 打开菜单", ICON_MENU, leftX, rowY);
         drawShortcutRow("WASD", "移动角色", ICON_MOVE, leftX, rowY - rowGap);
-        drawShortcutRow("↑↓←→", "移动角色", ICON_MOVE, leftX, rowY - rowGap * 2f);
-        drawShortcutRow("出口", "走入出口切换房间", ICON_ROOM, leftX, rowY - rowGap * 3f);
-        drawShortcutRow("Q", "调查当前房间", ICON_LOOK, leftX, rowY - rowGap * 4f);
+        drawShortcutRow("出口", "走入出口切换房间", ICON_ROOM, leftX, rowY - rowGap * 2f);
+        drawShortcutRow("Q", "调查当前房间", ICON_LOOK, leftX, rowY - rowGap * 3f);
+        drawShortcutRow("B", "回退上一个房间", ICON_BACK, leftX, rowY - rowGap * 4f);
+        drawShortcutRow("T", "返回标题画面", ICON_TITLE, leftX, rowY - rowGap * 5f);
 
         drawShortcutRow("E", "拾取地面物品", ICON_TAKE, rightX, rowY);
         drawShortcutRow("U", "使用背包第一件物品", ICON_TAKE, rightX, rowY - rowGap);
@@ -641,9 +743,10 @@ public class GameScreen implements Screen
     {
         float width = Gdx.graphics.getWidth();
         float panelWidth = Math.min(360f, width - 56f);
-        float panelHeight = Math.min(190f, playHeight() - 24f);
+        float panelHeight = Math.min(190f, Math.max(120f, worldViewportHeight - 24f));
         float panelX = Math.max(24f, width - panelWidth - 28f);
-        float panelY = Math.max(playBottom() + 12f, playTop() - panelHeight - 12f);
+        float panelY = Math.max(WORLD_MARGIN_BOTTOM + 12f,
+            Gdx.graphics.getHeight() - WORLD_MARGIN_TOP - panelHeight - 12f);
 
         font.setColor(UI_LIGHT_TEXT);
         font.draw(batch, "背包", panelX + 24, panelY + panelHeight - 26);
@@ -746,6 +849,40 @@ public class GameScreen implements Screen
         activeFont.draw(batch, suffix, x, y);
     }
 
+    private void drawMultilineClamped(BitmapFont activeFont, String text, float x, float y,
+        float maxWidth, float lineHeight, int maxLines)
+    {
+        String source = text == null ? "" : text.replace('\n', ' ');
+        int start = 0;
+        int lineCount = 0;
+        while (start < source.length() && lineCount < maxLines) {
+            int end = source.length();
+            String line = source.substring(start, end);
+            layout.setText(activeFont, line);
+            while (line.length() > 1 && layout.width > maxWidth) {
+                end--;
+                line = source.substring(start, end);
+                layout.setText(activeFont, line + (lineCount == maxLines - 1 ? "..." : ""));
+            }
+            if (lineCount == maxLines - 1 && end < source.length()) {
+                activeFont.draw(batch, line + "...", x, y - lineHeight * lineCount);
+                return;
+            }
+            activeFont.draw(batch, line, x, y - lineHeight * lineCount);
+            start = end;
+            while (start < source.length() && source.charAt(start) == ' ') {
+                start++;
+            }
+            lineCount++;
+        }
+    }
+
+    private void drawRightAligned(String text, float rightX, float y)
+    {
+        layout.setText(smallFont, text);
+        smallFont.draw(batch, text, rightX - layout.width, y);
+    }
+
     private void drawMultiline(String text, float x, float y, float lineHeight)
     {
         String[] lines = text.split("\\n");
@@ -798,33 +935,47 @@ public class GameScreen implements Screen
         return height * tileHeight;
     }
 
-    private float playBottom()
-    {
-        return PLAY_BOTTOM;
-    }
-
-    private float playTop()
-    {
-        return playBottom() + playHeight();
-    }
-
-    private float playWidth()
-    {
-        return Math.max(TILE * 3f, Gdx.graphics.getWidth() - PLAY_LEFT - PLAY_RIGHT_MARGIN);
-    }
-
-    private float playHeight()
-    {
-        return Math.max(TILE * 3f, Gdx.graphics.getHeight() - PLAY_BOTTOM - PLAY_TOP_MARGIN);
-    }
-
     private void updateCameras(int width, int height)
     {
-        worldCamera.setToOrtho(false, 960f, 540f);
-        worldCamera.position.set(480f, 270f, 0f);
+        float mapWidth = mapPixelWidth();
+        float mapHeight = mapPixelHeight();
+        updateWorldViewport(width, height, mapWidth, mapHeight);
+        worldCamera.setToOrtho(false, mapWidth, mapHeight);
+        worldCamera.position.set(mapWidth / 2f, mapHeight / 2f, 0f);
         worldCamera.update();
         uiCamera.setToOrtho(false, width, height);
         uiCamera.update();
+    }
+
+    private void updateWorldViewport(int width, int height, float mapWidth, float mapHeight)
+    {
+        int availableX = WORLD_MARGIN_LEFT;
+        int availableY = WORLD_MARGIN_BOTTOM;
+        int availableWidth = Math.max(1, width - WORLD_MARGIN_LEFT - WORLD_MARGIN_RIGHT);
+        int availableHeight = Math.max(1, height - WORLD_MARGIN_BOTTOM - WORLD_MARGIN_TOP);
+        float mapAspect = mapWidth / mapHeight;
+        float availableAspect = (float) availableWidth / availableHeight;
+        if (availableAspect > mapAspect) {
+            worldViewportHeight = availableHeight;
+            worldViewportWidth = Math.round(worldViewportHeight * mapAspect);
+            worldViewportX = availableX + (availableWidth - worldViewportWidth) / 2;
+            worldViewportY = availableY;
+        } else {
+            worldViewportWidth = availableWidth;
+            worldViewportHeight = Math.round(worldViewportWidth / mapAspect);
+            worldViewportX = availableX;
+            worldViewportY = availableY + (availableHeight - worldViewportHeight) / 2;
+        }
+    }
+
+    private void applyWorldViewport()
+    {
+        Gdx.gl.glViewport(worldViewportX, worldViewportY, worldViewportWidth, worldViewportHeight);
+    }
+
+    private void applyFullViewport()
+    {
+        Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
     }
 
     private void disposeLater()

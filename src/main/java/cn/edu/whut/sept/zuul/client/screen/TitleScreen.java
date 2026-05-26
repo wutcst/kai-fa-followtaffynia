@@ -11,6 +11,7 @@ import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -31,6 +32,7 @@ public class TitleScreen implements Screen
     private final BitmapFont font;
     private final GameUiSkin uiSkin;
     private final GlyphLayout layout;
+    private final OrthographicCamera uiCamera;
     private final InputAdapter inputAdapter;
     private String playerName;
     private String statusMessage;
@@ -43,6 +45,7 @@ public class TitleScreen implements Screen
         this.font = game.getFonts().copyDefault(1.2f);
         this.uiSkin = new GameUiSkin();
         this.layout = new GlyphLayout();
+        this.uiCamera = new OrthographicCamera();
         this.playerName = DEFAULT_NAME;
         this.statusMessage = SaveGameService.hasSave() ? "按 L 读取存档" : "暂无存档";
         this.inputAdapter = new InputAdapter()
@@ -75,6 +78,7 @@ public class TitleScreen implements Screen
                 return false;
             }
         };
+        updateCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
     }
 
     @Override
@@ -101,6 +105,7 @@ public class TitleScreen implements Screen
         float panelY = (height - panelHeight) / 2f - 4f;
         float centerX = width / 2f;
 
+        batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
         uiSkin.drawWindow(batch, panelX, panelY, panelWidth, panelHeight);
         uiSkin.drawInset(batch, panelX + 46, panelY + 164, panelWidth - 92, 62);
@@ -181,6 +186,7 @@ public class TitleScreen implements Screen
     @Override
     public void resize(int width, int height)
     {
+        updateCamera(width, height);
     }
 
     @Override
@@ -204,5 +210,11 @@ public class TitleScreen implements Screen
     {
         font.dispose();
         uiSkin.dispose();
+    }
+
+    private void updateCamera(int width, int height)
+    {
+        uiCamera.setToOrtho(false, width, height);
+        uiCamera.update();
     }
 }
