@@ -264,6 +264,9 @@ public class GameScreen implements Screen
         }
         if ("guard-room".equals(roomId)) {
             npcPlaceholders.add(NpcPlaceholder.guard(tileToWorldRect(15, 7, 1, 1)));
+        } else if ("garden".equals(roomId)) {
+            // 守卫守在庭院南侧门口，未进门也可按 E 对话解锁 guard-gate
+            npcPlaceholders.add(NpcPlaceholder.guard(tileToWorldRect(12, 15, 1, 1)));
         } else if ("hidden-shrine".equals(roomId)) {
             npcPlaceholders.add(NpcPlaceholder.hermit(tileToWorldRect(15, 7, 1, 1)));
         } else if ("forge".equals(roomId)) {

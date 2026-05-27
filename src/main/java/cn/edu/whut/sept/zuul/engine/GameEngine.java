@@ -266,7 +266,12 @@ public class GameEngine
         if (next.getLockId() != null && !unlockedLocks.contains(next.getLockId())) {
             LOG.info("movePlayer: " + fromId + " -> " + next.getRoomId()
                 + " = LOCKED [" + next.getLockId() + "]");
-            lastMessage = "门被锁住了（" + next.getLockId() + "）。";
+            if ("guard-gate".equals(next.getLockId())) {
+                lastMessage = "守卫之门紧锁。可在 office 拾取铁钥匙后于门前使用（U），"
+                    + "或在 garden 南侧门口与守卫对话（E）请求放行。";
+            } else {
+                lastMessage = "门被锁住了（" + next.getLockId() + "）。";
+            }
             return false;
         }
 
