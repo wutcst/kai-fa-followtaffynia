@@ -10,6 +10,9 @@ import cn.edu.whut.sept.zuul.domain.Player;
 import cn.edu.whut.sept.zuul.domain.Room;
 import cn.edu.whut.sept.zuul.domain.RoomScene;
 import cn.edu.whut.sept.zuul.engine.effect.UseEffectRegistry;
+import cn.edu.whut.sept.zuul.engine.effect.combat.CombatActionRegistry;
+import cn.edu.whut.sept.zuul.domain.NpcCombatDef;
+import cn.edu.whut.sept.zuul.infra.CombatLoader;
 import cn.edu.whut.sept.zuul.infra.DialogueLoader;
 import cn.edu.whut.sept.zuul.infra.GameLogger;
 import cn.edu.whut.sept.zuul.infra.GameState;
@@ -18,6 +21,7 @@ import cn.edu.whut.sept.zuul.infra.WorldFactory;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -38,7 +42,9 @@ public class GameEngine
     private final Deque<String> roomHistory;
     private final Set<String> exploredRoomIds;
     private final Set<String> unlockedLocks;
+    private final Set<String> defeatedNpcs;
     private final UseEffectRegistry useEffectRegistry;
+    private final CombatActionRegistry combatActionRegistry;
     private final QuestManager questManager;
     private final EndingEvaluator endingEvaluator;
     private final DialogueActionExecutor dialogueActionExecutor;
@@ -48,6 +54,9 @@ public class GameEngine
     private DialogueTree activeDialogueTree;
     private String activeDialogueNodeId;
     private EndingType currentEnding;
+    private String encounterNpcId;
+    private CombatEngine activeCombat;
+    private CombatOutcome lastCombatOutcome;
 
     public GameEngine(String playerName)
     {
@@ -58,11 +67,14 @@ public class GameEngine
         this.roomHistory = new ArrayDeque<>();
         this.exploredRoomIds = new HashSet<>();
         this.unlockedLocks = new HashSet<>();
+        this.defeatedNpcs = new HashSet<>();
         this.useEffectRegistry = new UseEffectRegistry();
+        this.combatActionRegistry = new CombatActionRegistry();
         this.questManager = new QuestManager();
         this.endingEvaluator = new EndingEvaluator();
         this.dialogueActionExecutor = new DialogueActionExecutor(this);
         this.currentEnding = EndingType.NONE;
+        this.lastCombatOutcome = CombatOutcome.ONGOING;
         exploredRoomIds.add(currentRoom.getRoomId());
 
         LOG.info("=== GAME START ===");
@@ -124,6 +136,98 @@ public class GameEngine
         return activeDialogueTree != null;
     }
 
+    public boolean isInCombat()
+    {
+        return activeCombat != null;
+    }
+
+    public CombatOutcome getLastCombatOutcome()
+    {
+        return lastCombatOutcome;
+    }
+
+    public Set<String> getDefeatedNpcs()
+    {
+        return Collections.unmodifiableSet(defeatedNpcs);
+    }
+
+    public boolean isPlayerDead()
+    {
+        return player.getHp() <= 0;
+    }
+
+    public EncounterMenu startNpcEncounter(String npcId)
+    {
+        leaveEncounter();
+        encounterNpcId = npcId;
+        boolean canTalk = true;
+        boolean canFight = !"merchant".equals(npcId)
+            && !defeatedNpcs.contains(npcId);
+        return new EncounterMenu(npcId, canTalk, canFight, true);
+    }
+
+    public void leaveEncounter()
+    {
+        encounterNpcId = null;
+    }
+
+    public CombatSnapshot startCombat(String npcId)
+    {
+        endDialogue();
+        leaveEncounter();
+        try {
+            NpcCombatDef def = CombatLoader.load(npcId);
+            activeCombat = new CombatEngine(player, def, combatActionRegistry);
+            encounterNpcId = npcId;
+            lastCombatOutcome = CombatOutcome.ONGOING;
+            LOG.info("startCombat: " + npcId + " hp=" + def.maxHp);
+            return activeCombat.snapshot();
+        } catch (IOException ex) {
+            LOG.warning("startCombat: failed for " + npcId + ": " + ex.getMessage());
+            lastMessage = "无法与 " + npcId + " 开战。";
+            return null;
+        }
+    }
+
+    public CombatSnapshot combatAction(CombatAction action, String itemIdOrNull)
+    {
+        if (activeCombat == null) {
+            lastMessage = "当前没有进行中的战斗。";
+            return null;
+        }
+        CombatSnapshot snapshot = activeCombat.processPlayerAction(action, itemIdOrNull);
+        lastCombatOutcome = snapshot.outcome;
+        if (snapshot.outcome == CombatOutcome.VICTORY) {
+            applyCombatVictory(activeCombat.getDef());
+            clearCombat();
+        } else if (snapshot.outcome == CombatOutcome.DEFEAT
+            || snapshot.outcome == CombatOutcome.FLED) {
+            clearCombat();
+        }
+        return snapshot;
+    }
+
+    private void applyCombatVictory(NpcCombatDef def)
+    {
+        if (def.onDefeatReputation != 0) {
+            player.setReputation(player.getReputation() + def.onDefeatReputation);
+        }
+        if (def.onDefeatUnlock != null && !def.onDefeatUnlock.isEmpty()) {
+            unlockLock(def.onDefeatUnlock);
+        }
+        if (def.onDefeatMarkDefeated) {
+            defeatedNpcs.add(def.npcId);
+            LOG.info("defeatedNpcs: added " + def.npcId);
+        }
+        lastMessage = "你击败了 " + def.displayName + "。";
+    }
+
+    private void clearCombat()
+    {
+        activeCombat = null;
+        encounterNpcId = null;
+    }
+
     public String getLastMessage()
     {
         return lastMessage;
@@ -162,7 +266,12 @@ public class GameEngine
         if (next.getLockId() != null && !unlockedLocks.contains(next.getLockId())) {
             LOG.info("movePlayer: " + fromId + " -> " + next.getRoomId()
                 + " = LOCKED [" + next.getLockId() + "]");
-            lastMessage = "门被锁住了（" + next.getLockId() + "）。";
+            if ("guard-gate".equals(next.getLockId())) {
+                lastMessage = "守卫之门紧锁。可在 office 拾取铁钥匙后于门前使用（U），"
+                    + "或在 garden 南侧门口与守卫对话（E）请求放行。";
+            } else {
+                lastMessage = "门被锁住了（" + next.getLockId() + "）。";
+            }
             return false;
         }
 
@@ -175,7 +284,7 @@ public class GameEngine
         exploredRoomIds.add(currentRoom.getRoomId());
         questManager.onRoomEntered(currentRoom, exploredRoomIds);
         if ("throne-hall".equals(currentRoom.getRoomId())) {
-            currentEnding = endingEvaluator.evaluate(player);
+            currentEnding = endingEvaluator.evaluate(player, defeatedNpcs);
             LOG.info("Ending triggered: " + currentEnding);
         }
 
@@ -252,11 +361,68 @@ public class GameEngine
             + currentRoom.getRoomId());
     }
 
-    public String useItem(String itemId)
+    /**
+     * 校验物品是否可在当前房间使用（钥匙需靠近对应上锁出口）。
+     */
+    public ItemUseCheck checkItemUse(String itemId)
     {
-        Item item = player.getInventory().stream()
+        Item item = findInventoryItem(itemId);
+        if (item == null) {
+            return ItemUseCheck.blocked("背包中没有该物品。");
+        }
+        String effect = item.getEffect();
+        if (effect == null || effect.trim().isEmpty()) {
+            return ItemUseCheck.blocked(item.getName() + " 没有可使用的效果。");
+        }
+        if (effect.startsWith("unlock:")) {
+            String lockId = effect.substring("unlock:".length()).trim();
+            if (lockId.isEmpty()) {
+                return ItemUseCheck.blocked("这把钥匙似乎坏了。");
+            }
+            if (unlockedLocks.contains(lockId)) {
+                return ItemUseCheck.blocked("对应的门已经打开了。");
+            }
+            if (!hasAdjacentLockedExit(lockId)) {
+                return ItemUseCheck.needLocation("钥匙需在通往「" + lockId + "」的上锁出口旁使用。");
+            }
+            return ItemUseCheck.anytime();
+        }
+        return ItemUseCheck.anytime();
+    }
+
+    public String tryUseItem(String itemId)
+    {
+        ItemUseCheck check = checkItemUse(itemId);
+        if (!check.canUse) {
+            lastMessage = check.hint;
+            LOG.info("tryUseItem: " + itemId + " blocked -> " + lastMessage);
+            return lastMessage;
+        }
+        return useItem(itemId);
+    }
+
+    private boolean hasAdjacentLockedExit(String lockId)
+    {
+        for (String direction : currentRoom.getExitDirections()) {
+            Room next = currentRoom.getExit(direction);
+            if (next != null && lockId.equals(next.getLockId())
+                && !unlockedLocks.contains(lockId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Item findInventoryItem(String itemId)
+    {
+        return player.getInventory().stream()
             .filter(i -> i.getItemId().equals(itemId))
             .findFirst().orElse(null);
+    }
+
+    public String useItem(String itemId)
+    {
+        Item item = findInventoryItem(itemId);
         if (item == null) {
             LOG.info("useItem: " + itemId + " = FAIL (not in backpack)");
             lastMessage = "背包中没有 " + itemId;
@@ -439,6 +605,7 @@ public class GameEngine
         state.getRoomHistory().addAll(roomHistory);
         state.getQuestStates().clear();
         state.getQuestStates().putAll(questManager.getQuestStates());
+        state.getDefeatedNpcs().addAll(defeatedNpcs);
 
         RoomScene.SpawnPoint spawn = resolveCurrentSpawn();
         state.setPlayerX(spawn.tileX);
@@ -474,6 +641,11 @@ public class GameEngine
         roomHistory.clear();
         roomHistory.addAll(state.getRoomHistory());
         questManager.restoreQuestStates(state.getQuestStates());
+        defeatedNpcs.clear();
+        if (state.getDefeatedNpcs() != null) {
+            defeatedNpcs.addAll(state.getDefeatedNpcs());
+        }
+        clearCombat();
         endDialogue();
         entryDirection = Direction.fromExitKey(state.getEntryDirection());
         spawnAtDoorSide = false;

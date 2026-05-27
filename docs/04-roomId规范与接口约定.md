@@ -1,7 +1,7 @@
 # roomId 规范与接口约定
 
-**版本**：2.1  
-**日期**：2026-05-25  
+**版本**：2.2  
+**日期**：2026-05-26  
 **状态**：第 1 周末 API 草案，第 2 周末定稿  
 
 ---
@@ -165,6 +165,34 @@ A 编写 JSON；B 解析；C 渲染。
 
 ---
 
+## 6.5 战斗 JSON（v2.2）
+
+路径：`assets/combat/<npcId>.json`
+
+与 `assets/dialogue/<npcId>.json` 同 `npcId` 配对。**可战斗 NPC**：`guard`、`hermit`；`merchant` 无 combat 文件。
+
+| 字段 | 说明 |
+|------|------|
+| `maxHp` | NPC 生命值 |
+| `defaultState` | 初始状态 id |
+| `states` | HP 阈值 → 可用 `skills` 列表 |
+| `skills` | 技能 id → `damage`、`text`、可选 `selfBuff` |
+| `onDefeat` | `reputation`、`unlock`、`markDefeated` |
+
+完整样例见 **`02-软件设计说明书.md` §18.7**。A 编写；B 解析；C 展示 `CombatSnapshot.logLines`。
+
+### 6.6 NPC 放置规范
+
+| npcId | 推荐房间 | type | 属性 |
+|-------|----------|------|------|
+| guard | guard-room | npc | `npcId=guard` |
+| hermit | hidden-shrine | npc | `npcId=hermit` |
+| merchant | forge | npc | `npcId=merchant` |
+
+遭遇菜单：**交流** → `talkNpc`；**杀害** → `startCombat`（merchant 不显示或禁用）；**离开** → `leaveEncounter`。
+
+---
+
 ## 7. 精灵表
 
 > 风格、色板、UI 与三阶段占位策略见 **`05-美术资源设计说明书.md`**。本节仅列技术布局。
@@ -202,7 +230,9 @@ A 编写 JSON；B 解析；C 渲染。
 
 ---
 
-## 10. GameEngine API（冻结）
+## 10. GameEngine API（冻结 + v2.2 战斗草案）
+
+### 10.1 已实现（v2.1）
 
 ```java
 // Domain
@@ -215,13 +245,17 @@ boolean GameEngine.movePlayer(Direction direction);
 boolean GameEngine.takeItem(String itemId);
 boolean GameEngine.dropItem(String itemId);
 void GameEngine.dropAllItems();
-boolean GameEngine.useItem(String itemId);
+String GameEngine.useItem(String itemId);
 void GameEngine.eatItem(String itemId);
 Dialogue GameEngine.talkNpc(String npcId);
+Dialogue GameEngine.chooseDialogueOption(int index);
+void GameEngine.endDialogue();
+boolean GameEngine.isInDialogue();
 String GameEngine.look();
 boolean GameEngine.moveBack();
 GameState GameEngine.captureState();
 void GameEngine.restoreState(GameState state);
+EndingType GameEngine.getCurrentEnding();
 
 // World
 Room WorldFactory.build(String playerName);
@@ -232,7 +266,19 @@ Room WorldFactory.randomRoomExcept(String excludeRoomId);
 GameScreen(GameEngine engine);  // 禁止直接改 Room
 ```
 
-**冻结节奏**：第 1 周末提交草案 PR；第 2 周末合并定稿，C 据此对接 GameScreen。
+### 10.2 战斗扩展（v2.2 草案，B 实现后冻结）
+
+```java
+EncounterMenu GameEngine.startNpcEncounter(String npcId);
+void GameEngine.leaveEncounter();
+
+CombatSnapshot GameEngine.startCombat(String npcId);
+CombatSnapshot GameEngine.combatAction(CombatAction action, String itemIdOrNull);
+boolean GameEngine.isInCombat();
+CombatResult GameEngine.getLastCombatResult();
+```
+
+**冻结节奏**：战斗 API 随 `feature/engineAndPlay` 第二次 PR 提交草案；C 评审后合并。
 
 ---
 
@@ -249,6 +295,7 @@ GameScreen(GameEngine engine);  // 禁止直接改 Room
 | `inventory` | itemId 列表 |
 | `unlockedLocks` | |
 | `questStates` | |
+| `defeatedNpcs` | 已击败/杀害的 npcId（v2.2 战斗） |
 | `exploredRoomIds` | |
 | `roomHistory` | roomId 栈 |
 

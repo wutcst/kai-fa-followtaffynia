@@ -59,7 +59,8 @@ public final class WorldFactory
         List<Room> candidates = new ArrayList<>();
         for (Room room : ROOMS.values()) {
             if (!room.getRoomId().equals(excludeRoomId)
-                && !TELEPORT_EXCLUDED.contains(room.getRoomId())) {
+                && !TELEPORT_EXCLUDED.contains(room.getRoomId())
+                && room.getLockId() == null) {
                 candidates.add(room);
             }
         }

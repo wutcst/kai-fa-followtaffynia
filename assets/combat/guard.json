@@ -1,0 +1,30 @@
+{
+  "npcId": "guard",
+  "displayName": "王座守卫",
+  "maxHp": 80,
+  "defaultState": "normal",
+  "states": {
+    "normal": {
+      "whenHpBelow": 1.0,
+      "skills": ["stab", "block"]
+    },
+    "enraged": {
+      "whenHpBelow": 0.6,
+      "skills": ["stab", "heavy_slash"]
+    },
+    "desperate": {
+      "whenHpBelow": 0.2,
+      "skills": ["heavy_slash", "heavy_slash"]
+    }
+  },
+  "skills": {
+    "stab": { "damage": 8, "text": "守卫刺向你！" },
+    "block": { "damage": 0, "selfBuff": "defense", "text": "守卫举盾防御。" },
+    "heavy_slash": { "damage": 18, "text": "守卫重斩！" }
+  },
+  "onDefeat": {
+    "reputation": -15,
+    "unlock": "guard-gate",
+    "markDefeated": true
+  }
+}
