@@ -259,6 +259,40 @@ class GameEngineTest
         assertTrue(result.contains("没有特殊效果"));
     }
 
+    @Test
+    void checkItemUse_keyRequiresAdjacentLockedExit()
+    {
+        goToLab();
+        engine.takeItem("key-vault");
+        ItemUseCheck inLab = engine.checkItemUse("key-vault");
+        assertTrue(inLab.canUse);
+
+        engine.movePlayer(Direction.NORTH);
+        ItemUseCheck outside = engine.checkItemUse("key-vault");
+        assertFalse(outside.canUse);
+        assertTrue(outside.requiresLocation);
+    }
+
+    @Test
+    void tryUseItem_keyBlockedAwayFromDoor()
+    {
+        goToLab();
+        engine.takeItem("key-vault");
+        engine.movePlayer(Direction.NORTH);
+        String msg = engine.tryUseItem("key-vault");
+        assertTrue(msg.contains("上锁出口"));
+        assertTrue(engine.getPlayer().getInventory().stream()
+            .anyMatch(i -> "key-vault".equals(i.getItemId())));
+    }
+
+    @Test
+    void checkItemUse_healAnytime()
+    {
+        engine.getPlayer().addItem(new Item("test-heal", "Potion",
+            "test", 1, "heal:20"));
+        assertTrue(engine.checkItemUse("test-heal").canUse);
+    }
+
   /** outside 下方(south) → lab */
     private void goToLab()
     {

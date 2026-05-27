@@ -28,6 +28,7 @@ public class GameState implements Serializable
     private List<String> inventory;
     private Set<String> unlockedLocks;
     private Map<String, String> questStates;
+    private Set<String> defeatedNpcs;
     private Set<String> exploredRoomIds;
     private List<String> roomHistory;
 
@@ -36,6 +37,7 @@ public class GameState implements Serializable
         inventory = new ArrayList<>();
         unlockedLocks = new HashSet<>();
         questStates = new HashMap<>();
+        defeatedNpcs = new HashSet<>();
         exploredRoomIds = new HashSet<>();
         roomHistory = new ArrayList<>();
         facing = "down";
@@ -155,6 +157,11 @@ public class GameState implements Serializable
     public Map<String, String> getQuestStates()
     {
         return questStates;
+    }
+
+    public Set<String> getDefeatedNpcs()
+    {
+        return defeatedNpcs;
     }
 
     public Set<String> getExploredRoomIds()

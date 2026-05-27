@@ -70,6 +70,58 @@ class GameEngineDialogueQuestTest
     }
 
     @Test
+    void endingShadowWhenGuardDefeatedWithGem()
+    {
+        engine.getPlayer().addItem(new Item("gem-light", "Light Gem",
+            "test", 5, "light:full"));
+        engine.getPlayer().setHp(200);
+        engine.startCombat("guard");
+        for (int i = 0; i < 30 && engine.isInCombat(); i++) {
+            engine.combatAction(CombatAction.ATTACK, null);
+        }
+        assertFalse(engine.isInCombat());
+        assertTrue(engine.getDefeatedNpcs().contains("guard"));
+        enterThroneHall();
+        assertEquals(EndingType.SHADOW, engine.getCurrentEnding());
+    }
+
+    @Test
+    void merchantCannotFight()
+    {
+        EncounterMenu menu = engine.startNpcEncounter("merchant");
+        assertFalse(menu.canFight);
+    }
+
+    @Test
+    void combatVictoryUnlocksGuardGate()
+    {
+        engine.getPlayer().setHp(200);
+        engine.startCombat("guard");
+        for (int i = 0; i < 30 && engine.isInCombat(); i++) {
+            engine.combatAction(CombatAction.ATTACK, null);
+        }
+        assertTrue(engine.isLockUnlocked("guard-gate"));
+        assertTrue(engine.getDefeatedNpcs().contains("guard"));
+        assertEquals(CombatOutcome.VICTORY, engine.getLastCombatOutcome());
+    }
+
+    @Test
+    void defeatedNpcsRoundTripInSave()
+    {
+        engine.getPlayer().setHp(200);
+        engine.startCombat("guard");
+        for (int i = 0; i < 30 && engine.isInCombat(); i++) {
+            engine.combatAction(CombatAction.ATTACK, null);
+        }
+        assertTrue(engine.getDefeatedNpcs().contains("guard"));
+        GameState state = engine.captureState();
+        GameEngine loaded = new GameEngine("other");
+        loaded.restoreState(state);
+        assertTrue(loaded.getDefeatedNpcs().contains("guard"));
+        assertFalse(loaded.isInCombat());
+    }
+
+    @Test
     void questStatesRoundTripInSave()
     {
         engine.getQuestManager().onItemTaken(

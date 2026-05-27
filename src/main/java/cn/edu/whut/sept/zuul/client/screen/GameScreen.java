@@ -3,13 +3,21 @@ package cn.edu.whut.sept.zuul.client.screen;
 import cn.edu.whut.sept.zuul.client.RpgMain;
 import cn.edu.whut.sept.zuul.client.ui.GameUiSkin;
 import cn.edu.whut.sept.zuul.domain.Direction;
+import cn.edu.whut.sept.zuul.domain.Dialogue;
+import cn.edu.whut.sept.zuul.domain.Item;
 import cn.edu.whut.sept.zuul.domain.Room;
 import cn.edu.whut.sept.zuul.domain.RoomScene;
+import cn.edu.whut.sept.zuul.engine.CombatAction;
+import cn.edu.whut.sept.zuul.engine.CombatSnapshot;
+import cn.edu.whut.sept.zuul.engine.EncounterMenu;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
+import cn.edu.whut.sept.zuul.engine.ItemUseCheck;
 import cn.edu.whut.sept.zuul.infra.GameLogger;
 import cn.edu.whut.sept.zuul.infra.GameState;
 import cn.edu.whut.sept.zuul.infra.SaveGameService;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -25,11 +33,13 @@ import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.maps.MapProperties;
+import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.utils.Align;
 
 /**
  * 主玩法画面：TMX 地图渲染、碰撞检测、房间切换、存档读档与像素风 HUD。
@@ -76,6 +86,7 @@ public class GameScreen implements Screen
     private OrthogonalTiledMapRenderer mapRenderer;
     private TiledMapTileLayer wallLayer;
     private MapObjects objectsLayer;
+    private final List<NpcPlaceholder> npcPlaceholders;
 
     private float playerX;
     private float playerY;
@@ -83,6 +94,16 @@ public class GameScreen implements Screen
     private String currentMapPath;
     private float exitCooldown;
     private boolean inventoryOpen;
+    private boolean inventoryUseMode;
+    private int inventorySelectedIndex;
+    private boolean inventoryInspectMode;
+    private int inventoryInspectIndex;
+    private boolean encounterMenuOpen;
+    private EncounterMenu encounterMenu;
+    private Dialogue activeDialogue;
+    private CombatSnapshot activeCombatSnapshot;
+    private final List<String> dialoguePages;
+    private int dialoguePageIndex;
     private boolean paused;
     private boolean screenChanged;
 
@@ -105,6 +126,10 @@ public class GameScreen implements Screen
         this.worldCamera = new OrthographicCamera();
         this.uiCamera = new OrthographicCamera();
         this.actionMessage = initialStatus;
+        this.npcPlaceholders = new java.util.ArrayList<>();
+        this.dialoguePages = new ArrayList<>();
+        this.dialoguePageIndex = 0;
+        this.inventoryInspectIndex = 0;
 
         updateCameras(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         loadCurrentRoom(false);
@@ -147,6 +172,8 @@ public class GameScreen implements Screen
         worldCamera.update();
         mapRenderer.setView(worldCamera);
         mapRenderer.render();
+        drawNpcPlaceholders();
+        drawNpcDialogueBubble();
         drawPlayer();
 
         batch.setProjectionMatrix(uiCamera.combined);
@@ -178,6 +205,7 @@ public class GameScreen implements Screen
             wallLayer = (TiledMapTileLayer) map.getLayers().get("wall");
             MapLayer objectLayer = map.getLayers().get("objects");
             objectsLayer = objectLayer == null ? null : objectLayer.getObjects();
+            buildNpcPlaceholders(engine.getCurrentRoom().getRoomId());
             if (objectsLayer != null) {
                 int exitCount = 0;
                 for (MapObject obj : objectsLayer) {
@@ -201,8 +229,67 @@ public class GameScreen implements Screen
             mapRenderer = null;
             wallLayer = null;
             objectsLayer = null;
+            npcPlaceholders.clear();
             actionMessage = "地图加载失败: " + tmxPath;
         }
+    }
+
+    private void buildNpcPlaceholders(String roomId)
+    {
+        npcPlaceholders.clear();
+
+        // 优先：若 TMX objects 层存在 type=npc 的对象，则直接读取其矩形范围与 npcId。
+        if (objectsLayer != null) {
+            for (MapObject obj : objectsLayer) {
+                String type = obj.getProperties().get("type", String.class);
+                if (!"npc".equals(type)) {
+                    continue;
+                }
+                if (!(obj instanceof RectangleMapObject)) {
+                    continue;
+                }
+                String npcId = obj.getProperties().get("npcId", String.class);
+                if (npcId == null || npcId.trim().isEmpty()) {
+                    continue;
+                }
+                Rectangle rect = ((RectangleMapObject) obj).getRectangle();
+                // TMX 矩形是像素坐标（左下角），与当前 world 坐标一致。
+                npcPlaceholders.add(NpcPlaceholder.forNpc(npcId, rect));
+            }
+        }
+
+        // 兼容：地图暂未放 npc 对象时，用明显色块占位（不可穿过）。
+        if (!npcPlaceholders.isEmpty()) {
+            return;
+        }
+        if ("guard-room".equals(roomId)) {
+            npcPlaceholders.add(NpcPlaceholder.guard(tileToWorldRect(15, 7, 1, 1)));
+        } else if ("hidden-shrine".equals(roomId)) {
+            npcPlaceholders.add(NpcPlaceholder.hermit(tileToWorldRect(15, 7, 1, 1)));
+        } else if ("forge".equals(roomId)) {
+            npcPlaceholders.add(NpcPlaceholder.merchant(tileToWorldRect(15, 7, 1, 1)));
+        }
+    }
+
+    private Rectangle tileToWorldRect(int tileX, int tiledRowFromTop, int wTiles, int hTiles)
+    {
+        float x = tileX * TILE;
+        float y = tileRowToGdxY(tiledRowFromTop) - (TILE - PLAYER_H) / 2f;
+        return new Rectangle(x, y, wTiles * TILE, hTiles * TILE);
+    }
+
+    private void drawNpcPlaceholders()
+    {
+        if (npcPlaceholders.isEmpty()) {
+            return;
+        }
+        shapes.setProjectionMatrix(worldCamera.combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        for (NpcPlaceholder npc : npcPlaceholders) {
+            shapes.setColor(npc.color);
+            shapes.rect(npc.bounds.x, npc.bounds.y, npc.bounds.width, npc.bounds.height);
+        }
+        shapes.end();
     }
 
     private void snapToSpawn()
@@ -227,13 +314,50 @@ public class GameScreen implements Screen
     private void handleInput(float delta)
     {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            if (inventoryUseMode) {
+                closeInventoryUseMode();
+                return;
+            }
+            if (encounterMenuOpen) {
+                engine.leaveEncounter();
+                encounterMenuOpen = false;
+                encounterMenu = null;
+                actionMessage = "已关闭遭遇菜单";
+                return;
+            }
+            if (inventoryOpen) {
+                inventoryOpen = false;
+                inventoryInspectMode = false;
+                actionMessage = "背包已关闭";
+                return;
+            }
             paused = !paused;
-            inventoryOpen = false;
             actionMessage = paused ? "已暂停" : "继续探索";
             return;
         }
         if (paused) {
             handlePauseInput();
+            return;
+        }
+        if (inventoryUseMode) {
+            handleInventoryUseInput();
+            return;
+        }
+
+        if (encounterMenuOpen) {
+            handleEncounterInput();
+            return;
+        }
+        if (activeDialogue != null) {
+            handleDialogueInput();
+            return;
+        }
+        if (engine.isInDialogue()) {
+            handleDialogueInput();
+            return;
+        }
+        if (engine.isInCombat()) {
+            handleCombatInput();
             return;
         }
 
@@ -245,8 +369,19 @@ public class GameScreen implements Screen
             return;
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
+            if (inventoryUseMode) {
+                closeInventoryUseMode();
+            }
             inventoryOpen = !inventoryOpen;
-            actionMessage = inventoryOpen ? "背包已打开" : "背包已关闭";
+            if (!inventoryOpen) {
+                inventoryUseMode = false;
+                inventoryInspectMode = false;
+            }
+            actionMessage = inventoryOpen ? "背包已打开（仅查看）" : "背包已关闭";
+        }
+
+        if (inventoryOpen && !inventoryUseMode) {
+            handleInventoryBrowseInput();
         }
 
         movePlayer(delta);
@@ -263,10 +398,424 @@ public class GameScreen implements Screen
             }
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
-            actionMessage = tryTakeFirstItem();
+            String npcId = findNearbyNpcId();
+            if (npcId != null) {
+                startNpcEncounter(npcId);
+            } else {
+                actionMessage = tryTakeFirstItem();
+            }
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.U)) {
-            actionMessage = tryUseFirstItem();
+            openInventoryUseMode();
+        }
+    }
+
+    private String findNearbyNpcId()
+    {
+        if (npcPlaceholders.isEmpty()) {
+            return null;
+        }
+        // interaction area intentionally larger than collision area
+        // so pressing E works even if the player can't overlap the NPC.
+        Rectangle interactRect = new Rectangle(
+            playerX - 10f, playerY - 10f,
+            PLAYER_W + 20f, PLAYER_H + 20f);
+        for (NpcPlaceholder npc : npcPlaceholders) {
+            if (npc.bounds.overlaps(interactRect)) {
+                return npc.npcId;
+            }
+        }
+        return null;
+    }
+
+    private void startNpcEncounter(String npcId)
+    {
+        EncounterMenu menu = engine.startNpcEncounter(npcId);
+        if (menu == null) {
+            actionMessage = engine.getLastMessage();
+            return;
+        }
+        encounterMenu = menu;
+        encounterMenuOpen = true;
+        activeDialogue = null;
+        activeCombatSnapshot = null;
+        actionMessage = formatEncounterMenu(menu);
+    }
+
+    private String formatEncounterMenu(EncounterMenu menu)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("遇到 ").append(menu.npcId).append("。\n");
+        if (menu.canTalk) {
+            sb.append("按 1 交流。 ");
+        }
+        if (menu.canFight) {
+            sb.append("按 2 杀害。 ");
+        }
+        if (menu.canLeave) {
+            sb.append("按 3 离开。 ");
+        }
+        return sb.toString();
+    }
+
+    private void handleEncounterInput()
+    {
+        if (!encounterMenuOpen || encounterMenu == null) {
+            encounterMenuOpen = false;
+            encounterMenu = null;
+            return;
+        }
+        String npcId = encounterMenu.npcId;
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
+            if (!encounterMenu.canTalk) {
+                actionMessage = "你不能交流。";
+                return;
+            }
+            activeDialogue = engine.talkNpc(npcId);
+            encounterMenuOpen = false;
+            encounterMenu = null;
+            activeCombatSnapshot = null;
+            actionMessage = formatDialogue(activeDialogue);
+            return;
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
+            if (!encounterMenu.canFight) {
+                actionMessage = "你不能战斗。";
+                return;
+            }
+            activeCombatSnapshot = engine.startCombat(npcId);
+            encounterMenuOpen = false;
+            encounterMenu = null;
+            activeDialogue = null;
+            actionMessage = formatCombatSnapshot(activeCombatSnapshot);
+            return;
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
+            if (encounterMenu.canLeave) {
+                engine.leaveEncounter();
+                actionMessage = "你离开了。";
+            } else {
+                actionMessage = "你现在不能离开。";
+            }
+            encounterMenuOpen = false;
+            encounterMenu = null;
+        }
+    }
+
+    private void handleDialogueInput()
+    {
+        if (activeDialogue == null) {
+            return;
+        }
+
+        if (dialoguePages.isEmpty()) {
+            prepareDialoguePages(activeDialogue);
+        }
+
+        // Enter：翻页；到最后一页后若无选项/已结束则退出
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            if (dialoguePageIndex + 1 < dialoguePages.size()) {
+                dialoguePageIndex++;
+                actionMessage = formatDialogue(activeDialogue);
+                return;
+            }
+            List<String> opts = activeDialogue.getOptionTexts();
+            if (opts == null || opts.isEmpty() || !activeDialogue.isActive()) {
+                activeDialogue = null;
+                engine.endDialogue();
+                actionMessage = "对话结束。";
+                return;
+            }
+            actionMessage = formatDialogue(activeDialogue);
+            return;
+        }
+
+        // 未到最后一页：只允许 Enter 翻页
+        if (dialoguePageIndex + 1 < dialoguePages.size()) {
+            return;
+        }
+
+        // 数字键选择选项
+        List<String> opts = activeDialogue.getOptionTexts();
+        if (opts == null || opts.isEmpty()) {
+            return;
+        }
+        for (int i = 0; i < Math.min(9, opts.size()); i++) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1 + i)) {
+                activeDialogue = engine.chooseDialogueOption(i);
+                prepareDialoguePages(activeDialogue);
+                actionMessage = formatDialogue(activeDialogue);
+                return;
+            }
+        }
+    }
+
+    private void handleCombatInput()
+    {
+        if (!engine.isInCombat()) {
+            activeCombatSnapshot = null;
+            return;
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
+            activeCombatSnapshot = engine.combatAction(CombatAction.ATTACK, null);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
+            activeCombatSnapshot = engine.combatAction(CombatAction.DEFEND, null);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
+            activeCombatSnapshot = engine.combatAction(CombatAction.FLEE, null);
+        } else {
+            // NUM_4..NUM_9 => use bag item index 0..5
+            List<Item> inv = engine.getPlayer().getInventory();
+            for (int itemIdx = 0; itemIdx < Math.min(6, inv.size()); itemIdx++) {
+                int key = Input.Keys.NUM_4 + itemIdx;
+                if (Gdx.input.isKeyJustPressed(key)) {
+                    activeCombatSnapshot =
+                        engine.combatAction(CombatAction.USE_ITEM, inv.get(itemIdx).getItemId());
+                    break;
+                }
+            }
+        }
+
+        actionMessage = formatCombatSnapshot(activeCombatSnapshot);
+        if (!engine.isInCombat()) {
+            activeCombatSnapshot = null;
+        }
+    }
+
+    private String formatDialogue(Dialogue d)
+    {
+        if (d == null) {
+            return "对话结束。";
+        }
+        StringBuilder sb = new StringBuilder();
+        if (dialoguePages.isEmpty()) {
+            prepareDialoguePages(d);
+        }
+        sb.append(dialoguePages.get(Math.min(dialoguePageIndex, dialoguePages.size() - 1)));
+
+        if (d.isActive() && d.getOptionTexts() != null && !d.getOptionTexts().isEmpty()) {
+            if (dialoguePageIndex + 1 >= dialoguePages.size()) {
+                sb.append("\n（Enter 继续 / 选 1-9）\n");
+                for (int i = 0; i < d.getOptionTexts().size() && i < 9; i++) {
+                    sb.append(i + 1).append(". ").append(d.getOptionTexts().get(i)).append(" ");
+                }
+            } else {
+                sb.append("\n（Enter 继续）");
+            }
+        } else {
+            if (dialoguePageIndex + 1 >= dialoguePages.size()) {
+                sb.append("\n（Enter 退出）");
+            } else {
+                sb.append("\n（Enter 继续）");
+            }
+        }
+        return sb.toString();
+    }
+
+    private void prepareDialoguePages(Dialogue d)
+    {
+        dialoguePages.clear();
+        dialoguePageIndex = 0;
+        if (d == null || d.getText() == null || d.getText().trim().isEmpty()) {
+            dialoguePages.add("");
+            return;
+        }
+        // 以空行分页：JSON 里写 \\n\\n
+        String[] parts = d.getText().split("\\n\\n");
+        for (String p : parts) {
+            String page = p.trim();
+            if (!page.isEmpty()) {
+                dialoguePages.add(page);
+            }
+        }
+        if (dialoguePages.isEmpty()) {
+            dialoguePages.add(d.getText());
+        }
+    }
+
+    private void drawNpcDialogueBubble()
+    {
+        if (activeDialogue == null) {
+            return;
+        }
+        Rectangle npcBounds = findNpcBounds(activeDialogue.getNpcId());
+        if (npcBounds == null) {
+            return;
+        }
+        String text = formatDialogue(activeDialogue);
+        if (text == null || text.trim().isEmpty()) {
+            return;
+        }
+
+        float padding = 6f;
+        float bubbleW = 300f;
+        float x = npcBounds.x + npcBounds.width / 2f - bubbleW / 2f;
+        float y = npcBounds.y + npcBounds.height + 18f;
+
+        batch.setProjectionMatrix(worldCamera.combined);
+        batch.begin();
+        layout.setText(smallFont, text, Color.WHITE, bubbleW - padding * 2f, Align.left, true);
+        float bubbleH = layout.height + padding * 2f + 10f;
+        batch.end();
+
+        shapes.setProjectionMatrix(worldCamera.combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0f, 0f, 0f, 0.72f);
+        shapes.rect(x, y, bubbleW, bubbleH);
+        shapes.end();
+
+        batch.setProjectionMatrix(worldCamera.combined);
+        batch.begin();
+        smallFont.setColor(Color.WHITE);
+        smallFont.draw(batch, text, x + padding, y + bubbleH - padding);
+        batch.end();
+    }
+
+    private Rectangle findNpcBounds(String npcId)
+    {
+        if (npcId == null) {
+            return null;
+        }
+        for (NpcPlaceholder npc : npcPlaceholders) {
+            if (npcId.equals(npc.npcId)) {
+                return npc.bounds;
+            }
+        }
+        return null;
+    }
+
+    private String formatCombatSnapshot(CombatSnapshot snap)
+    {
+        if (snap == null) {
+            return "战斗尚未开始。";
+        }
+        String last = snap.logLines.isEmpty() ? "" : snap.logLines.get(snap.logLines.size() - 1);
+        StringBuilder sb = new StringBuilder();
+        sb.append("守卫 ").append(snap.npcHp).append("/").append(snap.npcMaxHp)
+            .append(" | 你 ").append(snap.playerHp).append("/").append(snap.playerMaxHp)
+            .append("\n");
+        sb.append(last);
+        if (snap.outcome != null && snap.outcome != cn.edu.whut.sept.zuul.engine.CombatOutcome.ONGOING) {
+            sb.append("\n结果：").append(snap.outcome);
+        } else {
+            sb.append("\n战斗操作：1攻 2防 3逃 4-9用物品");
+        }
+        return sb.toString();
+    }
+
+    private void openInventoryUseMode()
+    {
+        if (engine.getPlayer().getInventory().isEmpty()) {
+            actionMessage = "背包是空的";
+            return;
+        }
+        inventoryOpen = true;
+        inventoryUseMode = true;
+        inventorySelectedIndex = 0;
+        actionMessage = "选择要使用的物品（↑↓ / 数字键 选择，Enter 使用，Esc 关闭）";
+    }
+
+    private void closeInventoryUseMode()
+    {
+        inventoryUseMode = false;
+        inventoryOpen = false;
+        actionMessage = "已关闭物品使用";
+    }
+
+    private void handleInventoryUseInput()
+    {
+        List<Item> items = engine.getPlayer().getInventory();
+        if (items.isEmpty()) {
+            closeInventoryUseMode();
+            actionMessage = "背包是空的";
+            return;
+        }
+        if (inventorySelectedIndex >= items.size()) {
+            inventorySelectedIndex = items.size() - 1;
+        }
+        if (inventorySelectedIndex < 0) {
+            inventorySelectedIndex = 0;
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+            inventorySelectedIndex = (inventorySelectedIndex - 1 + items.size()) % items.size();
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+            inventorySelectedIndex = (inventorySelectedIndex + 1) % items.size();
+        }
+        for (int i = 0; i < Math.min(9, items.size()); i++) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1 + i)) {
+                inventorySelectedIndex = i;
+                tryUseSelectedItem();
+                return;
+            }
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
+            || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            tryUseSelectedItem();
+        }
+    }
+
+    private void handleInventoryBrowseInput()
+    {
+        List<Item> items = engine.getPlayer().getInventory();
+        if (items.isEmpty()) {
+            inventoryInspectIndex = 0;
+            inventoryInspectMode = false;
+            return;
+        }
+        if (inventoryInspectIndex >= items.size()) {
+            inventoryInspectIndex = items.size() - 1;
+        }
+        if (inventoryInspectIndex < 0) {
+            inventoryInspectIndex = 0;
+        }
+
+        if (!inventoryInspectMode) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+                inventoryInspectIndex = (inventoryInspectIndex - 1 + items.size()) % items.size();
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+                inventoryInspectIndex = (inventoryInspectIndex + 1) % items.size();
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.X)) {
+                inventoryInspectMode = true;
+                actionMessage = "查看物品详情（Enter 返回）";
+            }
+        } else {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+                inventoryInspectMode = false;
+                actionMessage = "已返回背包列表";
+            }
+        }
+    }
+
+    private void tryUseSelectedItem()
+    {
+        List<Item> items = engine.getPlayer().getInventory();
+        if (items.isEmpty()) {
+            closeInventoryUseMode();
+            return;
+        }
+        Item selected = items.get(inventorySelectedIndex);
+        ItemUseCheck check = engine.checkItemUse(selected.getItemId());
+        actionMessage = engine.tryUseItem(selected.getItemId());
+        if (check.canUse) {
+            closeInventoryUseMode();
+        }
+        clampInventorySelection();
+    }
+
+    private void clampInventorySelection()
+    {
+        int size = engine.getPlayer().getInventory().size();
+        if (size == 0) {
+            inventorySelectedIndex = 0;
+        } else if (inventorySelectedIndex >= size) {
+            inventorySelectedIndex = size - 1;
         }
     }
 
@@ -334,6 +883,9 @@ public class GameScreen implements Screen
             || newY + PLAYER_H > mapPixelHeight()) {
             return false;
         }
+        if (collidesNpc(newX, newY)) {
+            return false;
+        }
         if (wallLayer == null) {
             return true;
         }
@@ -356,6 +908,67 @@ public class GameScreen implements Screen
             }
         }
         return true;
+    }
+
+    private boolean collidesNpc(float newX, float newY)
+    {
+        if (npcPlaceholders.isEmpty()) {
+            return false;
+        }
+        Rectangle playerRect = new Rectangle(newX, newY, PLAYER_W, PLAYER_H);
+        for (NpcPlaceholder npc : npcPlaceholders) {
+            if (npc.bounds.overlaps(playerRect)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static final class NpcPlaceholder
+    {
+        final String npcId;
+        final Rectangle bounds;
+        final Color color;
+
+        private NpcPlaceholder(String npcId, Rectangle bounds, Color color)
+        {
+            this.npcId = npcId;
+            this.bounds = bounds;
+            this.color = color;
+        }
+
+        static NpcPlaceholder guard(Rectangle bounds)
+        {
+            return new NpcPlaceholder("guard", bounds,
+                new Color(0.85f, 0.2f, 0.2f, 1f));
+        }
+
+        static NpcPlaceholder hermit(Rectangle bounds)
+        {
+            return new NpcPlaceholder("hermit", bounds,
+                new Color(0.2f, 0.8f, 0.35f, 1f));
+        }
+
+        static NpcPlaceholder merchant(Rectangle bounds)
+        {
+            return new NpcPlaceholder("merchant", bounds,
+                new Color(0.95f, 0.65f, 0.15f, 1f));
+        }
+
+        static NpcPlaceholder forNpc(String npcId, Rectangle bounds)
+        {
+            if ("guard".equals(npcId)) {
+                return guard(bounds);
+            }
+            if ("hermit".equals(npcId)) {
+                return hermit(bounds);
+            }
+            if ("merchant".equals(npcId)) {
+                return merchant(bounds);
+            }
+            return new NpcPlaceholder(npcId, bounds,
+                new Color(0.55f, 0.3f, 0.9f, 1f));
+        }
     }
 
     private void checkExitOverlap()
@@ -468,15 +1081,6 @@ public class GameScreen implements Screen
         return "拾取失败（可能超重）";
     }
 
-    private String tryUseFirstItem()
-    {
-        if (engine.getPlayer().getInventory().isEmpty()) {
-            return "背包是空的";
-        }
-        String itemId = engine.getPlayer().getInventory().get(0).getItemId();
-        return engine.useItem(itemId);
-    }
-
     private void saveGame()
     {
         try {
@@ -535,12 +1139,13 @@ public class GameScreen implements Screen
             uiSkin.drawButton(batch, panelX + panelWidth / 2f - 92, panelY + 24, 184, 42);
         }
         if (inventoryOpen) {
-            float panelWidth = Math.min(360f, width - 56f);
-            float panelHeight = Math.min(190f, playHeight() - 24f);
+            float panelWidth = Math.min(400f, width - 56f);
+            float panelHeight = inventoryPanelHeight();
             float panelX = Math.max(24f, width - panelWidth - 28f);
             float panelY = Math.max(playBottom() + 12f, playTop() - panelHeight - 12f);
             uiSkin.drawWindow(batch, panelX, panelY, panelWidth, panelHeight);
-            uiSkin.drawInset(batch, panelX + 20, panelY + 42, panelWidth - 40, panelHeight - 74);
+            float insetHeight = panelHeight - (inventoryUseMode ? 52f : 74f);
+            uiSkin.drawInset(batch, panelX + 20, panelY + 42, panelWidth - 40, insetHeight);
         }
     }
 
@@ -580,7 +1185,7 @@ public class GameScreen implements Screen
         x = drawHintChip("出口", x, y, 60, 42, ICON_ROOM, 28) + gap;
         x = drawHintChip("Q", x, y, 60, 42, ICON_LOOK, 28) + gap;
         x = drawHintChip("E", x, y, 60, 42, ICON_TAKE, 28) + gap;
-        x = drawHintChip("U", x, y, 60, 42, ICON_TAKE, 28) + gap;
+        x = drawHintChip("U", x, y, 60, 42, ICON_INVENTORY, 28) + gap;
         x = drawHintChip("I", x, y, 60, 42, ICON_INVENTORY, 28) + gap;
         x = drawHintChip("F5", x, y, 66, 42, ICON_SAVE, 34) + gap;
         x = drawHintChip("F9", x, y, 66, 42, ICON_LOAD, 34) + gap;
@@ -628,7 +1233,7 @@ public class GameScreen implements Screen
         drawShortcutRow("Q", "调查当前房间", ICON_LOOK, leftX, rowY - rowGap * 4f);
 
         drawShortcutRow("E", "拾取地面物品", ICON_TAKE, rightX, rowY);
-        drawShortcutRow("U", "使用背包第一件物品", ICON_TAKE, rightX, rowY - rowGap);
+        drawShortcutRow("U", "打开背包并选择物品使用", ICON_INVENTORY, rightX, rowY - rowGap);
         drawShortcutRow("I", "打开 / 关闭背包", ICON_INVENTORY, rightX, rowY - rowGap * 2f);
         drawShortcutRow("F5", "保存当前进度", ICON_SAVE, rightX, rowY - rowGap * 3f);
         drawShortcutRow("F9", "读取存档", ICON_LOAD, rightX, rowY - rowGap * 4f);
@@ -637,21 +1242,140 @@ public class GameScreen implements Screen
         drawCenteredInBoxWithSmallFont("ESC 继续", centerX - 92, panelY + 24, 184, 42);
     }
 
+    private float inventoryPanelHeight()
+    {
+        if (inventoryUseMode) {
+            int rows = Math.max(1, engine.getPlayer().getInventory().size());
+            return Math.min(88f + rows * 30f, playHeight() - 24f);
+        }
+        if (inventoryInspectMode) {
+            return Math.min(260f, playHeight() - 24f);
+        }
+        return Math.min(190f, playHeight() - 24f);
+    }
+
     private void drawInventoryPanel()
     {
         float width = Gdx.graphics.getWidth();
-        float panelWidth = Math.min(360f, width - 56f);
-        float panelHeight = Math.min(190f, playHeight() - 24f);
+        float panelWidth = Math.min(400f, width - 56f);
+        float panelHeight = inventoryPanelHeight();
         float panelX = Math.max(24f, width - panelWidth - 28f);
         float panelY = Math.max(playBottom() + 12f, playTop() - panelHeight - 12f);
 
         font.setColor(UI_LIGHT_TEXT);
-        font.draw(batch, "背包", panelX + 24, panelY + panelHeight - 26);
+        if (inventoryUseMode) {
+            font.draw(batch, "使用物品", panelX + 24, panelY + panelHeight - 26);
+            drawInventoryUseList(panelX, panelY, panelWidth, panelHeight);
+            return;
+        }
+
+        List<Item> items = engine.getPlayer().getInventory();
+        if (inventoryInspectIndex >= items.size()) {
+            inventoryInspectIndex = Math.max(0, items.size() - 1);
+        }
+
+        font.draw(batch, inventoryInspectMode ? "物品详情" : "背包", panelX + 24,
+            panelY + panelHeight - 26);
         font.setColor(UI_DARK_TEXT);
-        drawMultiline("地面物品: " + engine.getRoomItemsWithWeight(),
-            panelX + 32, panelY + panelHeight - 70, 22);
-        drawMultiline("随身物品: " + engine.getPlayerItemsWithWeight(),
-            panelX + 32, panelY + panelHeight - 102, 22);
+
+        float innerX = panelX + 28f;
+        float topY = panelY + panelHeight - 52f;
+
+        if (!inventoryInspectMode) {
+            smallFont.setColor(UI_DARK_TEXT);
+            smallFont.draw(batch, "↑↓选择  X查看详情  Esc关闭", innerX, topY);
+
+            float rowY = topY - 28f;
+            float rowH = 26f;
+            float rowW = panelWidth - 56f;
+            for (int i = 0; i < items.size() && i < 12; i++) {
+                float y = rowY - i * rowH;
+                if (i == inventoryInspectIndex) {
+                    uiSkin.drawButton(batch, innerX, y, rowW, rowH);
+                }
+                Item it = items.get(i);
+                String line = (i + 1) + ". " + it.getName() + " (" + it.getWeight() + ")";
+                smallFont.setColor(i == inventoryInspectIndex ? Color.WHITE : UI_DARK_TEXT);
+                smallFont.draw(batch, line, innerX + 8f, y + rowH - 7f);
+            }
+
+            if (!items.isEmpty()) {
+                Item picked = items.get(inventoryInspectIndex);
+                ItemUseCheck check = engine.checkItemUse(picked.getItemId());
+                smallFont.setColor(UI_DARK_TEXT);
+                drawClampedLine(smallFont, "效果提示: " + check.hint, innerX,
+                    panelY + 22f, rowW);
+            } else {
+                smallFont.setColor(UI_DARK_TEXT);
+                smallFont.draw(batch, "背包为空", innerX, panelY + 36f);
+            }
+
+            return;
+        }
+
+        if (items.isEmpty()) {
+            smallFont.setColor(UI_DARK_TEXT);
+            smallFont.draw(batch, "背包为空", innerX, panelY + panelHeight - 70f);
+            return;
+        }
+
+        Item item = items.get(inventoryInspectIndex);
+        ItemUseCheck check = engine.checkItemUse(item.getItemId());
+
+        font.setColor(UI_LIGHT_TEXT);
+        smallFont.setColor(UI_DARK_TEXT);
+        smallFont.draw(batch, "物品ID: " + item.getItemId(), innerX, topY);
+        smallFont.draw(batch, "重量: " + item.getWeight(), innerX, topY - 18f);
+        String effect = item.getEffect() == null ? "无" : item.getEffect();
+        smallFont.draw(batch, "效果: " + effect, innerX, topY - 36f);
+
+        // 描述
+        font.setColor(UI_DARK_TEXT);
+        drawMultiline("描述: " + item.getDescription(), innerX, topY - 58f, 20f);
+
+        // 可用性提示
+        smallFont.setColor(UI_DARK_TEXT);
+        drawClampedLine(smallFont, "使用条件: " + check.hint, innerX, panelY + 44f,
+            panelWidth - 56f);
+        smallFont.setColor(UI_DARK_TEXT);
+        smallFont.draw(batch, "Enter返回  Esc关闭", innerX, panelY + 20f);
+    }
+
+    private void drawInventoryUseList(float panelX, float panelY, float panelWidth,
+        float panelHeight)
+    {
+        List<Item> items = engine.getPlayer().getInventory();
+        float rowY = panelY + panelHeight - 58f;
+        float rowHeight = 28f;
+        smallFont.setColor(UI_DARK_TEXT);
+        for (int i = 0; i < items.size(); i++) {
+            Item item = items.get(i);
+            ItemUseCheck check = engine.checkItemUse(item.getItemId());
+            boolean selected = i == inventorySelectedIndex;
+            float rowX = panelX + 28f;
+            float rowW = panelWidth - 56f;
+            if (selected) {
+                uiSkin.drawButton(batch, rowX, rowY - 20f, rowW, rowHeight);
+            }
+            String prefix = (i < 9) ? ((i + 1) + ". ") : "   ";
+            String status;
+            if (check.canUse) {
+                status = " [可用]";
+            } else if (check.requiresLocation) {
+                status = " [需在门锁前]";
+            } else {
+                status = " [不可用]";
+            }
+            String line = prefix + item.getName() + " (" + item.getWeight() + ")" + status;
+            smallFont.setColor(selected ? Color.WHITE : UI_DARK_TEXT);
+            smallFont.draw(batch, line, rowX + 8f, rowY);
+            rowY -= rowHeight;
+        }
+        if (!items.isEmpty()) {
+            ItemUseCheck hint = engine.checkItemUse(items.get(inventorySelectedIndex).getItemId());
+            smallFont.setColor(UI_DARK_TEXT);
+            drawClampedLine(smallFont, hint.hint, panelX + 28f, panelY + 18f, panelWidth - 56f);
+        }
     }
 
     private float drawHintChip(String key, float x, float y, float width, float height, int icon,
