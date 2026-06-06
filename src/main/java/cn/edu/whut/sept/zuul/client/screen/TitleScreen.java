@@ -24,6 +24,8 @@ public class TitleScreen implements Screen
     private static final String LOG_TAG = "TitleScreen";
     private static final String DEFAULT_NAME = "编年史者";
     private static final int MAX_NAME_LENGTH = 12;
+    private static final float UI_GRID = 8f;
+    private static final float UI_PAD = 24f;
     private static final Color LIGHT_TEXT = new Color(1f, 0.96f, 0.84f, 1f);
     private static final Color DARK_TEXT = new Color(0.28f, 0.19f, 0.1f, 1f);
 
@@ -99,29 +101,31 @@ public class TitleScreen implements Screen
 
         float width = Gdx.graphics.getWidth();
         float height = Gdx.graphics.getHeight();
-        float panelWidth = Math.min(520f, width - 96f);
-        float panelHeight = Math.min(360f, height - 88f);
-        float panelX = (width - panelWidth) / 2f;
-        float panelY = (height - panelHeight) / 2f - 4f;
-        float centerX = width / 2f;
+        float panelWidth = grid(Math.min(544f, width - 96f));
+        float panelHeight = grid(Math.min(368f, height - 88f));
+        float panelX = grid((width - panelWidth) / 2f);
+        float panelY = grid((height - panelHeight) / 2f);
+        float centerX = panelX + panelWidth / 2f;
 
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
         uiSkin.drawWindow(batch, panelX, panelY, panelWidth, panelHeight);
-        uiSkin.drawInset(batch, panelX + 46, panelY + 164, panelWidth - 92, 62);
-        uiSkin.drawLightButton(batch, panelX + 78, panelY + 82, panelWidth - 156, 46);
+        uiSkin.drawInset(batch, panelX + UI_PAD * 2f, panelY + 152f,
+            panelWidth - UI_PAD * 4f, 64f);
+        uiSkin.drawLightButton(batch, panelX + 96f, panelY + 84f, panelWidth - 192f, 48f);
 
         font.setColor(LIGHT_TEXT);
-        drawCentered("Chronicle of the Lost Realms", centerX, panelY + panelHeight - 46);
-        drawCentered("失落 Realm 编年史", centerX, panelY + panelHeight - 78);
+        drawCentered("Chronicle of the Lost Realms", centerX, panelY + panelHeight - 64f);
+        drawCentered("失落 Realm 编年史", centerX, panelY + panelHeight - 96f);
 
         font.setColor(DARK_TEXT);
-        drawCentered("姓名: " + playerName, centerX, panelY + 202);
-        drawCenteredInBox("Enter 开始新游戏", panelX + 78, panelY + 82, panelWidth - 156, 46);
+        drawCentered("姓名: " + playerName, centerX, panelY + 192f);
+        drawCenteredInBox("Enter 开始新游戏", panelX + 96f, panelY + 84f,
+            panelWidth - 192f, 48f);
 
         font.setColor(LIGHT_TEXT);
-        drawCentered("直接输入文字修改姓名", centerX, panelY + 150);
-        drawCentered(statusMessage, centerX, panelY + 54);
+        drawCentered("直接输入文字修改姓名", centerX, panelY + 144f);
+        drawCentered(statusMessage, centerX, panelY + 56f);
         batch.end();
     }
 
@@ -173,14 +177,19 @@ public class TitleScreen implements Screen
     private void drawCentered(String text, float centerX, float y)
     {
         layout.setText(font, text);
-        font.draw(batch, text, centerX - layout.width / 2f, y);
+        font.draw(batch, text, Math.round(centerX - layout.width / 2f), Math.round(y));
     }
 
     private void drawCenteredInBox(String text, float x, float y, float width, float height)
     {
         layout.setText(font, text);
-        font.draw(batch, text, x + (width - layout.width) / 2f,
-            y + (height + layout.height) / 2f + 1f);
+        font.draw(batch, text, Math.round(x + (width - layout.width) / 2f),
+            Math.round(y + (height + layout.height) / 2f + 1f));
+    }
+
+    private float grid(float value)
+    {
+        return Math.round(value / UI_GRID) * UI_GRID;
     }
 
     @Override

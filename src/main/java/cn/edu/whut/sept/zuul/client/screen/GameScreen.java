@@ -52,11 +52,19 @@ public class GameScreen implements Screen
     private static final float SPEED = 128f;
     private static final int WORLD_MARGIN_LEFT = 12;
     private static final int WORLD_MARGIN_RIGHT = 12;
-    private static final int WORLD_MARGIN_BOTTOM = 112;
-    private static final int WORLD_MARGIN_TOP = 82;
-    private static final float TOP_BAR_HEIGHT = 66f;
+    private static final int WORLD_MARGIN_BOTTOM = 96;
+    private static final int WORLD_MARGIN_TOP = 64;
+    private static final float TOP_BAR_HEIGHT = 56f;
     private static final float FOOTER_HEIGHT = 96f;
     private static final float SIDE_PANEL_MIN_WIDTH = 132f;
+    private static final boolean SIDE_PANELS_ENABLED = false;
+    private static final float UI_GRID = 8f;
+    private static final float UI_EDGE = 8f;
+    private static final float UI_PAD = 16f;
+    private static final float UI_INSET = 12f;
+    private static final float UI_HEADER_HEIGHT = 32f;
+    private static final float UI_CHIP_HEIGHT = 40f;
+    private static final float UI_CHIP_GAP = 8f;
     private static final int ICON_MOVE = 0;
     private static final int ICON_ROOM = 1;
     private static final int ICON_LOOK = 2;
@@ -67,6 +75,7 @@ public class GameScreen implements Screen
     private static final int ICON_LOAD = 7;
     private static final int ICON_MENU = 8;
     private static final int ICON_TITLE = 9;
+    private static final int ICON_USE = 10;
     private static final String LOG_TAG = "GameScreen";
     private static final Color UI_LIGHT_TEXT = new Color(1f, 0.96f, 0.82f, 1f);
     private static final Color UI_DARK_TEXT = new Color(0.26f, 0.18f, 0.1f, 1f);
@@ -99,10 +108,9 @@ public class GameScreen implements Screen
     private int worldViewportWidth;
     private int worldViewportHeight;
     private boolean inventoryOpen;
-    private boolean inventoryUseMode;
-    private int inventorySelectedIndex;
     private boolean inventoryInspectMode;
     private int inventoryInspectIndex;
+    private int inventoryScrollOffset;
     private boolean encounterMenuOpen;
     private EncounterMenu encounterMenu;
     private Dialogue activeDialogue;
@@ -166,7 +174,7 @@ public class GameScreen implements Screen
             checkExitOverlap();
         }
 
-        Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
+        Gdx.gl.glClearColor(0.06f, 0.06f, 0.1f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         if (map == null || mapRenderer == null) {
@@ -181,6 +189,7 @@ public class GameScreen implements Screen
         drawNpcPlaceholders();
         drawNpcDialogueBubble();
         drawPlayer();
+        drawInteractionPrompt();
 
         applyFullViewport();
         batch.setProjectionMatrix(uiCamera.combined);
@@ -325,10 +334,6 @@ public class GameScreen implements Screen
     private void handleInput(float delta)
     {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            if (inventoryUseMode) {
-                closeInventoryUseMode();
-                return;
-            }
             if (encounterMenuOpen) {
                 engine.leaveEncounter();
                 encounterMenuOpen = false;
@@ -348,10 +353,6 @@ public class GameScreen implements Screen
         }
         if (paused) {
             handlePauseInput();
-            return;
-        }
-        if (inventoryUseMode) {
-            handleInventoryUseInput();
             return;
         }
 
@@ -380,19 +381,18 @@ public class GameScreen implements Screen
             return;
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
-            if (inventoryUseMode) {
-                closeInventoryUseMode();
-            }
             inventoryOpen = !inventoryOpen;
             if (!inventoryOpen) {
-                inventoryUseMode = false;
                 inventoryInspectMode = false;
             }
-            actionMessage = inventoryOpen ? "背包已打开（仅查看）" : "背包已关闭";
+            actionMessage = inventoryOpen
+                ? "背包已打开：↑↓选择，U使用，X查看详情"
+                : "背包已关闭";
         }
 
-        if (inventoryOpen && !inventoryUseMode) {
+        if (inventoryOpen) {
             handleInventoryBrowseInput();
+            return;
         }
 
         movePlayer(delta);
@@ -417,7 +417,7 @@ public class GameScreen implements Screen
             }
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.U)) {
-            openInventoryUseMode();
+            actionMessage = "按 I 打开背包，选择物品后按 U 使用";
         }
     }
 
@@ -717,64 +717,12 @@ public class GameScreen implements Screen
         return sb.toString();
     }
 
-    private void openInventoryUseMode()
-    {
-        if (engine.getPlayer().getInventory().isEmpty()) {
-            actionMessage = "背包是空的";
-            return;
-        }
-        inventoryOpen = true;
-        inventoryUseMode = true;
-        inventorySelectedIndex = 0;
-        actionMessage = "选择要使用的物品（↑↓ / 数字键 选择，Enter 使用，Esc 关闭）";
-    }
-
-    private void closeInventoryUseMode()
-    {
-        inventoryUseMode = false;
-        inventoryOpen = false;
-        actionMessage = "已关闭物品使用";
-    }
-
-    private void handleInventoryUseInput()
-    {
-        List<Item> items = engine.getPlayer().getInventory();
-        if (items.isEmpty()) {
-            closeInventoryUseMode();
-            actionMessage = "背包是空的";
-            return;
-        }
-        if (inventorySelectedIndex >= items.size()) {
-            inventorySelectedIndex = items.size() - 1;
-        }
-        if (inventorySelectedIndex < 0) {
-            inventorySelectedIndex = 0;
-        }
-
-        if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
-            inventorySelectedIndex = (inventorySelectedIndex - 1 + items.size()) % items.size();
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
-            inventorySelectedIndex = (inventorySelectedIndex + 1) % items.size();
-        }
-        for (int i = 0; i < Math.min(9, items.size()); i++) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1 + i)) {
-                inventorySelectedIndex = i;
-                tryUseSelectedItem();
-                return;
-            }
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
-            || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-            tryUseSelectedItem();
-        }
-    }
-
     private void handleInventoryBrowseInput()
     {
         List<Item> items = engine.getPlayer().getInventory();
         if (items.isEmpty()) {
             inventoryInspectIndex = 0;
+            inventoryScrollOffset = 0;
             inventoryInspectMode = false;
             return;
         }
@@ -784,17 +732,31 @@ public class GameScreen implements Screen
         if (inventoryInspectIndex < 0) {
             inventoryInspectIndex = 0;
         }
+        keepInventorySelectionVisible();
 
         if (!inventoryInspectMode) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
                 inventoryInspectIndex = (inventoryInspectIndex - 1 + items.size()) % items.size();
+                keepInventorySelectionVisible();
             }
             if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
                 inventoryInspectIndex = (inventoryInspectIndex + 1) % items.size();
+                keepInventorySelectionVisible();
+            }
+            for (int i = 0; i < Math.min(9, items.size()); i++) {
+                if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1 + i)) {
+                    inventoryInspectIndex = i;
+                    keepInventorySelectionVisible();
+                }
             }
             if (Gdx.input.isKeyJustPressed(Input.Keys.X)) {
                 inventoryInspectMode = true;
                 actionMessage = "查看物品详情（Enter 返回）";
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.U)
+                || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
+                || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                tryUseSelectedItem();
             }
         } else {
             if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
@@ -808,14 +770,16 @@ public class GameScreen implements Screen
     {
         List<Item> items = engine.getPlayer().getInventory();
         if (items.isEmpty()) {
-            closeInventoryUseMode();
+            inventoryOpen = false;
+            inventoryInspectMode = false;
+            actionMessage = "背包是空的";
             return;
         }
-        Item selected = items.get(inventorySelectedIndex);
+        Item selected = items.get(inventoryInspectIndex);
         ItemUseCheck check = engine.checkItemUse(selected.getItemId());
         actionMessage = engine.tryUseItem(selected.getItemId());
         if (check.canUse) {
-            closeInventoryUseMode();
+            inventoryInspectMode = false;
         }
         clampInventorySelection();
     }
@@ -824,10 +788,31 @@ public class GameScreen implements Screen
     {
         int size = engine.getPlayer().getInventory().size();
         if (size == 0) {
-            inventorySelectedIndex = 0;
-        } else if (inventorySelectedIndex >= size) {
-            inventorySelectedIndex = size - 1;
+            inventoryInspectIndex = 0;
+            inventoryScrollOffset = 0;
+            inventoryOpen = false;
+            inventoryInspectMode = false;
+        } else if (inventoryInspectIndex >= size) {
+            inventoryInspectIndex = size - 1;
+            keepInventorySelectionVisible();
         }
+    }
+
+    private void keepInventorySelectionVisible()
+    {
+        int size = engine.getPlayer().getInventory().size();
+        if (size <= 0) {
+            inventoryScrollOffset = 0;
+            return;
+        }
+        int visibleRows = inventoryVisibleRows(inventoryPanelHeight());
+        int maxOffset = Math.max(0, size - visibleRows);
+        if (inventoryInspectIndex < inventoryScrollOffset) {
+            inventoryScrollOffset = inventoryInspectIndex;
+        } else if (inventoryInspectIndex >= inventoryScrollOffset + visibleRows) {
+            inventoryScrollOffset = inventoryInspectIndex - visibleRows + 1;
+        }
+        inventoryScrollOffset = Math.max(0, Math.min(inventoryScrollOffset, maxOffset));
     }
 
     private void handlePauseInput()
@@ -1069,6 +1054,87 @@ public class GameScreen implements Screen
         shapes.end();
     }
 
+    private void drawInteractionPrompt()
+    {
+        if (paused || inventoryOpen || encounterMenuOpen || activeDialogue != null
+            || engine.isInDialogue() || engine.isInCombat()) {
+            return;
+        }
+
+        InteractionPrompt prompt = currentInteractionPrompt();
+        if (prompt == null) {
+            return;
+        }
+
+        float promptWidth = Math.max(88f, prompt.text.length() * 14f + 42f);
+        float promptHeight = 28f;
+        float x = Math.max(8f, Math.min(playerX + PLAYER_W / 2f - promptWidth / 2f,
+            mapPixelWidth() - promptWidth - 8f));
+        float y = Math.min(playerY + PLAYER_H + 14f, mapPixelHeight() - promptHeight - 8f);
+
+        batch.setProjectionMatrix(worldCamera.combined);
+        batch.begin();
+        uiSkin.drawLightButton(batch, x, y, promptWidth, promptHeight);
+        drawIcon(prompt.icon, x + 8f, y + 6f, 16f);
+        smallFont.setColor(UI_DARK_TEXT);
+        drawClampedLine(smallFont, prompt.text, x + 30f, y + 20f, promptWidth - 38f);
+        batch.end();
+    }
+
+    private InteractionPrompt currentInteractionPrompt()
+    {
+        if (findNearbyNpcId() != null) {
+            return new InteractionPrompt("E 交谈", ICON_LOOK);
+        }
+        if (!engine.getCurrentRoom().getItems().isEmpty()) {
+            return new InteractionPrompt("E 拾取", ICON_TAKE);
+        }
+        String exitName = nearbyExitTarget();
+        if (exitName != null) {
+            return new InteractionPrompt("进入 " + exitName, ICON_ROOM);
+        }
+        return null;
+    }
+
+    private String nearbyExitTarget()
+    {
+        if (objectsLayer == null) {
+            return null;
+        }
+        Rectangle playerRect = new Rectangle(playerX - 16f, playerY - 16f,
+            PLAYER_W + 32f, PLAYER_H + 32f);
+        for (MapObject object : objectsLayer) {
+            if (!"exit".equals(object.getProperties().get("type", String.class))) {
+                continue;
+            }
+            MapProperties props = object.getProperties();
+            float objectX = props.get("x", Float.class) == null ? 0f : props.get("x", Float.class);
+            float objectY = props.get("y", Float.class) == null ? 0f : props.get("y", Float.class);
+            float objectWidth = props.get("width", Float.class) == null
+                ? TILE : props.get("width", Float.class);
+            float objectHeight = props.get("height", Float.class) == null
+                ? TILE : props.get("height", Float.class);
+            Rectangle exitRect = new Rectangle(objectX, objectY, objectWidth, objectHeight);
+            if (playerRect.overlaps(exitRect)) {
+                String targetRoomId = props.get("targetRoomId", String.class);
+                return targetRoomId == null || targetRoomId.trim().isEmpty() ? "出口" : targetRoomId;
+            }
+        }
+        return null;
+    }
+
+    private static final class InteractionPrompt
+    {
+        final String text;
+        final int icon;
+
+        InteractionPrompt(String text, int icon)
+        {
+            this.text = text;
+            this.icon = icon;
+        }
+    }
+
     private void drawMapLoadError()
     {
         applyFullViewport();
@@ -1137,29 +1203,33 @@ public class GameScreen implements Screen
     {
         float width = Gdx.graphics.getWidth();
         float height = Gdx.graphics.getHeight();
-        uiSkin.drawWindow(batch, 10, height - TOP_BAR_HEIGHT - 8, width - 20, TOP_BAR_HEIGHT);
-        uiSkin.drawWindow(batch, 10, 8, width - 20, FOOTER_HEIGHT);
-        uiSkin.drawInset(batch, 28, 64, width - 56, 28);
+        uiSkin.drawWindow(batch, UI_EDGE, height - TOP_BAR_HEIGHT - UI_EDGE,
+            width - UI_EDGE * 2f, TOP_BAR_HEIGHT);
+        uiSkin.drawWindow(batch, UI_EDGE, UI_EDGE, width - UI_EDGE * 2f, FOOTER_HEIGHT);
+        uiSkin.drawInset(batch, UI_EDGE + 20f, UI_EDGE + 56f,
+            width - (UI_EDGE + 20f) * 2f, 28f);
         drawSidePanels();
 
         if (paused) {
-            float panelWidth = Math.min(660f, width - 72f);
-            float panelHeight = Math.min(380f, height - 86f);
-            float panelX = (width - panelWidth) / 2f;
-            float panelY = (height - panelHeight) / 2f;
+            float panelWidth = grid(Math.min(672f, width - 72f));
+            float panelHeight = grid(Math.min(384f, height - 88f));
+            float panelX = grid((width - panelWidth) / 2f);
+            float panelY = grid((height - panelHeight) / 2f);
             uiSkin.drawWindow(batch, panelX, panelY, panelWidth, panelHeight);
-            uiSkin.drawInset(batch, panelX + 30, panelY + 72, panelWidth - 60, panelHeight - 138);
-            uiSkin.drawButton(batch, panelX + panelWidth / 2f - 92, panelY + 24, 184, 42);
+            uiSkin.drawInset(batch, panelX + 32f, panelY + 72f,
+                panelWidth - 64f, panelHeight - 144f);
+            uiSkin.drawButton(batch, panelX + panelWidth / 2f - 96f,
+                panelY + 24f, 192f, 40f);
         }
         if (inventoryOpen) {
-            float panelWidth = Math.min(400f, width - 56f);
-            float panelHeight = inventoryPanelHeight();
-            float panelX = Math.max(24f, width - panelWidth - 28f);
-            float panelY = Math.max(WORLD_MARGIN_BOTTOM + 12f,
-                height - WORLD_MARGIN_TOP - panelHeight - 12f);
+            float panelWidth = grid(Math.min(520f, width - 96f));
+            float panelHeight = grid(inventoryPanelHeight());
+            float panelX = grid((width - panelWidth) / 2f);
+            float panelY = grid(Math.max(WORLD_MARGIN_BOTTOM + 16f,
+                height - WORLD_MARGIN_TOP - panelHeight - 16f));
             uiSkin.drawWindow(batch, panelX, panelY, panelWidth, panelHeight);
-            float insetHeight = panelHeight - (inventoryUseMode ? 52f : 74f);
-            uiSkin.drawInset(batch, panelX + 20, panelY + 42, panelWidth - 40, insetHeight);
+            uiSkin.drawInset(batch, panelX + 24f, panelY + 48f,
+                panelWidth - 48f, panelHeight - 84f);
         }
     }
 
@@ -1167,13 +1237,13 @@ public class GameScreen implements Screen
     {
         float width = Gdx.graphics.getWidth();
         float height = Gdx.graphics.getHeight();
-        float contentX = 28f;
-        float contentRight = width - 28f;
-        float topY = height - 25f;
+        float contentX = UI_EDGE + 20f;
+        float contentRight = width - UI_EDGE - 20f;
+        float topY = height - 24f;
         float barY = height - 58f;
-        float barWidth = Math.max(120f, Math.min(220f, (width - 260f) / 2f));
+        float barWidth = grid(Math.max(72f, Math.min(176f, (width - 256f) / 2f)));
         float hpX = contentX;
-        float weightX = hpX + barWidth + 146f;
+        float weightX = grid(Math.max(width / 2f + 16f, hpX + barWidth + 120f));
 
         smallFont.setColor(UI_LIGHT_TEXT);
         drawClampedLine(smallFont, "玩家 " + engine.getPlayer().getName(), contentX, topY, 180f);
@@ -1201,21 +1271,19 @@ public class GameScreen implements Screen
     private void drawFooter()
     {
         smallFont.setColor(UI_DARK_TEXT);
-        drawClampedLine(smallFont, actionMessage, 44, 84, Gdx.graphics.getWidth() - 88);
+        drawClampedLine(smallFont, "日志", UI_EDGE + 36f, 84f, 40f);
+        drawMultilineClamped(smallFont, actionMessage, UI_EDGE + 80f, 84f,
+            Gdx.graphics.getWidth() - 128f, 16f, 2);
 
-        float gap = 9f;
-        float totalWidth = 78 + 60 + 60 + 60 + 60 + 60 + 66 + 66 + 72 + gap * 8f;
-        float x = Math.max(20f, (Gdx.graphics.getWidth() - totalWidth) / 2f);
-        float y = 15f;
-        x = drawHintChip("WASD", x, y, 78, 42, ICON_MOVE, 42) + gap;
-        x = drawHintChip("Q", x, y, 60, 42, ICON_LOOK, 28) + gap;
-        x = drawHintChip("E", x, y, 60, 42, ICON_TAKE, 28) + gap;
-        x = drawHintChip("U", x, y, 60, 42, ICON_INVENTORY, 28) + gap;
-        x = drawHintChip("I", x, y, 60, 42, ICON_INVENTORY, 28) + gap;
-        x = drawHintChip("B", x, y, 60, 42, ICON_BACK, 28) + gap;
-        x = drawHintChip("F5", x, y, 66, 42, ICON_SAVE, 34) + gap;
-        x = drawHintChip("F9", x, y, 66, 42, ICON_LOAD, 34) + gap;
-        drawHintChip("ESC", x, y, 72, 42, ICON_MENU, 38);
+        float gap = UI_CHIP_GAP;
+        float totalWidth = 80f + 56f * 3f + 72f + gap * 4f;
+        float x = grid(Math.max(20f, (Gdx.graphics.getWidth() - totalWidth) / 2f));
+        float y = 16f;
+        x = drawHintChip("WASD", x, y, 80f, UI_CHIP_HEIGHT, ICON_MOVE, 40f) + gap;
+        x = drawHintChip("E", x, y, 56f, UI_CHIP_HEIGHT, ICON_TAKE, 28f) + gap;
+        x = drawHintChip("Q", x, y, 56f, UI_CHIP_HEIGHT, ICON_LOOK, 28f) + gap;
+        x = drawHintChip("I", x, y, 56f, UI_CHIP_HEIGHT, ICON_INVENTORY, 28f) + gap;
+        drawHintChip("ESC", x, y, 72f, UI_CHIP_HEIGHT, ICON_MENU, 40f);
     }
 
     private void drawStatusBar(String label, int value, int maxValue, float x, float y, float width,
@@ -1240,15 +1308,17 @@ public class GameScreen implements Screen
         }
         float panelY = WORLD_MARGIN_BOTTOM;
         float panelHeight = Gdx.graphics.getHeight() - WORLD_MARGIN_TOP - WORLD_MARGIN_BOTTOM;
-        float leftX = 10f;
-        float leftWidth = worldViewportX - 18f;
-        float rightX = worldViewportX + worldViewportWidth + 8f;
-        float rightWidth = Gdx.graphics.getWidth() - rightX - 10f;
+        float leftX = UI_EDGE;
+        float leftWidth = grid(worldViewportX - UI_EDGE * 2f);
+        float rightX = grid(worldViewportX + worldViewportWidth + UI_EDGE);
+        float rightWidth = grid(Gdx.graphics.getWidth() - rightX - UI_EDGE);
 
         uiSkin.drawWindow(batch, leftX, panelY, leftWidth, panelHeight);
-        uiSkin.drawInset(batch, leftX + 12f, panelY + 18f, leftWidth - 24f, panelHeight - 48f);
+        uiSkin.drawInset(batch, leftX + UI_INSET, panelY + 24f,
+            leftWidth - UI_INSET * 2f, panelHeight - 56f);
         uiSkin.drawWindow(batch, rightX, panelY, rightWidth, panelHeight);
-        uiSkin.drawInset(batch, rightX + 12f, panelY + 18f, rightWidth - 24f, panelHeight - 48f);
+        uiSkin.drawInset(batch, rightX + UI_INSET, panelY + 24f,
+            rightWidth - UI_INSET * 2f, panelHeight - 56f);
     }
 
     private void drawSidePanelContent()
@@ -1258,38 +1328,43 @@ public class GameScreen implements Screen
         }
         float panelY = WORLD_MARGIN_BOTTOM;
         float panelHeight = Gdx.graphics.getHeight() - WORLD_MARGIN_TOP - WORLD_MARGIN_BOTTOM;
-        float leftX = 10f;
-        float leftWidth = worldViewportX - 18f;
-        float rightX = worldViewportX + worldViewportWidth + 8f;
-        float rightWidth = Gdx.graphics.getWidth() - rightX - 10f;
-        float textInset = 22f;
+        float leftX = UI_EDGE;
+        float leftWidth = grid(worldViewportX - UI_EDGE * 2f);
+        float rightX = grid(worldViewportX + worldViewportWidth + UI_EDGE);
+        float rightWidth = grid(Gdx.graphics.getWidth() - rightX - UI_EDGE);
+        float textInset = UI_PAD + 4f;
 
-        smallFont.setColor(UI_LIGHT_TEXT);
-        smallFont.draw(batch, "状态", leftX + textInset, panelY + panelHeight - 18f);
-        smallFont.draw(batch, "行动", rightX + textInset, panelY + panelHeight - 18f);
-
-        smallFont.setColor(UI_DARK_TEXT);
         float leftTextX = leftX + textInset;
         float leftTextWidth = leftWidth - textInset * 2f;
+        drawPanelHeader("角色档案", ICON_TITLE, leftX + UI_PAD,
+            panelY + panelHeight - 48f, leftWidth - UI_PAD * 2f);
+
+        smallFont.setColor(UI_DARK_TEXT);
+        drawIcon(ICON_ROOM, leftTextX, panelY + panelHeight - 80f, 18f);
         drawClampedLine(smallFont, "房间 " + engine.getCurrentRoom().getRoomId(),
-            leftTextX, panelY + panelHeight - 52f, leftTextWidth);
+            leftTextX + 26f, panelY + panelHeight - 64f, leftTextWidth - 26f);
         drawCompactStatusBar("生命", engine.getPlayer().getHp(), engine.getPlayer().getMaxHp(),
-            leftTextX, panelY + panelHeight - 100f, leftTextWidth, true);
+            leftTextX, panelY + panelHeight - 120f, leftTextWidth, true);
         drawCompactStatusBar("负重", engine.getPlayer().totalWeight(), engine.getPlayer().getMaxWeight(),
-            leftTextX, panelY + panelHeight - 148f, leftTextWidth, false);
+            leftTextX, panelY + panelHeight - 176f, leftTextWidth, false);
         drawClampedLine(smallFont, "声望 " + engine.getPlayer().getReputation(),
-            leftTextX, panelY + panelHeight - 190f, leftTextWidth);
+            leftTextX, panelY + panelHeight - 224f, leftTextWidth);
 
         float rightTextX = rightX + textInset;
         float rightTextWidth = rightWidth - textInset * 2f;
-        drawMultilineClamped(smallFont, actionMessage, rightTextX, panelY + panelHeight - 52f,
-            rightTextWidth, 17f, 4);
-        float hintY = panelY + 116f;
-        drawClampedLine(smallFont, "WASD 移动", rightTextX, hintY + 68f, rightTextWidth);
-        drawClampedLine(smallFont, "出口 切换房间", rightTextX, hintY + 46f, rightTextWidth);
-        drawClampedLine(smallFont, "Q 调查  E 拾取", rightTextX, hintY + 24f, rightTextWidth);
-        drawClampedLine(smallFont, "U 使用  I 背包", rightTextX, hintY + 2f, rightTextWidth);
-        drawClampedLine(smallFont, "F5 存档  F9 读档", rightTextX, hintY - 20f, rightTextWidth);
+        drawPanelHeader("当前事件", ICON_LOOK, rightX + UI_PAD,
+            panelY + panelHeight - 48f, rightWidth - UI_PAD * 2f);
+        smallFont.setColor(UI_DARK_TEXT);
+        drawMultilineClamped(smallFont, actionMessage, rightTextX, panelY + panelHeight - 72f,
+            rightTextWidth, 18f, 5);
+
+        float hintY = grid(Math.max(panelY + 48f, panelY + Math.min(160f, panelHeight - 184f)));
+        drawPanelHeader("快捷键", ICON_MENU, rightX + UI_PAD, hintY + 96f,
+            rightWidth - UI_PAD * 2f);
+        drawSideShortcut("WASD", "移动", ICON_MOVE, rightTextX, hintY + 64f, rightTextWidth);
+        drawSideShortcut("E", "拾取/交谈", ICON_TAKE, rightTextX, hintY + 38f, rightTextWidth);
+        drawSideShortcut("I", "背包", ICON_INVENTORY, rightTextX, hintY + 12f, rightTextWidth);
+        drawSideShortcut("U", "使用物品", ICON_USE, rightTextX, hintY - 14f, rightTextWidth);
     }
 
     private void drawCompactStatusBar(String label, int value, int maxValue, float x, float y,
@@ -1307,7 +1382,8 @@ public class GameScreen implements Screen
 
     private boolean hasSidePanels()
     {
-        return worldViewportX - 20f >= SIDE_PANEL_MIN_WIDTH
+        return SIDE_PANELS_ENABLED
+            && worldViewportX - 20f >= SIDE_PANEL_MIN_WIDTH
             && Gdx.graphics.getWidth() - (worldViewportX + worldViewportWidth) - 20f >= SIDE_PANEL_MIN_WIDTH;
     }
 
@@ -1315,10 +1391,10 @@ public class GameScreen implements Screen
     {
         float width = Gdx.graphics.getWidth();
         float height = Gdx.graphics.getHeight();
-        float panelWidth = Math.min(660f, width - 72f);
-        float panelHeight = Math.min(380f, height - 86f);
-        float panelX = (width - panelWidth) / 2f;
-        float panelY = (height - panelHeight) / 2f;
+        float panelWidth = grid(Math.min(672f, width - 72f));
+        float panelHeight = grid(Math.min(384f, height - 88f));
+        float panelX = grid((width - panelWidth) / 2f);
+        float panelY = grid((height - panelHeight) / 2f);
         float centerX = panelX + panelWidth / 2f;
 
         font.setColor(UI_LIGHT_TEXT);
@@ -1326,10 +1402,10 @@ public class GameScreen implements Screen
         smallFont.setColor(UI_LIGHT_TEXT);
         drawCenteredWithSmallFont("按键说明", centerX, panelY + panelHeight - 64);
 
-        float leftX = panelX + 50;
-        float rightX = panelX + panelWidth / 2f + 22;
-        float rowY = panelY + panelHeight - 104;
-        float rowGap = 31f;
+        float leftX = panelX + 48f;
+        float rightX = panelX + panelWidth / 2f + 24f;
+        float rowY = panelY + panelHeight - 104f;
+        float rowGap = 32f;
         drawShortcutRow("ESC", "继续探索 / 打开菜单", ICON_MENU, leftX, rowY);
         drawShortcutRow("WASD", "移动角色", ICON_MOVE, leftX, rowY - rowGap);
         drawShortcutRow("出口", "走入出口切换房间", ICON_ROOM, leftX, rowY - rowGap * 2f);
@@ -1337,45 +1413,63 @@ public class GameScreen implements Screen
         drawShortcutRow("B", "回退上一个房间", ICON_BACK, leftX, rowY - rowGap * 4f);
         drawShortcutRow("T", "返回标题画面", ICON_TITLE, leftX, rowY - rowGap * 5f);
 
-        drawShortcutRow("E", "拾取地面物品", ICON_TAKE, rightX, rowY);
-        drawShortcutRow("U", "打开背包并选择物品使用", ICON_INVENTORY, rightX, rowY - rowGap);
-        drawShortcutRow("I", "打开 / 关闭背包", ICON_INVENTORY, rightX, rowY - rowGap * 2f);
+        drawShortcutRow("E", "拾取地面物品 / 与 NPC 互动", ICON_TAKE, rightX, rowY);
+        drawShortcutRow("I", "打开 / 关闭背包", ICON_INVENTORY, rightX, rowY - rowGap);
+        drawShortcutRow("U", "使用背包中选中的物品", ICON_USE, rightX, rowY - rowGap * 2f);
         drawShortcutRow("F5", "保存当前进度", ICON_SAVE, rightX, rowY - rowGap * 3f);
         drawShortcutRow("F9", "读取存档", ICON_LOAD, rightX, rowY - rowGap * 4f);
 
         smallFont.setColor(UI_DARK_TEXT);
-        drawCenteredInBoxWithSmallFont("ESC 继续", centerX - 92, panelY + 24, 184, 42);
+        drawCenteredInBoxWithSmallFont("ESC 继续", centerX - 96f, panelY + 24f, 192f, 40f);
+    }
+
+    private void drawPanelHeader(String title, int icon, float x, float y, float width)
+    {
+        if (width <= 42f) {
+            return;
+        }
+        uiSkin.drawButton(batch, grid(x), grid(y), grid(width), UI_HEADER_HEIGHT);
+        drawIcon(icon, x + 8f, y + 8f, 16f);
+        smallFont.setColor(UI_LIGHT_TEXT);
+        drawClampedLine(smallFont, title, x + 32f, y + 22f, width - 40f);
+    }
+
+    private void drawSideShortcut(String key, String label, int icon, float x, float y, float width)
+    {
+        y = grid(y);
+        drawIcon(icon, x, y + 4f, 16f);
+        uiSkin.drawButton(batch, x + 24f, y, 40f, 24f);
+        smallFont.setColor(Color.WHITE);
+        drawCenteredInBoxWithSmallFont(key, x + 24f, y, 40f, 24f);
+        smallFont.setColor(UI_DARK_TEXT);
+        drawClampedLine(smallFont, label, x + 72f, y + 18f, Math.max(24f, width - 72f));
     }
 
     private float inventoryPanelHeight()
     {
         float availableHeight = Math.max(120f, worldViewportHeight - 24f);
-        if (inventoryUseMode) {
-            int rows = Math.max(1, engine.getPlayer().getInventory().size());
-            return Math.min(Math.max(120f, 88f + rows * 30f), availableHeight);
-        }
         if (inventoryInspectMode) {
-            return Math.min(260f, availableHeight);
+            return Math.min(296f, availableHeight);
         }
-        return Math.min(190f, availableHeight);
+        int rows = Math.max(3, Math.min(7, engine.getPlayer().getInventory().size()));
+        return Math.min(Math.max(264f, 152f + rows * 30f), availableHeight);
+    }
+
+    private int inventoryVisibleRows(float panelHeight)
+    {
+        return Math.max(1, (int)((panelHeight - 156f) / 30f));
     }
 
     private void drawInventoryPanel()
     {
         float width = Gdx.graphics.getWidth();
-        float panelWidth = Math.min(400f, width - 56f);
-        float panelHeight = inventoryPanelHeight();
-        float panelX = Math.max(24f, width - panelWidth - 28f);
-        float panelY = Math.max(WORLD_MARGIN_BOTTOM + 12f,
-            Gdx.graphics.getHeight() - WORLD_MARGIN_TOP - panelHeight - 12f);
+        float panelWidth = grid(Math.min(520f, width - 96f));
+        float panelHeight = grid(inventoryPanelHeight());
+        float panelX = grid((width - panelWidth) / 2f);
+        float panelY = grid(Math.max(WORLD_MARGIN_BOTTOM + 16f,
+            Gdx.graphics.getHeight() - WORLD_MARGIN_TOP - panelHeight - 16f));
 
         font.setColor(UI_LIGHT_TEXT);
-        if (inventoryUseMode) {
-            font.draw(batch, "使用物品", panelX + 24, panelY + panelHeight - 26);
-            drawInventoryUseList(panelX, panelY, panelWidth, panelHeight);
-            return;
-        }
-
         List<Item> items = engine.getPlayer().getInventory();
         if (inventoryInspectIndex >= items.size()) {
             inventoryInspectIndex = Math.max(0, items.size() - 1);
@@ -1385,25 +1479,38 @@ public class GameScreen implements Screen
             panelY + panelHeight - 26);
         font.setColor(UI_DARK_TEXT);
 
-        float innerX = panelX + 28f;
-        float topY = panelY + panelHeight - 52f;
+        float innerX = panelX + 32f;
+        float topY = panelY + panelHeight - 56f;
 
         if (!inventoryInspectMode) {
             smallFont.setColor(UI_DARK_TEXT);
-            smallFont.draw(batch, "↑↓选择  X查看详情  Esc关闭", innerX, topY);
+            uiSkin.drawLightButton(batch, innerX, topY - 20f, panelWidth - 64f, 28f);
+            smallFont.setColor(UI_DARK_TEXT);
+            drawClampedLine(smallFont, "↑↓选择  U/Enter使用  X详情  Esc关闭",
+                innerX + 10f, topY - 1f, panelWidth - 84f);
 
-            float rowY = topY - 28f;
-            float rowH = 26f;
-            float rowW = panelWidth - 56f;
-            for (int i = 0; i < items.size() && i < 12; i++) {
-                float y = rowY - i * rowH;
+            float rowY = topY - 60f;
+            float rowH = 30f;
+            float rowW = panelWidth - 64f;
+            int visibleRows = inventoryVisibleRows(panelHeight);
+            keepInventorySelectionVisible();
+            int lastVisible = Math.min(items.size(), inventoryScrollOffset + visibleRows);
+            for (int i = inventoryScrollOffset; i < lastVisible; i++) {
+                float y = rowY - (i - inventoryScrollOffset) * rowH;
+                Item it = items.get(i);
+                ItemUseCheck check = engine.checkItemUse(it.getItemId());
+                String status = itemUseStatus(check);
                 if (i == inventoryInspectIndex) {
                     uiSkin.drawButton(batch, innerX, y, rowW, rowH);
                 }
-                Item it = items.get(i);
+                layout.setText(smallFont, status);
+                float statusWidth = layout.width;
                 String line = (i + 1) + ". " + it.getName() + " (" + it.getWeight() + ")";
                 smallFont.setColor(i == inventoryInspectIndex ? Color.WHITE : UI_DARK_TEXT);
-                smallFont.draw(batch, line, innerX + 8f, y + rowH - 7f);
+                drawClampedLine(smallFont, line, innerX + 10f, y + rowH - 9f,
+                    Math.max(40f, rowW - statusWidth - 24f));
+                smallFont.setColor(i == inventoryInspectIndex ? Color.WHITE : UI_DARK_TEXT);
+                smallFont.draw(batch, status, innerX + rowW - statusWidth - 10f, y + rowH - 9f);
             }
 
             if (!items.isEmpty()) {
@@ -1411,10 +1518,16 @@ public class GameScreen implements Screen
                 ItemUseCheck check = engine.checkItemUse(picked.getItemId());
                 smallFont.setColor(UI_DARK_TEXT);
                 drawClampedLine(smallFont, "效果提示: " + check.hint, innerX,
-                    panelY + 22f, rowW);
+                    panelY + 30f, rowW - 72f);
             } else {
                 smallFont.setColor(UI_DARK_TEXT);
-                smallFont.draw(batch, "背包为空", innerX, panelY + 36f);
+                smallFont.draw(batch, "背包为空", innerX, panelY + 40f);
+            }
+            if (items.size() > visibleRows) {
+                smallFont.setColor(UI_DARK_TEXT);
+                drawRightAligned((inventoryScrollOffset + 1) + "-" + lastVisible + "/"
+                        + items.size(),
+                    panelX + panelWidth - 32f, panelY + 30f);
             }
 
             return;
@@ -1437,63 +1550,48 @@ public class GameScreen implements Screen
         smallFont.draw(batch, "效果: " + effect, innerX, topY - 36f);
 
         // 描述
-        font.setColor(UI_DARK_TEXT);
-        drawMultiline("描述: " + item.getDescription(), innerX, topY - 58f, 20f);
+        smallFont.setColor(UI_DARK_TEXT);
+        drawMultilineClamped(smallFont, "描述: " + item.getDescription(), innerX,
+            topY - 58f, panelWidth - 56f, 18f, 4);
 
         // 可用性提示
         smallFont.setColor(UI_DARK_TEXT);
         drawClampedLine(smallFont, "使用条件: " + check.hint, innerX, panelY + 44f,
-            panelWidth - 56f);
+            panelWidth - 64f);
         smallFont.setColor(UI_DARK_TEXT);
-        smallFont.draw(batch, "Enter返回  Esc关闭", innerX, panelY + 20f);
+        smallFont.draw(batch, "Enter返回  Esc关闭", innerX, panelY + 24f);
     }
 
-    private void drawInventoryUseList(float panelX, float panelY, float panelWidth,
-        float panelHeight)
+    private String itemUseStatus(ItemUseCheck check)
     {
-        List<Item> items = engine.getPlayer().getInventory();
-        float rowY = panelY + panelHeight - 58f;
-        float rowHeight = 28f;
-        smallFont.setColor(UI_DARK_TEXT);
-        for (int i = 0; i < items.size(); i++) {
-            Item item = items.get(i);
-            ItemUseCheck check = engine.checkItemUse(item.getItemId());
-            boolean selected = i == inventorySelectedIndex;
-            float rowX = panelX + 28f;
-            float rowW = panelWidth - 56f;
-            if (selected) {
-                uiSkin.drawButton(batch, rowX, rowY - 20f, rowW, rowHeight);
-            }
-            String prefix = (i < 9) ? ((i + 1) + ". ") : "   ";
-            String status;
-            if (check.canUse) {
-                status = " [可用]";
-            } else if (check.requiresLocation) {
-                status = " [需在门锁前]";
-            } else {
-                status = " [不可用]";
-            }
-            String line = prefix + item.getName() + " (" + item.getWeight() + ")" + status;
-            smallFont.setColor(selected ? Color.WHITE : UI_DARK_TEXT);
-            smallFont.draw(batch, line, rowX + 8f, rowY);
-            rowY -= rowHeight;
+        if (check.canUse) {
+            return "可用";
         }
-        if (!items.isEmpty()) {
-            ItemUseCheck hint = engine.checkItemUse(items.get(inventorySelectedIndex).getItemId());
-            smallFont.setColor(UI_DARK_TEXT);
-            drawClampedLine(smallFont, hint.hint, panelX + 28f, panelY + 18f, panelWidth - 56f);
+        if (check.requiresLocation) {
+            return "需位置";
         }
+        return "不可用";
+    }
+
+    private float grid(float value)
+    {
+        return Math.round(value / UI_GRID) * UI_GRID;
     }
 
     private float drawHintChip(String key, float x, float y, float width, float height, int icon,
         float keyWidth)
     {
+        x = grid(x);
+        y = grid(y);
+        width = grid(width);
+        height = grid(height);
+        keyWidth = grid(keyWidth);
         uiSkin.drawLightButton(batch, x, y, width, height);
-        uiSkin.drawButton(batch, x + 6, y + 7, keyWidth, height - 14);
-        drawIcon(icon, x + keyWidth + 13, y + 8, height - 16);
+        uiSkin.drawButton(batch, x + 8f, y + 8f, keyWidth, height - 16f);
+        drawIcon(icon, x + keyWidth + 14f, y + 8f, height - 16f);
 
         smallFont.setColor(Color.WHITE);
-        drawCenteredInBoxWithSmallFont(key, x + 6, y + 7, keyWidth, height - 14);
+        drawCenteredInBoxWithSmallFont(key, x + 8f, y + 8f, keyWidth, height - 16f);
         return x + width;
     }
 
@@ -1519,6 +1617,8 @@ public class GameScreen implements Screen
             uiSkin.drawMenuIcon(batch, x, y, size);
         } else if (icon == ICON_TITLE) {
             uiSkin.drawTitleIcon(batch, x, y, size);
+        } else if (icon == ICON_USE) {
+            uiSkin.drawUseIcon(batch, x, y, size);
         } else {
             uiSkin.drawCircleIcon(batch, x, y, size);
         }
@@ -1527,21 +1627,21 @@ public class GameScreen implements Screen
     private void drawCentered(String text, float centerX, float y)
     {
         layout.setText(font, text);
-        font.draw(batch, text, centerX - layout.width / 2f, y);
+        font.draw(batch, text, Math.round(centerX - layout.width / 2f), Math.round(y));
     }
 
     private void drawCenteredWithSmallFont(String text, float centerX, float y)
     {
         layout.setText(smallFont, text);
-        smallFont.draw(batch, text, centerX - layout.width / 2f, y);
+        smallFont.draw(batch, text, Math.round(centerX - layout.width / 2f), Math.round(y));
     }
 
     private void drawCenteredInBoxWithSmallFont(String text, float x, float y, float width,
         float height)
     {
         layout.setText(smallFont, text);
-        smallFont.draw(batch, text, x + (width - layout.width) / 2f,
-            y + (height + layout.height) / 2f + 1f);
+        smallFont.draw(batch, text, Math.round(x + (width - layout.width) / 2f),
+            Math.round(y + (height + layout.height) / 2f + 1f));
     }
 
     private void drawShortcutRow(String key, String label, int icon, float x, float y)
@@ -1552,7 +1652,7 @@ public class GameScreen implements Screen
         smallFont.setColor(Color.WHITE);
         drawCenteredInBoxWithSmallFont(key, x + 34, y, keyWidth, 28);
         smallFont.setColor(UI_DARK_TEXT);
-        smallFont.draw(batch, label, x + keyWidth + 78, y + 20);
+        drawClampedLine(smallFont, label, x + keyWidth + 78, y + 20, 210f);
     }
 
     private void drawClampedLine(BitmapFont activeFont, String text, float x, float y,
