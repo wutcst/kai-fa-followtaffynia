@@ -1,0 +1,25 @@
+{
+  "npcId": "hermit",
+  "displayName": "守秘隐士",
+  "maxHp": 60,
+  "defaultState": "calm",
+  "states": {
+    "calm": {
+      "whenHpBelow": 1.0,
+      "skills": ["mind_blast", "shield"]
+    },
+    "warned": {
+      "whenHpBelow": 0.5,
+      "skills": ["mind_blast", "mind_storm"]
+    }
+  },
+  "skills": {
+    "mind_blast": { "damage": 12, "text": "隐士释放精神冲击！" },
+    "shield": { "damage": 0, "selfBuff": "defense", "text": "隐士展开奥术屏障。" },
+    "mind_storm": { "damage": 22, "text": "隐士召唤心灵风暴！" }
+  },
+  "onDefeat": {
+    "reputation": -20,
+    "markDefeated": true
+  }
+}

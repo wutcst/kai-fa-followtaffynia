@@ -24,4 +24,21 @@ class CombatLoaderTest
         assertEquals("guard-gate", def.onDefeatUnlock);
         assertTrue(def.onDefeatMarkDefeated);
     }
+
+    @Test
+    void loadHermitJson() throws IOException
+    {
+        NpcCombatDef def = CombatLoader.load("hermit");
+        assertEquals("hermit", def.npcId);
+        assertEquals("守秘隐士", def.displayName);
+        assertEquals(60, def.maxHp);
+        assertEquals("calm", def.defaultState);
+        assertTrue(def.skills.containsKey("mind_blast"));
+        assertTrue(def.skills.containsKey("shield"));
+        assertTrue(def.skills.containsKey("mind_storm"));
+        assertTrue(def.stateSkills.containsKey("calm"));
+        assertTrue(def.stateSkills.containsKey("warned"));
+        assertEquals(-20, def.onDefeatReputation);
+        assertTrue(def.onDefeatMarkDefeated);
+    }
 }
