@@ -1,6 +1,7 @@
 package cn.edu.whut.sept.zuul.client.screen;
 
 import cn.edu.whut.sept.zuul.client.RpgMain;
+import cn.edu.whut.sept.zuul.client.render.PlayerRenderer;
 import cn.edu.whut.sept.zuul.client.ui.GameUiSkin;
 import cn.edu.whut.sept.zuul.domain.Direction;
 import cn.edu.whut.sept.zuul.domain.Dialogue;
@@ -100,6 +101,9 @@ public class GameScreen implements Screen
 
     private float playerX;
     private float playerY;
+    private PlayerRenderer playerRenderer;
+    private String currentFacing = "south";
+    private boolean isMovingLastFrame;
     private String actionMessage;
     private String currentMapPath;
     private float exitCooldown;
@@ -122,11 +126,17 @@ public class GameScreen implements Screen
 
     public GameScreen(RpgMain game, SpriteBatch batch, GameEngine engine)
     {
-        this(game, batch, engine, Float.NaN, Float.NaN, "准备探索");
+        this(game, batch, engine, Float.NaN, Float.NaN, "准备探索", "south");
     }
 
     public GameScreen(RpgMain game, SpriteBatch batch, GameEngine engine,
         float savedPlayerX, float savedPlayerY, String initialStatus)
+    {
+        this(game, batch, engine, savedPlayerX, savedPlayerY, initialStatus, "south");
+    }
+
+    public GameScreen(RpgMain game, SpriteBatch batch, GameEngine engine,
+        float savedPlayerX, float savedPlayerY, String initialStatus, String savedFacing)
     {
         this.game = game;
         this.batch = batch;
@@ -143,6 +153,8 @@ public class GameScreen implements Screen
         this.dialoguePages = new ArrayList<>();
         this.dialoguePageIndex = 0;
         this.inventoryInspectIndex = 0;
+        this.playerRenderer = new PlayerRenderer();
+        this.currentFacing = (savedFacing != null && !savedFacing.isEmpty()) ? savedFacing : "south";
 
         updateCameras(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         loadCurrentRoom(false);
@@ -181,6 +193,9 @@ public class GameScreen implements Screen
             drawMapLoadError();
             return;
         }
+
+        playerRenderer.update(delta, isMovingLastFrame,
+            PlayerRenderer.FacingDirection.fromString(currentFacing));
 
         applyWorldViewport();
         worldCamera.update();
@@ -840,6 +855,15 @@ public class GameScreen implements Screen
         boolean aDown = Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT);
         boolean dDown = Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT);
 
+        boolean moving = wDown || sDown || aDown || dDown;
+        if (moving) {
+            if (wDown && !sDown) currentFacing = "north";
+            else if (sDown && !wDown) currentFacing = "south";
+            else if (aDown && !dDown) currentFacing = "west";
+            else if (dDown && !aDown) currentFacing = "east";
+        }
+        isMovingLastFrame = moving;
+
         if (wDown) dy = SPEED * delta;
         if (sDown) dy = -SPEED * delta;
         if (aDown) dx = -SPEED * delta;
@@ -847,10 +871,10 @@ public class GameScreen implements Screen
 
         if ((wDown || sDown || aDown || dDown) && moveLogFrame % 30 == 0) {
             String dir = "";
-            if (wDown) dir = "W/UP(往屏幕上方)";
-            if (sDown) dir = "S/DOWN(往屏幕下方)";
-            if (aDown) dir = "A/LEFT(往屏幕左)";
-            if (dDown) dir = "D/RIGHT(往屏幕右)";
+            if (wDown) dir = "W/UP";
+            if (sDown) dir = "S/DOWN";
+            if (aDown) dir = "A/LEFT";
+            if (dDown) dir = "D/RIGHT";
             LOG.info("moveKey: " + dir
                 + " | pixel=(" + (int)playerX + "," + (int)playerY + ")"
                 + " | tile=(" + (int)(playerX/TILE) + "," + gdxYToTiledRow(playerY) + ")");
@@ -1047,11 +1071,11 @@ public class GameScreen implements Screen
 
     private void drawPlayer()
     {
-        shapes.setProjectionMatrix(worldCamera.combined);
-        shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(0.3f, 0.55f, 0.95f, 1f);
-        shapes.rect(playerX, playerY, PLAYER_W, PLAYER_H);
-        shapes.end();
+        if (playerRenderer == null) return;
+        batch.setProjectionMatrix(worldCamera.combined);
+        batch.begin();
+        playerRenderer.render(batch, playerX, playerY);
+        batch.end();
     }
 
     private void drawInteractionPrompt()
@@ -1165,6 +1189,7 @@ public class GameScreen implements Screen
             GameState state = engine.captureState();
             state.setPlayerX(playerX);
             state.setPlayerY(playerY);
+            state.setFacing(currentFacing);
             SaveGameService.save(state);
             Gdx.app.log(LOG_TAG, "Saved game to " + SaveGameService.defaultSavePath());
             actionMessage = "已保存到 " + SaveGameService.defaultSavePath();
@@ -1183,7 +1208,7 @@ public class GameScreen implements Screen
             screenChanged = true;
             Gdx.app.log(LOG_TAG, "Loaded game from " + SaveGameService.defaultSavePath());
             game.setScreen(new GameScreen(game, batch, loadedEngine,
-                state.getPlayerX(), state.getPlayerY(), "已读取存档"));
+                state.getPlayerX(), state.getPlayerY(), "已读取存档", state.getFacing()));
             disposeLater();
         } catch (Exception e) {
             Gdx.app.error(LOG_TAG, "Load failed", e);
@@ -1861,5 +1886,6 @@ public class GameScreen implements Screen
         shapes.dispose();
         uiSkin.dispose();
         smallFont.dispose();
+        if (playerRenderer != null) playerRenderer.dispose();
     }
 }

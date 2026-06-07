@@ -147,7 +147,7 @@ public class TitleScreen implements Screen
             engine.restoreState(state);
             Gdx.app.log(LOG_TAG, "Loaded game from title: " + SaveGameService.defaultSavePath());
             switchToGame(new GameScreen(game, batch, engine,
-                state.getPlayerX(), state.getPlayerY(), "已读取存档"));
+                state.getPlayerX(), state.getPlayerY(), "已读取存档", state.getFacing()));
         } catch (Exception e) {
             Gdx.app.error(LOG_TAG, "Load from title failed", e);
             statusMessage = "读档失败: " + e.getClass().getSimpleName();

@@ -11,3 +11,4 @@ game.log
 *.log
 /saves/*.sav
 /elements/
+*.tmp.*
