@@ -18,9 +18,10 @@ public class LightEffect implements UseEffect
     @Override
     public UseResult apply(GameEngine engine, Item item, String effect)
     {
+        // 当前没有暗室机制，不消耗物品
         if ("light:full".equals(effect)) {
-            return UseResult.ok("使用了 " + item.getName() + "，光明之力充盈全身！");
+            return UseResult.fail(item.getName() + " 闪耀着纯净的光芒，但这里不需要光源。");
         }
-        return UseResult.ok("使用了 " + item.getName() + "，周围亮了起来！");
+        return UseResult.fail(item.getName() + " 照亮了周围，但这里足够明亮，不需要它。");
     }
 }
