@@ -3,6 +3,7 @@ package cn.edu.whut.sept.zuul.client.screen;
 import cn.edu.whut.sept.zuul.client.RpgMain;
 import cn.edu.whut.sept.zuul.client.render.PlayerRenderer;
 import cn.edu.whut.sept.zuul.client.ui.GameUiSkin;
+import cn.edu.whut.sept.zuul.client.ui.WorldMapRenderer;
 import cn.edu.whut.sept.zuul.domain.Direction;
 import cn.edu.whut.sept.zuul.domain.Dialogue;
 import cn.edu.whut.sept.zuul.domain.Item;
@@ -18,7 +19,9 @@ import cn.edu.whut.sept.zuul.infra.GameState;
 import cn.edu.whut.sept.zuul.infra.SaveGameService;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -51,6 +54,10 @@ public class GameScreen implements Screen
     private static final float PLAYER_W = 16f;
     private static final float PLAYER_H = 16f;
     private static final float SPEED = 128f;
+    private static final float DASH_SPEED_MULTIPLIER = 3.0f;
+    private static final float DASH_DURATION = 0.3f;
+    private static final float DASH_COOLDOWN = 1.0f;
+    private static final float ATTACK_COOLDOWN = 0.5f;
     private static final int WORLD_MARGIN_LEFT = 12;
     private static final int WORLD_MARGIN_RIGHT = 12;
     private static final int WORLD_MARGIN_BOTTOM = 96;
@@ -98,6 +105,7 @@ public class GameScreen implements Screen
     private TiledMapTileLayer wallLayer;
     private MapObjects objectsLayer;
     private final List<NpcPlaceholder> npcPlaceholders;
+    private final List<ItemPlaceholder> itemPlaceholders;
 
     private float playerX;
     private float playerY;
@@ -107,6 +115,12 @@ public class GameScreen implements Screen
     private String actionMessage;
     private String currentMapPath;
     private float exitCooldown;
+    private boolean isDashing;
+    private float dashTimer;
+    private float dashCooldownTimer;
+    private boolean isAttacking;
+    private float attackTimer;
+    private float attackCooldownTimer;
     private int worldViewportX;
     private int worldViewportY;
     private int worldViewportWidth;
@@ -123,6 +137,8 @@ public class GameScreen implements Screen
     private int dialoguePageIndex;
     private boolean paused;
     private boolean screenChanged;
+    private boolean worldMapOpen;
+    private final WorldMapRenderer worldMapRenderer;
 
     public GameScreen(RpgMain game, SpriteBatch batch, GameEngine engine)
     {
@@ -150,10 +166,12 @@ public class GameScreen implements Screen
         this.uiCamera = new OrthographicCamera();
         this.actionMessage = initialStatus;
         this.npcPlaceholders = new java.util.ArrayList<>();
+        this.itemPlaceholders = new java.util.ArrayList<>();
         this.dialoguePages = new ArrayList<>();
         this.dialoguePageIndex = 0;
         this.inventoryInspectIndex = 0;
         this.playerRenderer = new PlayerRenderer();
+        this.worldMapRenderer = new WorldMapRenderer();
         this.currentFacing = (savedFacing != null && !savedFacing.isEmpty()) ? savedFacing : "south";
 
         updateCameras(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
@@ -183,6 +201,30 @@ public class GameScreen implements Screen
             if (exitCooldown > 0f) {
                 exitCooldown -= delta;
             }
+            // 冲刺计时器衰减
+            if (isDashing) {
+                dashTimer -= delta;
+                if (dashTimer <= 0f) {
+                    isDashing = false;
+                    dashTimer = 0f;
+                    dashCooldownTimer = DASH_COOLDOWN;
+                }
+            }
+            if (dashCooldownTimer > 0f) {
+                dashCooldownTimer -= delta;
+            }
+            // 攻击计时器衰减
+            if (isAttacking) {
+                attackTimer -= delta;
+                if (playerRenderer.isAttackFinished() || attackTimer <= 0f) {
+                    isAttacking = false;
+                    attackTimer = 0f;
+                    attackCooldownTimer = ATTACK_COOLDOWN;
+                }
+            }
+            if (attackCooldownTimer > 0f) {
+                attackCooldownTimer -= delta;
+            }
             checkExitOverlap();
         }
 
@@ -194,7 +236,7 @@ public class GameScreen implements Screen
             return;
         }
 
-        playerRenderer.update(delta, isMovingLastFrame,
+        playerRenderer.update(delta, isMovingLastFrame, isDashing, isAttacking,
             PlayerRenderer.FacingDirection.fromString(currentFacing));
 
         applyWorldViewport();
@@ -202,6 +244,7 @@ public class GameScreen implements Screen
         mapRenderer.setView(worldCamera);
         mapRenderer.render();
         drawNpcPlaceholders();
+        drawItemPlaceholders();
         drawNpcDialogueBubble();
         drawPlayer();
         drawInteractionPrompt();
@@ -213,6 +256,10 @@ public class GameScreen implements Screen
         drawHud();
         drawFooter();
         batch.end();
+
+        if (worldMapOpen) {
+            drawWorldMap(delta);
+        }
     }
 
     private void loadCurrentRoom(boolean snapAfterLoad)
@@ -237,6 +284,7 @@ public class GameScreen implements Screen
             MapLayer objectLayer = map.getLayers().get("objects");
             objectsLayer = objectLayer == null ? null : objectLayer.getObjects();
             buildNpcPlaceholders(engine.getCurrentRoom().getRoomId());
+            buildItemPlaceholders(engine.getCurrentRoom().getRoomId());
             if (objectsLayer != null) {
                 int exitCount = 0;
                 for (MapObject obj : objectsLayer) {
@@ -251,6 +299,12 @@ public class GameScreen implements Screen
             }
             currentMapPath = tmxPath;
             exitCooldown = 0.3f;
+            isDashing = false;
+            dashTimer = 0f;
+            dashCooldownTimer = 0f;
+            isAttacking = false;
+            attackTimer = 0f;
+            attackCooldownTimer = 0f;
             if (snapAfterLoad) {
                 snapToSpawn();
             }
@@ -327,6 +381,77 @@ public class GameScreen implements Screen
         shapes.end();
     }
 
+    // ---------- 道具占位块 ----------
+
+    private void buildItemPlaceholders(String roomId)
+    {
+        itemPlaceholders.clear();
+        List<ItemSpawnDef> defs = ITEM_SPAWNS.get(roomId);
+        List<Item> roomItems = engine.getCurrentRoom().getItems();
+        if (roomItems.isEmpty()) {
+            return;
+        }
+
+        for (Item item : roomItems) {
+            ItemSpawnDef def = findSpawnDef(defs, item.getItemId());
+            Rectangle rect;
+            Color color;
+            if (def != null) {
+                rect = tileToWorldRect(def.tileX, def.tileY, 1, 1);
+                color = def.color;
+            } else {
+                // 无定义的道具（如玩家丢弃的）放在默认位置
+                rect = tileToWorldRect(15, 8, 1, 1);
+                color = new Color(0.9f, 0.9f, 0.5f, 1f);
+            }
+            itemPlaceholders.add(new ItemPlaceholder(item.getItemId(), rect, color));
+        }
+    }
+
+    private static ItemSpawnDef findSpawnDef(List<ItemSpawnDef> defs, String itemId)
+    {
+        if (defs == null) return null;
+        for (ItemSpawnDef def : defs) {
+            if (def.itemId.equals(itemId)) return def;
+        }
+        return null;
+    }
+
+    private void rebuildItemPlaceholders()
+    {
+        buildItemPlaceholders(engine.getCurrentRoom().getRoomId());
+    }
+
+    private void drawItemPlaceholders()
+    {
+        if (itemPlaceholders.isEmpty()) return;
+        shapes.setProjectionMatrix(worldCamera.combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        for (ItemPlaceholder ip : itemPlaceholders) {
+            shapes.setColor(ip.color);
+            shapes.rect(ip.bounds.x, ip.bounds.y, ip.bounds.width, ip.bounds.height);
+            // 外框让色块更明显
+            shapes.setColor(1f, 1f, 1f, 0.5f);
+            shapes.rect(ip.bounds.x, ip.bounds.y, ip.bounds.width, ip.bounds.height);
+        }
+        shapes.end();
+    }
+
+    /** 返回玩家附近可拾取的道具 ID，若距离太远返回 null。 */
+    private String findNearbyItemId()
+    {
+        if (itemPlaceholders.isEmpty()) return null;
+        Rectangle interactRect = new Rectangle(
+            playerX - 10f, playerY - 10f,
+            PLAYER_W + 20f, PLAYER_H + 20f);
+        for (ItemPlaceholder ip : itemPlaceholders) {
+            if (ip.bounds.overlaps(interactRect)) {
+                return ip.itemId;
+            }
+        }
+        return null;
+    }
+
     private void snapToSpawn()
     {
         RoomScene.SpawnPoint spawn = engine.resolveCurrentSpawn();
@@ -364,6 +489,10 @@ public class GameScreen implements Screen
             }
             paused = !paused;
             actionMessage = paused ? "已暂停" : "继续探索";
+            return;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+            worldMapOpen = !worldMapOpen;
             return;
         }
         if (paused) {
@@ -410,6 +539,24 @@ public class GameScreen implements Screen
             return;
         }
 
+        // 攻击：J键触发
+        if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
+            if (!isAttacking && attackCooldownTimer <= 0f && !isDashing) {
+                isAttacking = true;
+                attackTimer = 1.0f;
+                actionMessage = "攻击！";
+            }
+        }
+
+        // 冲刺：F键触发
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F)) {
+            if (!isDashing && dashCooldownTimer <= 0f && !isAttacking) {
+                isDashing = true;
+                dashTimer = DASH_DURATION;
+                actionMessage = "冲刺！";
+            }
+        }
+
         movePlayer(delta);
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) {
@@ -428,7 +575,15 @@ public class GameScreen implements Screen
             if (npcId != null) {
                 startNpcEncounter(npcId);
             } else {
-                actionMessage = tryTakeFirstItem();
+                String itemId = findNearbyItemId();
+                if (itemId != null) {
+                    if (engine.takeItem(itemId)) {
+                        rebuildItemPlaceholders();
+                        actionMessage = "拾取了 " + itemId;
+                    } else {
+                        actionMessage = "拾取失败（可能超重）";
+                    }
+                }
             }
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.U)) {
@@ -768,6 +923,9 @@ public class GameScreen implements Screen
                 inventoryInspectMode = true;
                 actionMessage = "查看物品详情（Enter 返回）";
             }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.F)) {
+                tryEatSelectedItem();
+            }
             if (Gdx.input.isKeyJustPressed(Input.Keys.U)
                 || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
                 || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
@@ -795,6 +953,25 @@ public class GameScreen implements Screen
         actionMessage = engine.tryUseItem(selected.getItemId());
         if (check.canUse) {
             inventoryInspectMode = false;
+        }
+        clampInventorySelection();
+    }
+
+    private void tryEatSelectedItem()
+    {
+        List<Item> items = engine.getPlayer().getInventory();
+        if (items.isEmpty()) {
+            inventoryOpen = false;
+            inventoryInspectMode = false;
+            actionMessage = "背包是空的";
+            return;
+        }
+        Item selected = items.get(inventoryInspectIndex);
+        engine.eatItem(selected.getItemId());
+        if (selected.isMagicCookie()) {
+            actionMessage = "吃下了 " + selected.getName() + "，负重上限 +20！";
+        } else {
+            actionMessage = selected.getName() + " 不可食用。";
         }
         clampInventorySelection();
     }
@@ -848,6 +1025,33 @@ public class GameScreen implements Screen
 
     private void movePlayer(float delta)
     {
+        if (isAttacking) {
+            isMovingLastFrame = false;
+            return;
+        }
+
+        if (isDashing) {
+            // 冲刺模式：沿朝向高速移动，穿NPC，不改变朝向
+            float dx = 0f;
+            float dy = 0f;
+            switch (currentFacing) {
+                case "north": dy = SPEED * DASH_SPEED_MULTIPLIER * delta; break;
+                case "south": dy = -SPEED * DASH_SPEED_MULTIPLIER * delta; break;
+                case "west":  dx = -SPEED * DASH_SPEED_MULTIPLIER * delta; break;
+                case "east":  dx = SPEED * DASH_SPEED_MULTIPLIER * delta; break;
+            }
+            isMovingLastFrame = true;
+            if (dx != 0f && canMoveDuringDash(playerX + dx, playerY)) {
+                playerX += dx;
+            }
+            if (dy != 0f && canMoveDuringDash(playerX, playerY + dy)) {
+                playerY += dy;
+            }
+            clampPlayerToMap();
+            return;
+        }
+
+        // 正常模式
         float dx = 0f;
         float dy = 0f;
         boolean wDown = Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP);
@@ -906,6 +1110,38 @@ public class GameScreen implements Screen
         if (collidesNpc(newX, newY)) {
             return false;
         }
+        if (wallLayer == null) {
+            return true;
+        }
+
+        float left = newX;
+        float right = newX + PLAYER_W;
+        float bottom = newY;
+        float top = newY + PLAYER_H;
+        int[][] corners = {
+            {(int) (left / TILE), (int) (bottom / TILE)},
+            {(int) (right / TILE), (int) (bottom / TILE)},
+            {(int) (left / TILE), (int) (top / TILE)},
+            {(int) (right / TILE), (int) (top / TILE)}
+        };
+
+        for (int[] corner : corners) {
+            TiledMapTileLayer.Cell cell = wallLayer.getCell(corner[0], corner[1]);
+            if (cell != null && cell.getTile() != null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean canMoveDuringDash(float newX, float newY)
+    {
+        if (newX < 0f || newY < 0f
+            || newX + PLAYER_W > mapPixelWidth()
+            || newY + PLAYER_H > mapPixelHeight()) {
+            return false;
+        }
+        // 冲刺可穿过 NPC，不调用 collidesNpc
         if (wallLayer == null) {
             return true;
         }
@@ -989,6 +1225,70 @@ public class GameScreen implements Screen
             return new NpcPlaceholder(npcId, bounds,
                 new Color(0.55f, 0.3f, 0.9f, 1f));
         }
+    }
+
+    // ======================== 道具占位块系统 ========================
+
+    /** 道具出生点定义（tile 坐标，左上角原点）。 */
+    private static final class ItemSpawnDef
+    {
+        final String itemId;
+        final int tileX;
+        final int tileY;
+        final Color color;
+
+        ItemSpawnDef(String itemId, int tileX, int tileY, Color color)
+        {
+            this.itemId = itemId;
+            this.tileX = tileX;
+            this.tileY = tileY;
+            this.color = color;
+        }
+    }
+
+    /** 地图上的道具占位块。 */
+    private static final class ItemPlaceholder
+    {
+        final String itemId;
+        final Rectangle bounds;
+        final Color color;
+
+        ItemPlaceholder(String itemId, Rectangle bounds, Color color)
+        {
+            this.itemId = itemId;
+            this.bounds = bounds;
+            this.color = color;
+        }
+    }
+
+    /** 每个房间中道具的 tile 坐标与占位色（左上角原点）。 */
+    private static final Map<String, List<ItemSpawnDef>> ITEM_SPAWNS = new HashMap<>();
+    static
+    {
+        addItemSpawn("outside", "welcome-note", 14, 8, new Color(0.9f, 0.85f, 0.65f, 1f));
+        addItemSpawn("theatre", "torch", 22, 8, new Color(1f, 0.5f, 0.1f, 1f));
+        addItemSpawn("pub", "ale-mug", 5, 10, new Color(0.9f, 0.65f, 0.2f, 1f));
+        addItemSpawn("lab", "key-vault", 18, 7, new Color(0.7f, 0.7f, 0.75f, 1f));
+        addItemSpawn("office", "key-guard", 12, 7, new Color(0.55f, 0.55f, 0.6f, 1f));
+        addItemSpawn("library", "ancient-tome", 8, 7, new Color(0.4f, 0.22f, 0.1f, 1f));
+        addItemSpawn("cellar", "old-barrel", 8, 10, new Color(0.5f, 0.3f, 0.15f, 1f));
+        addItemSpawn("vault", "gem-light", 22, 6, new Color(0.3f, 0.9f, 0.95f, 1f));
+        addItemSpawn("vault", "gold-coins", 22, 10, new Color(1f, 0.85f, 0.15f, 1f));
+        addItemSpawn("hidden-shrine", "crystal-shard", 14, 7, new Color(0.3f, 0.6f, 1f, 1f));
+        addItemSpawn("garden", "healing-herb", 10, 10, new Color(0.2f, 0.85f, 0.3f, 1f));
+        addItemSpawn("armory", "sword-rusty", 22, 8, new Color(0.6f, 0.6f, 0.65f, 1f));
+        addItemSpawn("armory", "shield-wooden", 22, 12, new Color(0.6f, 0.4f, 0.2f, 1f));
+        addItemSpawn("teleport-alcove", "warp-dust", 22, 8, new Color(0.65f, 0.3f, 0.9f, 1f));
+        // magic-cookie 随机出现在 3 个候选房间之一，三处都定义，实际只渲染存在的那个
+        addItemSpawn("cellar", "magic-cookie", 24, 12, new Color(1f, 0.5f, 0.7f, 1f));
+        addItemSpawn("library", "magic-cookie", 24, 12, new Color(1f, 0.5f, 0.7f, 1f));
+        addItemSpawn("hidden-shrine", "magic-cookie", 22, 11, new Color(1f, 0.5f, 0.7f, 1f));
+    }
+
+    private static void addItemSpawn(String roomId, String itemId, int tileX, int tileY, Color color)
+    {
+        ITEM_SPAWNS.computeIfAbsent(roomId, k -> new ArrayList<>())
+            .add(new ItemSpawnDef(itemId, tileX, tileY, color));
     }
 
     private void checkExitOverlap()
@@ -1110,8 +1410,13 @@ public class GameScreen implements Screen
         if (findNearbyNpcId() != null) {
             return new InteractionPrompt("E 交谈", ICON_LOOK);
         }
-        if (!engine.getCurrentRoom().getItems().isEmpty()) {
-            return new InteractionPrompt("E 拾取", ICON_TAKE);
+        String itemId = findNearbyItemId();
+        if (itemId != null) {
+            for (Item item : engine.getCurrentRoom().getItems()) {
+                if (item.getItemId().equals(itemId)) {
+                    return new InteractionPrompt("E 拾取 " + item.getName(), ICON_TAKE);
+                }
+            }
         }
         String exitName = nearbyExitTarget();
         if (exitName != null) {
@@ -1159,6 +1464,26 @@ public class GameScreen implements Screen
         }
     }
 
+    private void drawWorldMap(float delta)
+    {
+        float width = Gdx.graphics.getWidth();
+        float height = Gdx.graphics.getHeight();
+        float panelW = Math.min(520f, width - 48f);
+        float panelH = Math.min(420f, height - 88f);
+        float panelX = (width - panelW) / 2f;
+        float panelY = (height - panelH) / 2f;
+
+        applyFullViewport();
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+
+        worldMapRenderer.render(shapes, batch, smallFont,
+            panelX, panelY, panelW, panelH,
+            engine.getCurrentRoom().getRoomId(),
+            engine.getExploredRoomIds(),
+            engine::isLockUnlocked,
+            delta);
+    }
+
     private void drawMapLoadError()
     {
         applyFullViewport();
@@ -1169,18 +1494,6 @@ public class GameScreen implements Screen
             40, Gdx.graphics.getHeight() / 2f);
         drawFooter();
         batch.end();
-    }
-
-    private String tryTakeFirstItem()
-    {
-        if (engine.getCurrentRoom().getItems().isEmpty()) {
-            return "这里没有可拾取的物品";
-        }
-        String itemId = engine.getCurrentRoom().getItems().get(0).getItemId();
-        if (engine.takeItem(itemId)) {
-            return "拾取了 " + itemId;
-        }
-        return "拾取失败（可能超重）";
     }
 
     private void saveGame()

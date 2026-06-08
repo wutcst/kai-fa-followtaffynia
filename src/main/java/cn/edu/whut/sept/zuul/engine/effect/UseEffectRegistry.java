@@ -16,8 +16,10 @@ public final class UseEffectRegistry
         effects = Arrays.asList(
             new UnlockDoorEffect(),
             new HealEffect(),
+            new MaxWeightEffect(),
             new LightEffect(),
-            new ReputationEffect()
+            new ReputationEffect(),
+            new LoreEffect()
         );
     }
 
