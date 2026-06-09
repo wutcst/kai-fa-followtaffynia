@@ -263,9 +263,11 @@ public class GameScreen implements Screen
         }
 
         batch.begin();
-        drawUiPanels();
-        drawHud();
-        drawFooter();
+        if (!(engine.isInCombat() && engine.isUndertaleCombat())) {
+            drawUiPanels();
+            drawHud();
+            drawFooter();
+        }
         batch.end();
 
         if (worldMapOpen) {
@@ -971,8 +973,8 @@ public class GameScreen implements Screen
     private void drawUtSoul(UndertaleCombatEngine ut,
         float boxX, float boxY, float boxW, float boxH)
     {
-        float sx = boxX + (1f - ut.getSoulY()) * boxW;  // flip Y for LibGDX
-        float sy = boxY + ut.getSoulX() * boxH;
+        float sx = boxX + ut.getSoulX() * boxW;
+        float sy = boxY + ut.getSoulY() * boxH;
         float sr = 7f;
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         shapes.setColor(1f, 0.15f, 0.15f, 1f);
@@ -989,7 +991,7 @@ public class GameScreen implements Screen
         for (Bullet b : ut.getBullets()) {
             if (!b.alive) continue;
             float bx = boxX + b.x * boxW;
-            float by = boxY + (1f - b.y) * boxH;  // flip Y
+            float by = boxY + b.y * boxH;
             if (b.shape == Bullet.Shape.CIRCLE) {
                 float br = b.radius * boxW * 0.8f;
                 shapes.setColor(1f, 1f, 0.85f, 1f);
