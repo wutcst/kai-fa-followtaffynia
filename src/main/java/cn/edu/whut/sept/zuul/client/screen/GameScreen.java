@@ -37,6 +37,8 @@ public class GameScreen implements Screen
     private static final float DASH_COOLDOWN = 1.0f;
     private static final float ATTACK_COOLDOWN = 0.5f;
     private static final float UI_GRID = 8f;
+    private static final float TOP_BAR_HEIGHT = 56f;
+    private static final float FOOTER_HEIGHT = 96f;
     private static final Color UI_LIGHT_TEXT = new Color(1f, 0.96f, 0.82f, 1f);
     private static final Color UI_DARK_TEXT = new Color(0.26f, 0.18f, 0.1f, 1f);
     private static final String LOG_TAG = "GameScreen";
@@ -252,10 +254,15 @@ public class GameScreen implements Screen
         shapes.rect(0, 0, sw, sh);
         shapes.end();
 
-        float boxW = sw * 0.64f, boxH = sh * 0.56f;
-        float boxX = (sw - boxW) / 2f, boxY = (sh - boxH) / 2f;
+        float boxW = draw.grid(Math.max(360f, Math.min(760f, sw * 0.62f)));
+        float boxH = draw.grid(Math.max(240f, Math.min(360f, sh * 0.46f)));
+        float boxX = draw.grid((sw - boxW) / 2f);
+        float minBoxY = FOOTER_HEIGHT + 64f;
+        float maxBoxY = sh - TOP_BAR_HEIGHT - boxH - 28f;
+        float centeredY = (sh - boxH) / 2f;
+        float boxY = draw.grid(Math.max(minBoxY, Math.min(centeredY, maxBoxY)));
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(0.02f, 0.02f, 0.05f, 0.92f);
+        shapes.setColor(0.025f, 0.022f, 0.04f, 0.96f);
         shapes.rect(boxX, boxY, boxW, boxH);
         shapes.end();
         shapes.begin(ShapeRenderer.ShapeType.Line);

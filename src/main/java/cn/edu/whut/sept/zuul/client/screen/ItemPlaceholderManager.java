@@ -65,15 +65,29 @@ public class ItemPlaceholderManager
     public void drawItemPlaceholders(ShapeRenderer shapes)
     {
         if (placeholders.isEmpty()) return;
+        float iconSize = 18f;
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         for (ItemPlaceholder ip : placeholders) {
+            float x = ip.bounds.x + (ip.bounds.width - iconSize) / 2f;
+            float y = ip.bounds.y + (ip.bounds.height - iconSize) / 2f;
+            // 阴影
+            shapes.setColor(0f, 0f, 0f, 0.32f);
+            shapes.rect(x + 2f, y - 2f, iconSize, iconSize);
+            // 主体色块
             shapes.setColor(ip.color);
-            shapes.rect(ip.bounds.x, ip.bounds.y, ip.bounds.width, ip.bounds.height);
+            shapes.rect(x, y, iconSize, iconSize);
+            // 高光线
+            shapes.setColor(1f, 1f, 1f, 0.55f);
+            shapes.rect(x + 4f, y + iconSize - 6f, 5f, 3f);
         }
-        shapes.set(ShapeRenderer.ShapeType.Line);
+        shapes.end();
+        // 边框
+        shapes.begin(ShapeRenderer.ShapeType.Line);
         for (ItemPlaceholder ip : placeholders) {
-            shapes.setColor(1f, 1f, 1f, 0.7f);
-            shapes.rect(ip.bounds.x, ip.bounds.y, ip.bounds.width, ip.bounds.height);
+            float x = ip.bounds.x + (ip.bounds.width - iconSize) / 2f;
+            float y = ip.bounds.y + (ip.bounds.height - iconSize) / 2f;
+            shapes.setColor(0.18f, 0.12f, 0.08f, 0.9f);
+            shapes.rect(x, y, iconSize, iconSize);
         }
         shapes.end();
     }
