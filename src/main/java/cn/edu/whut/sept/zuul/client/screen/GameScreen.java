@@ -102,7 +102,7 @@ public class GameScreen implements Screen
         this.draw = new UiDrawUtils(font, smallFont, uiSkin, layout, UI_LIGHT_TEXT, UI_DARK_TEXT, UI_GRID);
         this.camera = new CameraController();
         // room must be assigned first so lambdas below can capture the field reference
-        this.room = new RoomController(engine, TILE, PLAYER_W, PLAYER_H,
+        this.room = new RoomController(engine, batch, TILE, PLAYER_W, PLAYER_H,
             null, null, r -> Gdx.app.postRunnable(r));
         this.npcManager = new NpcPlaceholderManager((tx, ty) -> room.tileToWorldRect(tx, ty, 1, 1));
         this.itemManager = new ItemPlaceholderManager(engine, (tx, ty) -> room.tileToWorldRect(tx, ty, 1, 1));
@@ -129,8 +129,9 @@ public class GameScreen implements Screen
         camera.update(room.mapPixelWidth(), room.mapPixelHeight());
         room.loadCurrentRoom(false);
         if (Float.isNaN(savedPlayerX) || Float.isNaN(savedPlayerY)) {
-            playerX = room.getSpawnX();
-            playerY = room.getSpawnY();
+            float[] sp = room.resolveSpawn();
+            playerX = sp[0];
+            playerY = sp[1];
         } else {
             playerX = savedPlayerX;
             playerY = savedPlayerY;
@@ -174,8 +175,11 @@ public class GameScreen implements Screen
             if (room.getExitCooldown() > 0f) room.setExitCooldown(room.getExitCooldown() - delta);
             movement.update(delta);
             movement.checkAttackFinished(playerRenderer.isAttackFinished());
-            String msg = room.checkExitOverlap(playerX, playerY);
-            if (msg != null) actionMessage = msg;
+            RoomController.ExitResult exit = room.checkExitOverlap(playerX, playerY);
+            if (exit != null) {
+                actionMessage = exit.message;
+                if (exit.hasSpawn) { playerX = exit.spawnX; playerY = exit.spawnY; }
+            }
         }
 
         Gdx.gl.glClearColor(0.06f, 0.06f, 0.1f, 1f);
@@ -344,7 +348,8 @@ public class GameScreen implements Screen
         if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) actionMessage = engine.look();
         if (Gdx.input.isKeyJustPressed(Input.Keys.B)) {
             if (engine.moveBack()) {
-                room.loadCurrentRoom(true);
+                float[] sp = room.loadCurrentRoom(true);
+                if (sp != null) { playerX = sp[0]; playerY = sp[1]; }
                 actionMessage = "已回退至 " + engine.getCurrentRoom().getRoomId();
             } else actionMessage = "无法回退";
         }
