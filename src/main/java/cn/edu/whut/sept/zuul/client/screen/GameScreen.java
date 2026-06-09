@@ -166,6 +166,7 @@ public class GameScreen implements Screen
         this.font = game.getFonts().getDefault();
         this.smallFont = game.getFonts().copyDefault(0.85f);
         this.shapes = new ShapeRenderer();
+        shapes.setAutoShapeType(true);
         this.uiSkin = new GameUiSkin();
         this.layout = new GlyphLayout();
         this.worldCamera = new OrthographicCamera();
@@ -443,8 +444,10 @@ public class GameScreen implements Screen
         for (ItemPlaceholder ip : itemPlaceholders) {
             shapes.setColor(ip.color);
             shapes.rect(ip.bounds.x, ip.bounds.y, ip.bounds.width, ip.bounds.height);
-            // 外框让色块更明显
-            shapes.setColor(1f, 1f, 1f, 0.5f);
+        }
+        shapes.set(ShapeRenderer.ShapeType.Line);
+        for (ItemPlaceholder ip : itemPlaceholders) {
+            shapes.setColor(1f, 1f, 1f, 0.7f);
             shapes.rect(ip.bounds.x, ip.bounds.y, ip.bounds.width, ip.bounds.height);
         }
         shapes.end();
@@ -1760,6 +1763,7 @@ public class GameScreen implements Screen
 
         applyFullViewport();
         Gdx.gl.glEnable(GL20.GL_BLEND);
+        shapes.setProjectionMatrix(uiCamera.combined);
 
         worldMapRenderer.render(shapes, batch, smallFont,
             panelX, panelY, panelW, panelH,
