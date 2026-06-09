@@ -75,6 +75,7 @@ public class GameEngine
         this.endingEvaluator = new EndingEvaluator();
         this.dialogueActionExecutor = new DialogueActionExecutor(this);
         this.currentEnding = EndingType.NONE;
+        this.combatMode = CombatMode.TURN_BASED;
         this.lastCombatOutcome = CombatOutcome.ONGOING;
         exploredRoomIds.add(currentRoom.getRoomId());
 
