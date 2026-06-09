@@ -152,6 +152,11 @@ public class GameEngine
         return Collections.unmodifiableSet(defeatedNpcs);
     }
 
+    public Set<String> getExploredRoomIds()
+    {
+        return Collections.unmodifiableSet(exploredRoomIds);
+    }
+
     public boolean isPlayerDead()
     {
         return player.getHp() <= 0;

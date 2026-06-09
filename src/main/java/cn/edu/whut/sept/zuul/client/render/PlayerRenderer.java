@@ -23,10 +23,14 @@ public class PlayerRenderer implements Disposable
     private static final float SCALE = 2.0f;
     private static final float RENDER_W = FRAME_W * SCALE;
     private static final float RENDER_H = FRAME_H * SCALE;
+    private static final float ATTACK_RENDER_W = 128f * SCALE;
+    private static final float ATTACK_RENDER_H = 128f * SCALE;
     private static final float COLLISION_W = 16f;
     private static final float COLLISION_H = 16f;
     private static final float IDLE_DURATION = 0.20f;
     private static final float WALK_DURATION = 0.12f;
+    private static final float DASH_ANIM_DURATION = 0.06f;
+    private static final float ATTACK_ANIM_DURATION = 0.04f;
     private static final int WALK_FRAMES = 4;
     private static final int IDLE_FRAMES = 5;
 
@@ -53,10 +57,12 @@ public class PlayerRenderer implements Disposable
         }
     }
 
-    private enum AnimState { IDLE, WALKING }
+    private enum AnimState { IDLE, WALKING, DASHING, ATTACKING }
 
     private final Map<FacingDirection, Animation<TextureRegion>> walkAnims;
     private final Map<FacingDirection, Animation<TextureRegion>> idleAnims;
+    private final Map<FacingDirection, Animation<TextureRegion>> dashAnims;
+    private final Map<FacingDirection, Animation<TextureRegion>> attackAnims;
     private final java.util.List<Texture> textures;
 
     private FacingDirection currentDirection = FacingDirection.S;
@@ -66,6 +72,8 @@ public class PlayerRenderer implements Disposable
     public PlayerRenderer() {
         walkAnims = new EnumMap<>(FacingDirection.class);
         idleAnims = new EnumMap<>(FacingDirection.class);
+        dashAnims = new EnumMap<>(FacingDirection.class);
+        attackAnims = new EnumMap<>(FacingDirection.class);
         textures = new java.util.ArrayList<>();
 
         // ---- 四个方向统一：walk 用单帧，idle 上下用单帧、左右用 walk 第一帧 ----
@@ -85,6 +93,16 @@ public class PlayerRenderer implements Disposable
             } else {
                 idleAnims.put(dir, new Animation<>(IDLE_DURATION, walkFrames[0]));
             }
+
+            // dash: 复用 walk 帧加速播放
+            dashAnims.put(dir, new Animation<>(DASH_ANIM_DURATION, walkFrames));
+            dashAnims.get(dir).setPlayMode(Animation.PlayMode.LOOP);
+
+            // attack: N/S=20帧, E/W=18帧, 原地攻击播一次
+            int attackFrames = (dir == FacingDirection.N || dir == FacingDirection.S) ? 20 : 18;
+            TextureRegion[] attackFramesArr = loadFrames(SINGLE_DIR + "attack_" + dirName, attackFrames);
+            attackAnims.put(dir, new Animation<>(ATTACK_ANIM_DURATION, attackFramesArr));
+            attackAnims.get(dir).setPlayMode(Animation.PlayMode.NORMAL);
         }
     }
 
@@ -106,20 +124,57 @@ public class PlayerRenderer implements Disposable
         return tex;
     }
 
-    public void update(float delta, boolean isMoving, FacingDirection facing) {
-        stateTime += delta;
+    public void update(float delta, boolean isMoving, boolean isDashing, boolean isAttacking, FacingDirection facing) {
         currentDirection = facing;
-        currentState = isMoving ? AnimState.WALKING : AnimState.IDLE;
+        if (isAttacking) {
+            if (currentState != AnimState.ATTACKING) {
+                stateTime = 0f;
+            }
+            currentState = AnimState.ATTACKING;
+        } else if (isDashing) {
+            currentState = AnimState.DASHING;
+        } else {
+            currentState = isMoving ? AnimState.WALKING : AnimState.IDLE;
+        }
+        stateTime += delta;
     }
 
     public void render(SpriteBatch batch, float playerX, float playerY) {
-        Animation<TextureRegion> anim =
-            currentState == AnimState.WALKING ? walkAnims.get(currentDirection) : idleAnims.get(currentDirection);
+        Animation<TextureRegion> anim;
+        switch (currentState) {
+            case ATTACKING: anim = attackAnims.get(currentDirection); break;
+            case DASHING:   anim = dashAnims.get(currentDirection); break;
+            case WALKING:   anim = walkAnims.get(currentDirection); break;
+            default:        anim = idleAnims.get(currentDirection); break;
+        }
         if (anim == null) return;
         TextureRegion frame = anim.getKeyFrame(stateTime);
-        float rx = playerX - (RENDER_W - COLLISION_W) / 2f;
-        float ry = playerY - (RENDER_H - COLLISION_H) / 2f;
-        batch.draw(frame, rx, ry, RENDER_W, RENDER_H);
+        float renderW, renderH;
+        if (currentState == AnimState.ATTACKING) {
+            renderW = ATTACK_RENDER_W;
+            renderH = ATTACK_RENDER_H;
+        } else {
+            renderW = RENDER_W;
+            renderH = RENDER_H;
+        }
+        float rx = playerX - (renderW - COLLISION_W) / 2f;
+        float ry = playerY - (renderH - COLLISION_H) / 2f;
+        if (currentState == AnimState.ATTACKING) {
+            // 攻击帧角色身体不在画布中心，按方向偏移
+            switch (currentDirection) {
+                case E: rx += 50f; break;
+                case W: rx -= 50f; break;
+                case N: ry -= 0f; break;
+                case S: ry += 0f; break;
+            }
+        }
+        batch.draw(frame, rx, ry, renderW, renderH);
+    }
+
+    public boolean isAttackFinished() {
+        if (currentState != AnimState.ATTACKING) return false;
+        Animation<TextureRegion> anim = attackAnims.get(currentDirection);
+        return anim != null && anim.isAnimationFinished(stateTime);
     }
 
     @Override
