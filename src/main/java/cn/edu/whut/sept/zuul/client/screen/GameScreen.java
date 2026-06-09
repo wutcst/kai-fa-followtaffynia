@@ -950,9 +950,15 @@ public class GameScreen implements Screen
             float btnW = 110f;
             float btnH = 28f;
             String[] labels = {"1 FIGHT", "2 ACT", "3 ITEM", "4 MERCY"};
+            // 先画按钮背景（shapes）
             for (int i = 0; i < 4; i++) {
                 float bx = boxX + i * (btnW + 6f);
-                drawUtButton(bx, boxY - btnH - 6f, btnW, btnH, labels[i]);
+                drawUtButtonBg(bx, boxY - btnH - 6f, btnW, btnH);
+            }
+            // 再画文字（batch 已 begin）
+            for (int i = 0; i < 4; i++) {
+                float bx = boxX + i * (btnW + 6f);
+                smallFont.draw(batch, labels[i], bx + 8f, boxY - btnH - 6f + btnH - 8f);
             }
         } else {
             smallFont.draw(batch, ut.getPhaseMessage(), boxX, bottomY);
@@ -1018,7 +1024,7 @@ public class GameScreen implements Screen
         shapes.end();
     }
 
-    private void drawUtButton(float x, float y, float w, float h, String text)
+    private void drawUtButtonBg(float x, float y, float w, float h)
     {
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         shapes.setColor(0.12f, 0.12f, 0.18f, 0.9f);
@@ -1028,10 +1034,6 @@ public class GameScreen implements Screen
         shapes.setColor(1f, 0.55f, 0.1f, 0.65f);
         shapes.rect(x, y, w, h);
         shapes.end();
-        batch.begin();
-        smallFont.setColor(Color.WHITE);
-        smallFont.draw(batch, text, x + 8f, y + h - 8f);
-        batch.end();
     }
 
     private void drawHpBar(float x, float y, float w, float h,
