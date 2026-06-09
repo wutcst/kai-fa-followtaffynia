@@ -55,30 +55,30 @@ public class GameUiSkin implements Disposable
 
     public GameUiSkin()
     {
-        panelBrown = createWoodWindowTexture();
-        panelBeige = createParchmentTexture(false);
-        panelInsetBeige = createParchmentTexture(true);
-        buttonLongBrown = createButtonTexture(false);
-        buttonLongBeige = createButtonTexture(true);
-        buttonSquareBrown = createSquareButtonTexture(false);
-        buttonSquareBeige = createSquareButtonTexture(true);
+        panelBrown = TextureFactory.createWoodWindow();
+        panelBeige = TextureFactory.createParchment(false);
+        panelInsetBeige = TextureFactory.createParchment(true);
+        buttonLongBrown = TextureFactory.createButton(false);
+        buttonLongBeige = TextureFactory.createButton(true);
+        buttonSquareBrown = TextureFactory.createSquareButton(false);
+        buttonSquareBeige = TextureFactory.createSquareButton(true);
         iconCheck = loadTexture("iconCheck_beige.png");
         iconCircle = loadTexture("iconCircle_blue.png");
         iconCross = loadTexture("iconCross_brown.png");
         cursorHand = loadTexture("cursorHand_beige.png");
         cursorSword = loadTexture("cursorSword_gold.png");
-        iconMove = createMoveIcon();
-        iconRoom = createRoomIcon();
-        iconLook = createLookIcon();
-        iconInventory = createInventoryIcon();
-        iconBack = createBackIcon();
-        iconSave = createSaveIcon();
-        iconLoad = createLoadIcon();
-        iconMenu = createMenuIcon();
-        iconTitle = createTitleIcon();
-        iconUse = createUseIcon();
-        gemGreen = createGemIcon();
-        ornamentLine = createOrnamentLine();
+        iconMove = TextureFactory.createMoveIcon();
+        iconRoom = TextureFactory.createRoomIcon();
+        iconLook = TextureFactory.createLookIcon();
+        iconInventory = TextureFactory.createInventoryIcon();
+        iconBack = TextureFactory.createBackIcon();
+        iconSave = TextureFactory.createSaveIcon();
+        iconLoad = TextureFactory.createLoadIcon();
+        iconMenu = TextureFactory.createMenuIcon();
+        iconTitle = TextureFactory.createTitleIcon();
+        iconUse = TextureFactory.createUseIcon();
+        gemGreen = TextureFactory.createGemIcon();
+        ornamentLine = TextureFactory.createOrnamentLine();
         barBack = loadBar("barBack");
         barRed = loadBar("barRed");
         barYellow = loadBar("barYellow");
@@ -311,313 +311,6 @@ public class GameUiSkin implements Disposable
         };
     }
 
-    private static Texture createMoveIcon()
-    {
-        Pixmap pixmap = createIconCanvas();
-        setGold(pixmap);
-        pixmap.fillRectangle(11, 5, 2, 14);
-        pixmap.fillRectangle(5, 11, 14, 2);
-        pixmap.fillRectangle(10, 3, 4, 3);
-        pixmap.fillRectangle(10, 18, 4, 3);
-        pixmap.fillRectangle(3, 10, 3, 4);
-        pixmap.fillRectangle(18, 10, 3, 4);
-        setDark(pixmap);
-        pixmap.fillRectangle(11, 8, 2, 8);
-        pixmap.fillRectangle(8, 11, 8, 2);
-        return finishIcon(pixmap);
-    }
-
-    private static Texture createRoomIcon()
-    {
-        Pixmap pixmap = createIconCanvas();
-        setGold(pixmap);
-        pixmap.fillRectangle(6, 10, 12, 9);
-        pixmap.fillTriangle(4, 10, 12, 4, 20, 10);
-        setDark(pixmap);
-        pixmap.fillRectangle(10, 14, 4, 5);
-        pixmap.fillRectangle(7, 11, 10, 2);
-        return finishIcon(pixmap);
-    }
-
-    private static Texture createLookIcon()
-    {
-        Pixmap pixmap = createIconCanvas();
-        setGold(pixmap);
-        pixmap.drawCircle(10, 10, 5);
-        pixmap.drawCircle(10, 10, 4);
-        pixmap.fillRectangle(14, 15, 6, 3);
-        pixmap.fillRectangle(17, 18, 3, 2);
-        setDark(pixmap);
-        pixmap.fillRectangle(9, 9, 3, 3);
-        return finishIcon(pixmap);
-    }
-
-    private static Texture createInventoryIcon()
-    {
-        Pixmap pixmap = createIconCanvas();
-        setGold(pixmap);
-        pixmap.fillRectangle(6, 10, 12, 10);
-        pixmap.fillRectangle(8, 7, 8, 4);
-        setDark(pixmap);
-        pixmap.fillRectangle(10, 7, 4, 2);
-        pixmap.fillRectangle(8, 12, 8, 2);
-        pixmap.fillRectangle(11, 15, 2, 3);
-        return finishIcon(pixmap);
-    }
-
-    private static Texture createBackIcon()
-    {
-        Pixmap pixmap = createIconCanvas();
-        setGold(pixmap);
-        pixmap.fillRectangle(7, 8, 11, 3);
-        pixmap.fillRectangle(7, 11, 3, 5);
-        pixmap.fillRectangle(10, 16, 6, 3);
-        pixmap.fillTriangle(4, 9, 9, 5, 9, 13);
-        setDark(pixmap);
-        pixmap.fillRectangle(12, 17, 4, 1);
-        return finishIcon(pixmap);
-    }
-
-    private static Texture createSaveIcon()
-    {
-        Pixmap pixmap = createIconCanvas();
-        setGold(pixmap);
-        pixmap.fillRectangle(5, 5, 14, 15);
-        setDark(pixmap);
-        pixmap.fillRectangle(8, 6, 7, 5);
-        pixmap.fillRectangle(8, 15, 8, 4);
-        setLight(pixmap);
-        pixmap.fillRectangle(10, 16, 4, 2);
-        return finishIcon(pixmap);
-    }
-
-    private static Texture createLoadIcon()
-    {
-        Pixmap pixmap = createIconCanvas();
-        setGold(pixmap);
-        pixmap.fillRectangle(6, 5, 12, 15);
-        setDark(pixmap);
-        pixmap.fillRectangle(8, 7, 1, 11);
-        pixmap.fillRectangle(10, 9, 6, 2);
-        pixmap.fillRectangle(10, 13, 5, 2);
-        pixmap.fillRectangle(10, 17, 4, 1);
-        return finishIcon(pixmap);
-    }
-
-    private static Texture createMenuIcon()
-    {
-        Pixmap pixmap = createIconCanvas();
-        setGold(pixmap);
-        pixmap.fillRectangle(5, 6, 14, 3);
-        pixmap.fillRectangle(5, 11, 14, 3);
-        pixmap.fillRectangle(5, 16, 14, 3);
-        setDark(pixmap);
-        pixmap.fillRectangle(7, 7, 10, 1);
-        pixmap.fillRectangle(7, 12, 10, 1);
-        pixmap.fillRectangle(7, 17, 10, 1);
-        return finishIcon(pixmap);
-    }
-
-    private static Texture createTitleIcon()
-    {
-        Pixmap pixmap = createIconCanvas();
-        setGold(pixmap);
-        pixmap.fillRectangle(8, 9, 8, 10);
-        pixmap.fillTriangle(5, 10, 12, 5, 19, 10);
-        setDark(pixmap);
-        pixmap.fillRectangle(11, 14, 3, 5);
-        pixmap.fillRectangle(4, 18, 16, 2);
-        return finishIcon(pixmap);
-    }
-
-    private static Texture createWoodWindowTexture()
-    {
-        Pixmap pixmap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
-        pixmap.setBlending(Pixmap.Blending.None);
-        pixmap.setColor(0.2f, 0.1f, 0.04f, 1f);
-        pixmap.fill();
-        pixmap.setBlending(Pixmap.Blending.SourceOver);
-        fill(pixmap, 4, 4, 56, 56, 0.36f, 0.2f, 0.09f, 1f);
-        fill(pixmap, 8, 8, 48, 48, 0.45f, 0.27f, 0.13f, 1f);
-        fill(pixmap, 11, 11, 42, 42, 0.4f, 0.23f, 0.11f, 1f);
-        drawGoldFrame(pixmap, 1, 1, 62, 62);
-        drawCornerCaps(pixmap, 0, 0, 64, 64);
-        fill(pixmap, 12, 8, 40, 2, 0.9f, 0.72f, 0.35f, 1f);
-        fill(pixmap, 12, 54, 40, 2, 0.32f, 0.16f, 0.06f, 1f);
-        return finishIcon(pixmap);
-    }
-
-    private static Texture createParchmentTexture(boolean inset)
-    {
-        Pixmap pixmap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
-        pixmap.setBlending(Pixmap.Blending.None);
-        pixmap.setColor(0f, 0f, 0f, 0f);
-        pixmap.fill();
-        pixmap.setBlending(Pixmap.Blending.SourceOver);
-        float base = inset ? 0.74f : 0.86f;
-        fill(pixmap, 2, 2, 60, 60, 0.42f, 0.26f, 0.13f, 1f);
-        fill(pixmap, 5, 5, 54, 54, base, base * 0.84f, base * 0.58f, 1f);
-        fill(pixmap, 8, 8, 48, 48, base + 0.04f, base * 0.88f, base * 0.62f, 1f);
-        drawGoldFrame(pixmap, 1, 1, 62, 62);
-        if (!inset) {
-            drawCornerCaps(pixmap, 0, 0, 64, 64);
-        }
-        fill(pixmap, 10, 10, 6, 2, 0.66f, 0.46f, 0.25f, 0.55f);
-        fill(pixmap, 48, 50, 7, 2, 0.66f, 0.46f, 0.25f, 0.45f);
-        return finishIcon(pixmap);
-    }
-
-    private static Texture createButtonTexture(boolean light)
-    {
-        Pixmap pixmap = new Pixmap(72, 40, Pixmap.Format.RGBA8888);
-        pixmap.setBlending(Pixmap.Blending.None);
-        pixmap.setColor(0f, 0f, 0f, 0f);
-        pixmap.fill();
-        pixmap.setBlending(Pixmap.Blending.SourceOver);
-        fill(pixmap, 3, 3, 66, 34, 0.48f, 0.29f, 0.14f, 1f);
-        if (light) {
-            fill(pixmap, 6, 6, 60, 28, 0.88f, 0.73f, 0.49f, 1f);
-        } else {
-            fill(pixmap, 6, 6, 60, 28, 0.58f, 0.36f, 0.18f, 1f);
-        }
-        drawGoldFrame(pixmap, 1, 1, 70, 38);
-        fill(pixmap, 12, 6, 48, 1, 0.98f, 0.78f, 0.34f, 1f);
-        return finishIcon(pixmap);
-    }
-
-    private static Texture createSquareButtonTexture(boolean light)
-    {
-        Pixmap pixmap = new Pixmap(40, 40, Pixmap.Format.RGBA8888);
-        pixmap.setBlending(Pixmap.Blending.None);
-        pixmap.setColor(0f, 0f, 0f, 0f);
-        pixmap.fill();
-        pixmap.setBlending(Pixmap.Blending.SourceOver);
-        if (light) {
-            fill(pixmap, 4, 4, 32, 32, 0.84f, 0.68f, 0.42f, 1f);
-            fill(pixmap, 7, 7, 26, 26, 0.9f, 0.78f, 0.56f, 1f);
-        } else {
-            fill(pixmap, 4, 4, 32, 32, 0.25f, 0.13f, 0.06f, 1f);
-            fill(pixmap, 7, 7, 26, 26, 0.42f, 0.24f, 0.12f, 1f);
-        }
-        drawGoldFrame(pixmap, 1, 1, 38, 38);
-        return finishIcon(pixmap);
-    }
-
-    private static Texture createUseIcon()
-    {
-        Pixmap pixmap = createIconCanvas();
-        setGold(pixmap);
-        pixmap.fillRectangle(6, 13, 10, 3);
-        pixmap.fillRectangle(9, 10, 6, 8);
-        pixmap.fillRectangle(16, 8, 3, 3);
-        setLight(pixmap);
-        pixmap.fillRectangle(11, 6, 2, 4);
-        pixmap.fillRectangle(9, 8, 6, 2);
-        pixmap.fillRectangle(18, 5, 2, 2);
-        pixmap.fillRectangle(4, 6, 2, 2);
-        setDark(pixmap);
-        pixmap.fillRectangle(8, 14, 6, 1);
-        pixmap.fillRectangle(10, 17, 4, 1);
-        pixmap.fillRectangle(17, 10, 1, 1);
-        return finishIcon(pixmap);
-    }
-
-    private static Texture createGemIcon()
-    {
-        Pixmap pixmap = createIconCanvas();
-        setGold(pixmap);
-        pixmap.fillRectangle(8, 3, 8, 3);
-        pixmap.fillRectangle(5, 6, 14, 3);
-        pixmap.fillRectangle(3, 9, 18, 6);
-        pixmap.fillRectangle(6, 15, 12, 3);
-        pixmap.fillRectangle(9, 18, 6, 3);
-        pixmap.setColor(0.08f, 0.55f, 0.27f, 1f);
-        pixmap.fillRectangle(8, 8, 8, 8);
-        pixmap.setColor(0.25f, 0.95f, 0.48f, 1f);
-        pixmap.fillRectangle(10, 6, 4, 3);
-        pixmap.fillRectangle(7, 10, 3, 4);
-        return finishIcon(pixmap);
-    }
-
-    private static Texture createOrnamentLine()
-    {
-        Pixmap pixmap = new Pixmap(96, 16, Pixmap.Format.RGBA8888);
-        pixmap.setBlending(Pixmap.Blending.None);
-        pixmap.setColor(0f, 0f, 0f, 0f);
-        pixmap.fill();
-        pixmap.setBlending(Pixmap.Blending.SourceOver);
-        setGold(pixmap);
-        pixmap.fillRectangle(8, 7, 80, 2);
-        pixmap.fillRectangle(2, 6, 8, 4);
-        pixmap.fillRectangle(86, 6, 8, 4);
-        pixmap.fillRectangle(43, 4, 10, 8);
-        pixmap.setColor(0.08f, 0.55f, 0.27f, 1f);
-        pixmap.fillRectangle(46, 6, 4, 4);
-        return finishIcon(pixmap);
-    }
-
-    private static Pixmap createIconCanvas()
-    {
-        Pixmap pixmap = new Pixmap(24, 24, Pixmap.Format.RGBA8888);
-        pixmap.setBlending(Pixmap.Blending.None);
-        pixmap.setColor(0f, 0f, 0f, 0f);
-        pixmap.fill();
-        pixmap.setBlending(Pixmap.Blending.SourceOver);
-        return pixmap;
-    }
-
-    private static Texture finishIcon(Pixmap pixmap)
-    {
-        Texture texture = new Texture(pixmap);
-        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-        pixmap.dispose();
-        return texture;
-    }
-
-    private static void setGold(Pixmap pixmap)
-    {
-        pixmap.setColor(0.93f, 0.72f, 0.33f, 1f);
-    }
-
-    private static void setLight(Pixmap pixmap)
-    {
-        pixmap.setColor(1f, 0.9f, 0.58f, 1f);
-    }
-
-    private static void setDark(Pixmap pixmap)
-    {
-        pixmap.setColor(0.24f, 0.14f, 0.05f, 1f);
-    }
-
-    private static void fill(Pixmap pixmap, int x, int y, int width, int height,
-        float r, float g, float b, float a)
-    {
-        pixmap.setColor(r, g, b, a);
-        pixmap.fillRectangle(x, y, width, height);
-    }
-
-    private static void drawGoldFrame(Pixmap pixmap, int x, int y, int width, int height)
-    {
-        fill(pixmap, x, y, width, 2, 0.95f, 0.68f, 0.22f, 1f);
-        fill(pixmap, x, y + height - 2, width, 2, 0.45f, 0.25f, 0.08f, 1f);
-        fill(pixmap, x, y, 2, height, 0.95f, 0.68f, 0.22f, 1f);
-        fill(pixmap, x + width - 2, y, 2, height, 0.45f, 0.25f, 0.08f, 1f);
-        fill(pixmap, x + 3, y + 3, width - 6, 1, 1f, 0.84f, 0.36f, 1f);
-        fill(pixmap, x + 3, y + height - 4, width - 6, 1, 0.2f, 0.1f, 0.04f, 1f);
-    }
-
-    private static void drawCornerCaps(Pixmap pixmap, int x, int y, int width, int height)
-    {
-        setGold(pixmap);
-        pixmap.fillRectangle(x, y, 10, 4);
-        pixmap.fillRectangle(x, y, 4, 10);
-        pixmap.fillRectangle(x + width - 10, y, 10, 4);
-        pixmap.fillRectangle(x + width - 4, y, 4, 10);
-        pixmap.fillRectangle(x, y + height - 4, 10, 4);
-        pixmap.fillRectangle(x, y + height - 10, 4, 10);
-        pixmap.fillRectangle(x + width - 10, y + height - 4, 10, 4);
-        pixmap.fillRectangle(x + width - 4, y + height - 10, 4, 10);
-    }
 
     @Override
     public void dispose()

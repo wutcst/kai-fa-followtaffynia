@@ -1,9 +1,6 @@
 package cn.edu.whut.sept.zuul.engine;
 
 import cn.edu.whut.sept.zuul.domain.Dialogue;
-import cn.edu.whut.sept.zuul.domain.DialogueNode;
-import cn.edu.whut.sept.zuul.domain.DialogueOption;
-import cn.edu.whut.sept.zuul.domain.DialogueTree;
 import cn.edu.whut.sept.zuul.domain.Direction;
 import cn.edu.whut.sept.zuul.domain.Item;
 import cn.edu.whut.sept.zuul.domain.Player;
@@ -11,9 +8,6 @@ import cn.edu.whut.sept.zuul.domain.Room;
 import cn.edu.whut.sept.zuul.domain.RoomScene;
 import cn.edu.whut.sept.zuul.engine.effect.UseEffectRegistry;
 import cn.edu.whut.sept.zuul.engine.effect.combat.CombatActionRegistry;
-import cn.edu.whut.sept.zuul.domain.NpcCombatDef;
-import cn.edu.whut.sept.zuul.infra.CombatLoader;
-import cn.edu.whut.sept.zuul.infra.DialogueLoader;
 import cn.edu.whut.sept.zuul.infra.GameLogger;
 import cn.edu.whut.sept.zuul.infra.GameState;
 import cn.edu.whut.sept.zuul.infra.WorldFactory;
@@ -27,7 +21,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import java.io.IOException;
 
 /**
  * 游戏核心引擎。GUI 唯一调用入口（见 docs/04 §10）。
@@ -48,16 +41,13 @@ public class GameEngine
     private final QuestManager questManager;
     private final EndingEvaluator endingEvaluator;
     private final DialogueActionExecutor dialogueActionExecutor;
+    private final DialogueManager dialogueManager;
+    private final CombatManager combatManager;
+    private final ItemManager itemManager;
     private String lastMessage;
     /** true 表示刚 moveBack，落点贴在返回的那扇门一侧 */
     private boolean spawnAtDoorSide;
-    private DialogueTree activeDialogueTree;
-    private String activeDialogueNodeId;
     private EndingType currentEnding;
-    private String encounterNpcId;
-    private CombatSystem activeCombat;
-    private CombatMode combatMode;
-    private CombatOutcome lastCombatOutcome;
 
     public GameEngine(String playerName)
     {
@@ -74,8 +64,14 @@ public class GameEngine
         this.questManager = new QuestManager();
         this.endingEvaluator = new EndingEvaluator();
         this.dialogueActionExecutor = new DialogueActionExecutor(this);
+        this.dialogueManager = new DialogueManager(dialogueActionExecutor,
+            msg -> this.lastMessage = msg);
+        this.combatManager = new CombatManager(player, defeatedNpcs, unlockedLocks,
+            combatActionRegistry, questManager,
+            msg -> this.lastMessage = msg);
+        this.itemManager = new ItemManager(this, unlockedLocks, questManager,
+            msg -> this.lastMessage = msg);
         this.currentEnding = EndingType.NONE;
-        this.lastCombatOutcome = CombatOutcome.ONGOING;
         exploredRoomIds.add(currentRoom.getRoomId());
 
         LOG.info("=== GAME START ===");
@@ -134,17 +130,17 @@ public class GameEngine
 
     public boolean isInDialogue()
     {
-        return activeDialogueTree != null;
+        return dialogueManager.isInDialogue();
     }
 
     public boolean isInCombat()
     {
-        return activeCombat != null;
+        return combatManager.isInCombat();
     }
 
     public CombatOutcome getLastCombatOutcome()
     {
-        return lastCombatOutcome;
+        return combatManager.getLastCombatOutcome();
     }
 
     public Set<String> getDefeatedNpcs()
@@ -164,18 +160,12 @@ public class GameEngine
 
     public EncounterMenu startNpcEncounter(String npcId)
     {
-        leaveEncounter();
-        encounterNpcId = npcId;
-        boolean isDefeated = defeatedNpcs.contains(npcId);
-        boolean canTalk = !isDefeated;
-        boolean canFight = !"merchant".equals(npcId) && !isDefeated;
-        boolean canUtFight = canFight && CombatLoader.exists(npcId);
-        return new EncounterMenu(npcId, canTalk, canFight, canUtFight, true);
+        return combatManager.startNpcEncounter(npcId);
     }
 
     public void leaveEncounter()
     {
-        encounterNpcId = null;
+        combatManager.leaveEncounter();
     }
 
     public CombatSnapshot startCombat(String npcId)
@@ -189,86 +179,28 @@ public class GameEngine
     public CombatSnapshot startCombat(String npcId, CombatMode mode)
     {
         endDialogue();
-        leaveEncounter();
-        try {
-            NpcCombatDef def = CombatLoader.load(npcId);
-            combatMode = mode;
-            if (mode == CombatMode.UNDERTALE) {
-                activeCombat = new UndertaleCombatEngine(player, def, combatActionRegistry);
-            } else {
-                activeCombat = new CombatEngine(player, def, combatActionRegistry);
-            }
-            encounterNpcId = npcId;
-            lastCombatOutcome = CombatOutcome.ONGOING;
-            LOG.info("startCombat: " + npcId + " mode=" + mode + " hp=" + def.maxHp);
-            return activeCombat.snapshot();
-        } catch (IOException ex) {
-            LOG.warning("startCombat: failed for " + npcId + ": " + ex.getMessage());
-            lastMessage = "无法与 " + npcId + " 开战。";
-            return null;
-        }
+        return combatManager.startCombat(npcId, mode);
     }
 
     /** 获取当前战斗系统，UI 可强转为 UndertaleCombatEngine 访问 UT 专用 API。 */
     public CombatSystem getCombatSystem()
     {
-        return activeCombat;
+        return combatManager.getCombatSystem();
     }
 
     public boolean isUndertaleCombat()
     {
-        return combatMode == CombatMode.UNDERTALE && activeCombat != null;
+        return combatManager.isUndertaleCombat();
     }
 
     public CombatSnapshot combatAction(CombatAction action, String itemIdOrNull)
     {
-        if (activeCombat == null) {
-            lastMessage = "当前没有进行中的战斗。";
-            return null;
-        }
-        CombatSnapshot snapshot = activeCombat.processPlayerAction(action, itemIdOrNull);
-        lastCombatOutcome = snapshot.outcome;
-        applyCombatOutcome();
-        return snapshot;
+        return combatManager.combatAction(action, itemIdOrNull);
     }
 
-    /**
-     * 检查当前战斗是否结束并结算（UT 引擎用——它的 outcome 由弹幕阶段自己设置，
-     * 不走 processPlayerAction 流程）。
-     */
     public void applyCombatOutcome()
     {
-        if (activeCombat == null) return;
-        CombatOutcome oc = activeCombat.getOutcome();
-        if (oc == CombatOutcome.VICTORY) {
-            applyCombatVictory(activeCombat.getDef());
-            lastCombatOutcome = oc;
-            clearCombat();
-        } else if (oc == CombatOutcome.DEFEAT || oc == CombatOutcome.FLED) {
-            lastCombatOutcome = oc;
-            clearCombat();
-        }
-    }
-
-    private void applyCombatVictory(NpcCombatDef def)
-    {
-        if (def.onDefeatReputation != 0) {
-            player.setReputation(player.getReputation() + def.onDefeatReputation);
-        }
-        if (def.onDefeatUnlock != null && !def.onDefeatUnlock.isEmpty()) {
-            unlockLock(def.onDefeatUnlock);
-        }
-        if (def.onDefeatMarkDefeated) {
-            defeatedNpcs.add(def.npcId);
-            LOG.info("defeatedNpcs: added " + def.npcId);
-        }
-        lastMessage = "你击败了 " + def.displayName + "。";
-    }
-
-    private void clearCombat()
-    {
-        activeCombat = null;
-        encounterNpcId = null;
+        combatManager.applyCombatOutcome();
     }
 
     public String getLastMessage()
@@ -356,208 +288,37 @@ public class GameEngine
         exploredRoomIds.add(currentRoom.getRoomId());
     }
 
-    public boolean takeItem(String itemId)
-    {
-        Room room = currentRoom;
-        Item item = room.removeItem(itemId);
-        if (item == null) {
-            LOG.info("takeItem: " + itemId + " = FAIL (not in " + room.getRoomId() + ")");
-            return false;
-        }
-        int currentWt = player.totalWeight();
-        if (currentWt + item.getWeight() > player.getMaxWeight()) {
-            room.addItem(item);
-            LOG.info("takeItem: " + itemId + " = FAIL overweight ("
-                + (currentWt + item.getWeight()) + " > " + player.getMaxWeight() + ")");
-            return false;
-        }
-        player.addItem(item);
-        questManager.onItemTaken(item);
-        LOG.info("takeItem: " + itemId + " (" + item.getWeight() + " wt) from "
-            + room.getRoomId() + " | backpack: " + player.totalWeight()
-            + "/" + player.getMaxWeight() + " (" + player.getInventory().size() + " items)");
-        return true;
-    }
-
-    public boolean dropItem(String itemId)
-    {
-        Item item = player.removeItem(itemId);
-        if (item == null) {
-            LOG.info("dropItem: " + itemId + " = FAIL (not in backpack)");
-            return false;
-        }
-        currentRoom.addItem(item);
-        LOG.info("dropItem: " + itemId + " (" + item.getWeight() + " wt) -> "
-            + currentRoom.getRoomId() + " | backpack: " + player.totalWeight()
-            + "/" + player.getMaxWeight());
-        return true;
-    }
-
-    public void dropAllItems()
-    {
-        List<Item> copy = new ArrayList<>(player.getInventory());
-        for (Item item : copy) {
-            player.removeItem(item.getItemId());
-            currentRoom.addItem(item);
-        }
-        LOG.info("dropAllItems: " + copy.size() + " items dropped in "
-            + currentRoom.getRoomId());
-    }
-
-    /**
-     * 校验物品是否可在当前房间使用（钥匙需靠近对应上锁出口）。
-     */
-    public ItemUseCheck checkItemUse(String itemId)
-    {
-        Item item = findInventoryItem(itemId);
-        if (item == null) {
-            return ItemUseCheck.blocked("背包中没有该物品。");
-        }
-        String effect = item.getEffect();
-        if (effect == null || effect.trim().isEmpty()) {
-            return ItemUseCheck.blocked(item.getName() + " 没有可使用的效果。");
-        }
-        if (effect.startsWith("unlock:")) {
-            String lockId = effect.substring("unlock:".length()).trim();
-            if (lockId.isEmpty()) {
-                return ItemUseCheck.blocked("这把钥匙似乎坏了。");
-            }
-            if (unlockedLocks.contains(lockId)) {
-                return ItemUseCheck.blocked("对应的门已经打开了。");
-            }
-            if (!hasAdjacentLockedExit(lockId)) {
-                return ItemUseCheck.needLocation("钥匙需在通往「" + lockId + "」的上锁出口旁使用。");
-            }
-            return ItemUseCheck.anytime();
-        }
-        return ItemUseCheck.anytime();
-    }
-
-    public String tryUseItem(String itemId)
-    {
-        ItemUseCheck check = checkItemUse(itemId);
-        if (!check.canUse) {
-            lastMessage = check.hint;
-            LOG.info("tryUseItem: " + itemId + " blocked -> " + lastMessage);
-            return lastMessage;
-        }
-        return useItem(itemId);
-    }
-
-    private boolean hasAdjacentLockedExit(String lockId)
-    {
-        for (String direction : currentRoom.getExitDirections()) {
-            Room next = currentRoom.getExit(direction);
-            if (next != null && lockId.equals(next.getLockId())
-                && !unlockedLocks.contains(lockId)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private Item findInventoryItem(String itemId)
-    {
-        return player.getInventory().stream()
-            .filter(i -> i.getItemId().equals(itemId))
-            .findFirst().orElse(null);
-    }
+    public boolean takeItem(String itemId) { return itemManager.takeItem(itemId); }
+    public boolean dropItem(String itemId) { return itemManager.dropItem(itemId); }
+    public void dropAllItems() { itemManager.dropAllItems(); }
+    public ItemUseCheck checkItemUse(String itemId) { return itemManager.checkItemUse(itemId); }
+    public String tryUseItem(String itemId) { return itemManager.tryUseItem(itemId); }
+    public void eatItem(String itemId) { itemManager.eatItem(itemId); }
 
     public String useItem(String itemId)
     {
-        Item item = findInventoryItem(itemId);
-        if (item == null) {
-            LOG.info("useItem: " + itemId + " = FAIL (not in backpack)");
-            lastMessage = "背包中没有 " + itemId;
-            return lastMessage;
-        }
-
+        Item item = player.getInventory().stream()
+            .filter(i -> i.getItemId().equals(itemId)).findFirst().orElse(null);
+        if (item == null) { lastMessage = "背包中没有 " + itemId; return lastMessage; }
         UseResult result = useEffectRegistry.apply(this, item);
-        if (result.isSuccess()) {
-            player.removeItem(itemId);
-        }
+        if (result.isSuccess()) player.removeItem(itemId);
         lastMessage = result.getMessage();
-        LOG.info("useItem: " + itemId + " -> " + lastMessage);
         return lastMessage;
-    }
-
-    public void eatItem(String itemId)
-    {
-        Item item = player.removeItem(itemId);
-        if (item != null && item.isMagicCookie()) {
-            int before = player.getMaxWeight();
-            player.setMaxWeight(before + Item.COOKIE_WEIGHT_BOOST);
-            LOG.info("eatItem: magic-cookie! MaxWeight " + before + " -> "
-                + player.getMaxWeight());
-        } else if (item != null) {
-            player.addItem(item);
-            LOG.info("eatItem: " + itemId + " is not edible, returned to backpack");
-        } else {
-            LOG.info("eatItem: " + itemId + " = FAIL (not in backpack)");
-        }
     }
 
     public Dialogue talkNpc(String npcId)
     {
-        endDialogue();
-        try {
-            activeDialogueTree = DialogueLoader.load(npcId);
-            activeDialogueNodeId = activeDialogueTree.getStartNodeId();
-            LOG.info("talkNpc: " + npcId + " start=" + activeDialogueNodeId);
-            return presentDialogueNode(activeDialogueTree.getStartNode());
-        } catch (IOException ex) {
-            LOG.warning("talkNpc: failed to load dialogue for " + npcId + ": " + ex.getMessage());
-            lastMessage = "无法与 " + npcId + " 对话。";
-            return new Dialogue(npcId, lastMessage, new ArrayList<>(), false);
-        }
+        return dialogueManager.talkNpc(npcId);
     }
 
     public Dialogue chooseDialogueOption(int optionIndex)
     {
-        if (activeDialogueTree == null || activeDialogueNodeId == null) {
-            lastMessage = "当前没有进行中的对话。";
-            return new Dialogue("", lastMessage, new ArrayList<>(), false);
-        }
-        DialogueNode current = activeDialogueTree.getNode(activeDialogueNodeId);
-        if (current == null || optionIndex < 0 || optionIndex >= current.getOptions().size()) {
-            lastMessage = "无效的对话选项。";
-            return new Dialogue(activeDialogueTree.getNpcId(), lastMessage,
-                new ArrayList<>(), false);
-        }
-        DialogueOption option = current.getOptions().get(optionIndex);
-        DialogueNode next = activeDialogueTree.getNode(option.getNextNodeId());
-        if (next == null) {
-            endDialogue();
-            lastMessage = "对话数据损坏。";
-            return new Dialogue(activeDialogueTree.getNpcId(), lastMessage,
-                new ArrayList<>(), false);
-        }
-        activeDialogueNodeId = next.getNodeId();
-        LOG.info("talkNpc: " + activeDialogueTree.getNpcId() + " -> node " + activeDialogueNodeId);
-        return presentDialogueNode(next);
+        return dialogueManager.chooseDialogueOption(optionIndex);
     }
 
     public void endDialogue()
     {
-        activeDialogueTree = null;
-        activeDialogueNodeId = null;
-    }
-
-    private Dialogue presentDialogueNode(DialogueNode node)
-    {
-        String npcId = activeDialogueTree.getNpcId();
-        String actionMessage = dialogueActionExecutor.apply(node.getAction());
-        if (actionMessage != null) {
-            lastMessage = actionMessage;
-        }
-        List<String> optionTexts = node.getOptions().stream()
-            .map(DialogueOption::getText)
-            .collect(Collectors.toList());
-        if (node.isTerminal()) {
-            endDialogue();
-            return new Dialogue(npcId, node.getText(), optionTexts, false);
-        }
-        return new Dialogue(npcId, node.getText(), optionTexts, true);
+        dialogueManager.endDialogue();
     }
 
     public String look()
@@ -688,7 +449,7 @@ public class GameEngine
         if (state.getDefeatedNpcs() != null) {
             defeatedNpcs.addAll(state.getDefeatedNpcs());
         }
-        clearCombat();
+        combatManager.leaveEncounter();
         endDialogue();
         entryDirection = Direction.fromExitKey(state.getEntryDirection());
         spawnAtDoorSide = false;
