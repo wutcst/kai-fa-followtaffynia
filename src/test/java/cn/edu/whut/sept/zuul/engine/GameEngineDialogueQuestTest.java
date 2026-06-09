@@ -137,7 +137,7 @@ class GameEngineDialogueQuestTest
         engine.movePlayer(Direction.SOUTH);
         engine.takeItem("key-vault");
         engine.useItem("key-vault");
-        engine.movePlayer(Direction.EAST);
+        engine.movePlayer(Direction.SOUTH);
     }
 
     private void enterThroneHall()

@@ -87,13 +87,13 @@ public final class WorldFactory
 
         // -- theatre: 讲堂 --
         Room theatre = createRoom("theatre", "in a lecture theater");
-        setSpawns(theatre, 15,8, 15,6, 15,13, 27,8, 3,8);
+        setSpawns(theatre, 15,8, 15,2, 15,13, 27,8, 3,8);
         theatre.addItem(createItem("torch", "Torch",
             "A flickering torch. Useful in dark places.", 3, "light"));
 
         // -- pub: 酒馆 --
         Room pub = createRoom("pub", "in the campus pub");
-        setSpawns(pub, 4,8, 4,8, 4,8, 4,8, 4,8);
+        setSpawns(pub, 15,8, 15,2, 15,13, 27,8, 3,8);
         pub.addItem(createItem("ale-mug", "Ale Mug",
             "A half-empty mug of ale.", 2, null));
 
@@ -105,13 +105,13 @@ public final class WorldFactory
 
         // -- office: 行政办公室 --
         Room office = createRoom("office", "in the computing admin office");
-        setSpawns(office, 4,8, 4,8, 4,8, 4,8, 4,8);
+        setSpawns(office, 15,8, 15,8, 15,8, 15,8, 3,8);
         office.addItem(createItem("key-guard", "Iron Key",
             "A heavy iron key, marked 'Guard Gate'.", 2, "unlock:guard-gate"));
 
         // -- library: 图书馆 --
         Room library = createRoom("library", "in an ancient library");
-        setSpawns(library, 15,8, 15,3, 15,14, 4,8, 4,8);
+        setSpawns(library, 15,8, 15,3, 15,14, 27,8, 3,8);
         library.addItem(createItem("ancient-tome", "Ancient Tome",
             "A heavy tome bound in cracked leather.", 15, "lore"));
 
@@ -124,7 +124,7 @@ public final class WorldFactory
         // -- vault: 金库（上锁） --
         Room vault = createRoom("vault", "in a gleaming vault");
         vault.setLockId("vault-door");
-        setSpawns(vault, 27,8, 27,8, 27,8, 4,8, 27,8);
+        setSpawns(vault, 15,8, 27,8, 27,8, 27,8, 4,8);
         vault.addItem(createItem("gem-light", "Light Gem",
             "A radiant gem pulsing with pure light.", 5, "light:full"));
         vault.addItem(createItem("gold-coins", "Gold Coins",
@@ -149,7 +149,7 @@ public final class WorldFactory
 
         // -- armory: 军械库 --
         Room armory = createRoom("armory", "in the armory");
-        setSpawns(armory, 4,8, 15,3, 15,13, 27,8, 3,8);
+        setSpawns(armory, 15,8, 15,3, 15,13, 27,8, 3,8);
         armory.addItem(createItem("sword-rusty", "Rusty Sword",
             "An old sword, still sharp enough.", 25, null));
         armory.addItem(createItem("shield-wooden", "Wooden Shield",
@@ -162,7 +162,7 @@ public final class WorldFactory
         // -- teleport-alcove: 传送密室 --
         Room teleportAlcove = createRoom("teleport-alcove", "in an unstable teleport alcove");
         teleportAlcove.setTeleport(true);
-        setSpawns(teleportAlcove, 27,8, 27,8, 27,8, 4,8, 27,8);
+        setSpawns(teleportAlcove, 15,8, 27,8, 27,8, 27,8, 4,8);
         teleportAlcove.addItem(createItem("warp-dust", "Warp Dust",
             "Fine dust that sparkles with teleport energy.", 2, null));
 
@@ -180,7 +180,7 @@ public final class WorldFactory
         linkBidirectional(pub, "south", cellar, "north");
         linkBidirectional(pub, "east", garden, "west");
 
-        linkBidirectional(lab, "east", vault, "west");
+        linkBidirectional(lab, "south", vault, "north");
 
         linkBidirectional(library, "north", hiddenShrine, "south");
         linkBidirectional(library, "east", teleportAlcove, "west");
@@ -189,7 +189,6 @@ public final class WorldFactory
         linkBidirectional(garden, "east", armory, "west");
 
         linkBidirectional(guardRoom, "south", throneHall, "north");
-        linkBidirectional(guardRoom, "west", armory, "east");
 
         linkBidirectional(armory, "south", forge, "north");
     }

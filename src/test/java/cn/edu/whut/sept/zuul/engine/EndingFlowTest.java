@@ -116,11 +116,11 @@ class EndingFlowTest
         engine.moveBack(); // → outside
     }
 
-    /** outside → south → lab → east → vault */
+    /** outside → south → lab → south → vault */
     private void navigateToVault()
     {
         engine.movePlayer(Direction.SOUTH); // outside → lab
-        engine.movePlayer(Direction.EAST);  // lab → vault
+        engine.movePlayer(Direction.SOUTH);  // lab → vault
     }
 
     /** vault → lab → outside */

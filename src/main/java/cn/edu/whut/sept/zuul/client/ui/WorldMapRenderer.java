@@ -57,7 +57,7 @@ public class WorldMapRenderer
         font.draw(batch, "世界地图  [M] 关闭", panelX + (panelW - layout.width) / 2f, panelY + panelH - pad + 4f);
         batch.end();
 
-        int minCol = 0, maxCol = 4, minRow = 0, maxRow = 4;
+        int minCol = 0, maxCol = 5, minRow = 0, maxRow = 4;
         float totalW = (maxCol - minCol) * CELL_GAP + CELL_SIZE;
         float totalH = (maxRow - minRow) * CELL_GAP + CELL_SIZE;
         float scale = Math.min(contentW / totalW, contentH / totalH);

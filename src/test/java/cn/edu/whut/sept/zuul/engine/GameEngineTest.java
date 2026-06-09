@@ -198,7 +198,7 @@ class GameEngineTest
     {
         // vault 有 lockId=vault-door，未解锁前不能进入
         goToLab();
-        assertFalse(engine.movePlayer(Direction.EAST),
+        assertFalse(engine.movePlayer(Direction.SOUTH),
             "vault should be locked, cannot enter");
         assertEquals("lab", engine.getCurrentRoom().getRoomId());
         assertTrue(engine.getLastMessage().contains("vault-door"));
@@ -214,7 +214,7 @@ class GameEngineTest
             .anyMatch(i -> i.getItemId().equals("key-vault")));
 
         // Step 2: 尝试进 vault（仍然锁着）
-        assertFalse(engine.movePlayer(Direction.EAST));
+        assertFalse(engine.movePlayer(Direction.SOUTH));
 
         // Step 3: 使用 key-vault 解锁
         String result = engine.useItem("key-vault");
@@ -224,7 +224,7 @@ class GameEngineTest
             .anyMatch(i -> i.getItemId().equals("key-vault")));
 
         // Step 4: 现在可以进入 vault
-        assertTrue(engine.movePlayer(Direction.EAST));
+        assertTrue(engine.movePlayer(Direction.SOUTH));
         assertEquals("vault", engine.getCurrentRoom().getRoomId());
         // 可以拾取 vault 内的宝物
         assertTrue(engine.takeItem("gem-light"));

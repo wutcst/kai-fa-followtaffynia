@@ -382,10 +382,10 @@ public class GameEngine
         if (entryDirection == Direction.DEFAULT) {
             spawnSide = Direction.DEFAULT;
         } else if (spawnAtDoorSide) {
-            // moveBack 后贴在来时的门边（entry 已取反，再取反回到门侧）
+            // moveBack 后 entryDirection 已取反，再取反回到原来的门侧
             spawnSide = entryDirection.opposite();
         } else {
-            // 从 entry 方向的来向门进入：落在来向门的对侧（刚进门，靠近来向门）
+            // 从入口方向进来，落在门对侧（靠近来时的门，方便回去）
             spawnSide = entryDirection.opposite();
         }
         return currentRoom.getScene().getSpawnAt(spawnSide);
