@@ -31,6 +31,7 @@ public class GameState implements Serializable
     private Set<String> defeatedNpcs;
     private Set<String> exploredRoomIds;
     private List<String> roomHistory;
+    private Map<String, List<String>> roomItems;
 
     public GameState()
     {
@@ -40,6 +41,7 @@ public class GameState implements Serializable
         defeatedNpcs = new HashSet<>();
         exploredRoomIds = new HashSet<>();
         roomHistory = new ArrayList<>();
+        roomItems = new HashMap<>();
         facing = "down";
         entryDirection = "default";
     }
@@ -172,5 +174,13 @@ public class GameState implements Serializable
     public List<String> getRoomHistory()
     {
         return roomHistory;
+    }
+
+    public Map<String, List<String>> getRoomItems()
+    {
+        if (roomItems == null) {
+            roomItems = new HashMap<>();
+        }
+        return roomItems;
     }
 }

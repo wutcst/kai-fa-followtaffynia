@@ -260,7 +260,9 @@ public class GameScreen implements Screen
         batch.begin();
         drawUiPanels();
         drawHud();
-        drawFooter();
+        if (!(engine.isInCombat() && engine.isUndertaleCombat())) {
+            drawFooter();
+        }
         batch.end();
 
         if (worldMapOpen) {
@@ -439,11 +441,24 @@ public class GameScreen implements Screen
         shapes.setProjectionMatrix(worldCamera.combined);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         for (ItemPlaceholder ip : itemPlaceholders) {
+            float iconSize = 18f;
+            float x = ip.bounds.x + (ip.bounds.width - iconSize) / 2f;
+            float y = ip.bounds.y + (ip.bounds.height - iconSize) / 2f;
+            shapes.setColor(0f, 0f, 0f, 0.32f);
+            shapes.rect(x + 2f, y - 2f, iconSize, iconSize);
             shapes.setColor(ip.color);
-            shapes.rect(ip.bounds.x, ip.bounds.y, ip.bounds.width, ip.bounds.height);
-            // 外框让色块更明显
-            shapes.setColor(1f, 1f, 1f, 0.5f);
-            shapes.rect(ip.bounds.x, ip.bounds.y, ip.bounds.width, ip.bounds.height);
+            shapes.rect(x, y, iconSize, iconSize);
+            shapes.setColor(1f, 1f, 1f, 0.55f);
+            shapes.rect(x + 4f, y + iconSize - 6f, 5f, 3f);
+        }
+        shapes.end();
+        shapes.begin(ShapeRenderer.ShapeType.Line);
+        for (ItemPlaceholder ip : itemPlaceholders) {
+            float iconSize = 18f;
+            float x = ip.bounds.x + (ip.bounds.width - iconSize) / 2f;
+            float y = ip.bounds.y + (ip.bounds.height - iconSize) / 2f;
+            shapes.setColor(0.18f, 0.12f, 0.08f, 0.9f);
+            shapes.rect(x, y, iconSize, iconSize);
         }
         shapes.end();
     }
@@ -877,27 +892,27 @@ public class GameScreen implements Screen
 
         int sw = Gdx.graphics.getWidth();
         int sh = Gdx.graphics.getHeight();
-        float boxW = sw * 0.64f;
-        float boxH = sh * 0.56f;
-        float boxX = (sw - boxW) / 2f;
-        float boxY = (sh - boxH) / 2f;
+        float boxW = grid(Math.max(360f, Math.min(760f, sw * 0.62f)));
+        float boxH = grid(Math.max(240f, Math.min(360f, sh * 0.46f)));
+        float boxX = grid((sw - boxW) / 2f);
+        float minBoxY = FOOTER_HEIGHT + 64f;
+        float maxBoxY = sh - TOP_BAR_HEIGHT - boxH - 28f;
+        float centeredY = (sh - boxH) / 2f;
+        float boxY = grid(Math.max(minBoxY, Math.min(centeredY, maxBoxY)));
 
         Gdx.gl.glEnable(GL20.GL_BLEND);
         shapes.setProjectionMatrix(uiCamera.combined);
 
-        // 暗色遮罩
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(0f, 0f, 0f, 0.55f);
+        shapes.setColor(0f, 0f, 0f, 0.68f);
         shapes.rect(0, 0, sw, sh);
         shapes.end();
 
-        // 战斗框背景
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(0.02f, 0.02f, 0.05f, 0.92f);
+        shapes.setColor(0.025f, 0.022f, 0.04f, 0.96f);
         shapes.rect(boxX, boxY, boxW, boxH);
         shapes.end();
 
-        // 战斗框边框
         shapes.begin(ShapeRenderer.ShapeType.Line);
         shapes.setColor(1f, 1f, 1f, 0.9f);
         shapes.rect(boxX, boxY, boxW, boxH);
@@ -918,40 +933,72 @@ public class GameScreen implements Screen
             drawUtFightBar(ut, boxX, boxY, boxW, boxH);
         }
 
-        // 顶部：HP 条 + 名称
-        batch.setProjectionMatrix(uiCamera.combined);
-        batch.begin();
-        float topY = boxY + boxH + 8f;
-        font.setColor(Color.WHITE);
-        font.draw(batch, ut.getDef().displayName, boxX, topY);
-        drawHpBar(boxX + sw * 0.28f, topY - 14f, sw * 0.18f, 10f,
+        float enemyBarX = boxX + 32f;
+        float playerBarX = boxX + boxW - 232f;
+        float barY = boxY + boxH - 34f;
+        drawHpBar(enemyBarX, barY, 176f, 10f,
             (float) ut.snapshot().npcHp / ut.getDef().maxHp, true);
-        font.draw(batch, engine.getPlayer().getName(), boxX + boxW - sw * 0.22f, topY);
-        drawHpBar(boxX + boxW - sw * 0.22f + sw * 0.06f, topY - 14f, sw * 0.16f, 10f,
+        drawHpBar(playerBarX, barY, 176f, 10f,
             (float) ut.snapshot().playerHp / engine.getPlayer().getMaxHp(), false);
-        batch.end();
 
-        // 底部：菜单 / 提示
-        batch.setProjectionMatrix(uiCamera.combined);
-        batch.begin();
-        smallFont.setColor(Color.WHITE);
         if (phase == UndertaleCombatPhase.MENU) {
-            float btnW = 110f, btnH = 28f;
-            String[] labels = {"1 FIGHT", "2 ACT", "3 ITEM", "4 MERCY"};
+            float btnGap = 10f;
+            float btnW = Math.min(132f, (boxW - btnGap * 3f) / 4f);
+            float total = btnW * 4f + btnGap * 3f;
+            float btnX = boxX + (boxW - total) / 2f;
+            float btnY = boxY - 46f;
             for (int i = 0; i < 4; i++) {
-                float bx = boxX + i * (btnW + 6f);
-                drawUtButtonBg(bx, boxY - btnH - 6f, btnW, btnH);
-            }
-            for (int i = 0; i < 4; i++) {
-                float bx = boxX + i * (btnW + 6f);
-                smallFont.draw(batch, labels[i], bx + 8f, boxY - btnH - 6f + btnH - 8f);
+                drawUtButtonBg(btnX + i * (btnW + btnGap), btnY, btnW, 34f);
             }
         } else {
-            smallFont.draw(batch, ut.getPhaseMessage(), boxX, boxY - 12f);
+            drawUtMessageBg(boxX, boxY - 44f, boxW, 34f);
+        }
+
+        batch.setProjectionMatrix(uiCamera.combined);
+        batch.begin();
+        float nameY = boxY + boxH - 12f;
+        font.setColor(Color.WHITE);
+        drawClampedLine(font, ut.getDef().displayName, enemyBarX, nameY, 180f);
+        drawRightAlignedWithFont(font, engine.getPlayer().getName(), boxX + boxW - 32f, nameY);
+        smallFont.setColor(UI_LIGHT_TEXT);
+        smallFont.draw(batch, ut.snapshot().npcHp + "/" + ut.getDef().maxHp,
+            enemyBarX + 188f, barY + 12f);
+        smallFont.draw(batch, ut.snapshot().playerHp + "/" + engine.getPlayer().getMaxHp(),
+            playerBarX + 188f, barY + 12f);
+
+        if (phase == UndertaleCombatPhase.MENU) {
+            float btnGap = 10f;
+            float btnW = Math.min(132f, (boxW - btnGap * 3f) / 4f);
+            float total = btnW * 4f + btnGap * 3f;
+            float btnX = boxX + (boxW - total) / 2f;
+            float btnY = boxY - 46f;
+            String[] labels = {"1 FIGHT", "2 ACT", "3 ITEM", "4 MERCY"};
+            for (int i = 0; i < 4; i++) {
+                smallFont.setColor(new Color(1f, 0.82f, 0.38f, 1f));
+                drawCenteredInBoxWithSmallFont(labels[i],
+                    btnX + i * (btnW + btnGap), btnY, btnW, 34f);
+            }
+        } else {
+            smallFont.setColor(UI_LIGHT_TEXT);
+            drawClampedLine(smallFont, ut.getPhaseMessage(),
+                boxX + 12f, boxY - 22f, boxW - 24f);
         }
         batch.end();
 
         Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    private void drawUtMessageBg(float x, float y, float w, float h)
+    {
+        shapes.setProjectionMatrix(uiCamera.combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.05f, 0.04f, 0.07f, 0.96f);
+        shapes.rect(x, y, w, h);
+        shapes.end();
+        shapes.begin(ShapeRenderer.ShapeType.Line);
+        shapes.setColor(1f, 1f, 1f, 0.45f);
+        shapes.rect(x, y, w, h);
+        shapes.end();
     }
 
     private void drawUtSoul(UndertaleCombatEngine ut,
@@ -1016,7 +1063,7 @@ public class GameScreen implements Screen
         shapes.rect(x, y, w, h);
         shapes.end();
         shapes.begin(ShapeRenderer.ShapeType.Line);
-        shapes.setColor(1f, 0.55f, 0.1f, 0.65f);
+        shapes.setColor(1f, 0.62f, 0.16f, 0.95f);
         shapes.rect(x, y, w, h);
         shapes.end();
     }
@@ -1809,11 +1856,14 @@ public class GameScreen implements Screen
     {
         float width = Gdx.graphics.getWidth();
         float height = Gdx.graphics.getHeight();
+        boolean undertaleCombat = engine.isInCombat() && engine.isUndertaleCombat();
         uiSkin.drawWindow(batch, UI_EDGE, height - TOP_BAR_HEIGHT - UI_EDGE,
             width - UI_EDGE * 2f, TOP_BAR_HEIGHT);
-        uiSkin.drawWindow(batch, UI_EDGE, UI_EDGE, width - UI_EDGE * 2f, FOOTER_HEIGHT);
-        uiSkin.drawInset(batch, UI_EDGE + 20f, UI_EDGE + 56f,
-            width - (UI_EDGE + 20f) * 2f, 28f);
+        if (!undertaleCombat) {
+            uiSkin.drawWindow(batch, UI_EDGE, UI_EDGE, width - UI_EDGE * 2f, FOOTER_HEIGHT);
+            uiSkin.drawInset(batch, UI_EDGE + 20f, UI_EDGE + 56f,
+                width - (UI_EDGE + 20f) * 2f, 28f);
+        }
         drawSidePanels();
 
         if (paused) {
@@ -1868,6 +1918,9 @@ public class GameScreen implements Screen
 
         if (paused) {
             drawPauseMenu();
+        }
+        if (encounterMenuOpen) {
+            drawEncounterMenuPanel();
         }
         if (inventoryOpen) {
             drawInventoryPanel();
@@ -2029,6 +2082,56 @@ public class GameScreen implements Screen
         drawCenteredInBoxWithSmallFont("ESC 继续", centerX - 96f, panelY + 24f, 192f, 40f);
     }
 
+    private void drawEncounterMenuPanel()
+    {
+        if (encounterMenu == null) {
+            return;
+        }
+        float width = Gdx.graphics.getWidth();
+        float height = Gdx.graphics.getHeight();
+        float panelWidth = grid(Math.min(560f, width - 80f));
+        float panelHeight = 168f;
+        float panelX = grid((width - panelWidth) / 2f);
+        float panelY = grid(Math.max(WORLD_MARGIN_BOTTOM + 16f,
+            (height - panelHeight) / 2f - 24f));
+        float centerX = panelX + panelWidth / 2f;
+
+        uiSkin.drawWindow(batch, panelX, panelY, panelWidth, panelHeight);
+        uiSkin.drawInset(batch, panelX + 24f, panelY + 56f,
+            panelWidth - 48f, panelHeight - 88f);
+
+        font.setColor(UI_LIGHT_TEXT);
+        drawCentered("遭遇 " + encounterMenu.npcId, centerX, panelY + panelHeight - 30f);
+
+        float y = panelY + 76f;
+        float gap = 10f;
+        float btnW = (panelWidth - 48f - gap * 3f) / 4f;
+        float x = panelX + 24f;
+        drawEncounterChoice("1", "交流", encounterMenu.canTalk, x, y, btnW);
+        x += btnW + gap;
+        drawEncounterChoice("2", "战斗", encounterMenu.canFight, x, y, btnW);
+        x += btnW + gap;
+        drawEncounterChoice("4", "UT", encounterMenu.canUndertaleFight, x, y, btnW);
+        x += btnW + gap;
+        drawEncounterChoice("3", "离开", encounterMenu.canLeave, x, y, btnW);
+
+        smallFont.setColor(UI_DARK_TEXT);
+        drawCenteredWithSmallFont("ESC 关闭", centerX, panelY + 28f);
+    }
+
+    private void drawEncounterChoice(String key, String label, boolean enabled,
+        float x, float y, float width)
+    {
+        if (enabled) {
+            uiSkin.drawLightButton(batch, x, y, width, 34f);
+            smallFont.setColor(UI_DARK_TEXT);
+        } else {
+            uiSkin.drawButton(batch, x, y, width, 34f);
+            smallFont.setColor(new Color(0.62f, 0.52f, 0.42f, 1f));
+        }
+        drawCenteredInBoxWithSmallFont(key + " " + label, x, y, width, 34f);
+    }
+
     private void drawPanelHeader(String title, int icon, float x, float y, float width)
     {
         if (width <= 42f) {
@@ -2092,7 +2195,7 @@ public class GameScreen implements Screen
             smallFont.setColor(UI_DARK_TEXT);
             uiSkin.drawLightButton(batch, innerX, topY - 20f, panelWidth - 64f, 28f);
             smallFont.setColor(UI_DARK_TEXT);
-            drawClampedLine(smallFont, "↑↓选择  U/Enter使用  X详情  Esc关闭",
+            drawClampedLine(smallFont, "↑↓ 选择    U/Enter 使用    X 详情    Esc 关闭",
                 innerX + 10f, topY - 1f, panelWidth - 84f);
 
             float rowY = topY - 60f;
@@ -2315,6 +2418,12 @@ public class GameScreen implements Screen
     {
         layout.setText(smallFont, text);
         smallFont.draw(batch, text, rightX - layout.width, y);
+    }
+
+    private void drawRightAlignedWithFont(BitmapFont activeFont, String text, float rightX, float y)
+    {
+        layout.setText(activeFont, text);
+        activeFont.draw(batch, text, rightX - layout.width, y);
     }
 
     private void drawMultiline(String text, float x, float y, float lineHeight)
