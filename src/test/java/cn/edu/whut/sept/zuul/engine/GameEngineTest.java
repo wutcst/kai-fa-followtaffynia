@@ -3,6 +3,7 @@ package cn.edu.whut.sept.zuul.engine;
 import cn.edu.whut.sept.zuul.domain.Direction;
 import cn.edu.whut.sept.zuul.domain.Item;
 import cn.edu.whut.sept.zuul.domain.Room;
+import cn.edu.whut.sept.zuul.infra.GameState;
 import cn.edu.whut.sept.zuul.infra.WorldFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -76,6 +77,23 @@ class GameEngineTest
             .noneMatch(i -> i.getItemId().equals("welcome-note")));
         assertTrue(engine.getPlayer().getInventory().stream()
             .anyMatch(i -> i.getItemId().equals("welcome-note")));
+    }
+
+    @Test
+    void restoreState_keepsTakenItemsOutOfRooms()
+    {
+        assertTrue(engine.takeItem("welcome-note"));
+        GameState state = engine.captureState();
+
+        GameEngine loaded = new GameEngine("测试者");
+        loaded.restoreState(state);
+
+        assertEquals(1, loaded.getPlayer().getInventory().stream()
+            .filter(i -> i.getItemId().equals("welcome-note"))
+            .count());
+        assertTrue(loaded.getCurrentRoom().getItems().stream()
+            .noneMatch(i -> i.getItemId().equals("welcome-note")));
+        assertFalse(loaded.takeItem("welcome-note"));
     }
 
     @Test

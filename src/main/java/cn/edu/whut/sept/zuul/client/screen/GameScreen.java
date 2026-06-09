@@ -218,6 +218,8 @@ public class GameScreen implements Screen
         }
 
         batch.begin();
+        drawUiPanels();
+        drawHud();
         if (!(engine.isInCombat() && engine.isUndertaleCombat())) {
             float w = Gdx.graphics.getWidth();
             float h = Gdx.graphics.getHeight();

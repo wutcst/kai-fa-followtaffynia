@@ -16,8 +16,10 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -410,6 +412,13 @@ public class GameEngine
         state.getQuestStates().clear();
         state.getQuestStates().putAll(questManager.getQuestStates());
         state.getDefeatedNpcs().addAll(defeatedNpcs);
+        state.getRoomItems().clear();
+        for (Room room : WorldFactory.getAllRooms().values()) {
+            List<String> itemIds = room.getItems().stream()
+                .map(Item::getItemId)
+                .collect(Collectors.toList());
+            state.getRoomItems().put(room.getRoomId(), itemIds);
+        }
 
         RoomScene.SpawnPoint spawn = resolveCurrentSpawn();
         state.setPlayerX(spawn.tileX);
@@ -428,12 +437,14 @@ public class GameEngine
             LOG.warning("restoreState: null state, skipped");
             return;
         }
+        Map<String, Item> itemTemplates = snapshotItemTemplates();
+
         player.setHp(state.getHp());
         player.setMaxWeight(state.getMaxWeight());
         player.setReputation(state.getReputation());
         player.clearInventory();
         for (String itemId : state.getInventory()) {
-            Item item = findItemTemplate(itemId);
+            Item item = cloneFromTemplate(itemTemplates, itemId);
             if (item != null) {
                 player.addItem(item);
             }
@@ -457,9 +468,73 @@ public class GameEngine
         if (currentRoom == null) {
             currentRoom = WorldFactory.getRoom("outside");
         }
+        restoreRoomItems(state, itemTemplates);
         LOG.info("restoreState: room=" + state.getCurrentRoomId()
             + " | inv=" + state.getInventory().size()
-            + " | explored=" + state.getExploredRoomIds().size());
+            + " | explored=" + state.getExploredRoomIds().size()
+            + " | roomItems=" + state.getRoomItems().size());
+    }
+
+    private Map<String, Item> snapshotItemTemplates()
+    {
+        Map<String, Item> templates = new HashMap<>();
+        for (Room room : WorldFactory.getAllRooms().values()) {
+            for (Item item : room.getItems()) {
+                templates.putIfAbsent(item.getItemId(), cloneItem(item));
+            }
+        }
+        String[] knownIds = {
+            "welcome-note", "torch", "ale-mug", "key-vault", "key-guard",
+            "ancient-tome", "old-barrel", "gem-light", "gold-coins",
+            "crystal-shard", "healing-herb", "sword-rusty", "shield-wooden",
+            "warp-dust", "magic-cookie"
+        };
+        for (String id : knownIds) {
+            Item known = createKnownItem(id);
+            if (known != null) {
+                templates.putIfAbsent(id, known);
+            }
+        }
+        return templates;
+    }
+
+    private void restoreRoomItems(GameState state, Map<String, Item> itemTemplates)
+    {
+        Map<String, List<String>> savedRoomItems = state.getRoomItems();
+        if (!savedRoomItems.isEmpty()) {
+            for (Room room : WorldFactory.getAllRooms().values()) {
+                room.getItems().clear();
+                List<String> itemIds = savedRoomItems.get(room.getRoomId());
+                if (itemIds == null) {
+                    continue;
+                }
+                for (String itemId : itemIds) {
+                    Item item = cloneFromTemplate(itemTemplates, itemId);
+                    if (item != null) {
+                        room.addItem(item);
+                    }
+                }
+            }
+            return;
+        }
+
+        // Compatibility with older save files that only stored inventory.
+        for (String itemId : state.getInventory()) {
+            for (Room room : WorldFactory.getAllRooms().values()) {
+                while (room.removeItem(itemId) != null) {
+                    // Remove every stale copy so already-owned items cannot be duplicated.
+                }
+            }
+        }
+    }
+
+    private Item cloneFromTemplate(Map<String, Item> templates, String itemId)
+    {
+        Item template = templates.get(itemId);
+        if (template != null) {
+            return cloneItem(template);
+        }
+        return createKnownItem(itemId);
     }
 
     private Item findItemTemplate(String itemId)
@@ -479,6 +554,12 @@ public class GameEngine
         switch (itemId) {
             case "welcome-note":
                 return new Item("welcome-note", "note", "A crumpled welcome note.", 1, null);
+            case "torch":
+                return new Item("torch", "Torch",
+                    "A flickering torch. Useful in dark places.", 3, "light");
+            case "ale-mug":
+                return new Item("ale-mug", "Ale Mug",
+                    "A half-empty mug of ale.", 2, null);
             case "key-vault":
                 return new Item("key-vault", "Rusty Key",
                     "A rusty key, inscribed 'Vault'.", 1, "unlock:vault-door");
@@ -488,6 +569,33 @@ public class GameEngine
             case "gem-light":
                 return new Item("gem-light", "Light Gem",
                     "A radiant gem pulsing with pure light.", 5, "light:full");
+            case "gold-coins":
+                return new Item("gold-coins", "Gold Coins",
+                    "A small pile of gold coins.", 10, null);
+            case "ancient-tome":
+                return new Item("ancient-tome", "Ancient Tome",
+                    "A heavy tome bound in cracked leather.", 15, "lore");
+            case "old-barrel":
+                return new Item("old-barrel", "Old Barrel",
+                    "A rotting barrel. It might contain something.", 20, null);
+            case "crystal-shard":
+                return new Item("crystal-shard", "Crystal Shard",
+                    "A fragment of crystal that hums softly.", 3, "reputation:+5");
+            case "healing-herb":
+                return new Item("healing-herb", "Healing Herb",
+                    "A fragrant herb that restores vitality.", 2, "heal:20");
+            case "sword-rusty":
+                return new Item("sword-rusty", "Rusty Sword",
+                    "An old sword, still sharp enough.", 25, null);
+            case "shield-wooden":
+                return new Item("shield-wooden", "Wooden Shield",
+                    "A battered wooden shield.", 18, null);
+            case "warp-dust":
+                return new Item("warp-dust", "Warp Dust",
+                    "Fine dust that sparkles with teleport energy.", 2, null);
+            case "magic-cookie":
+                return new Item("magic-cookie", "Magic Cookie",
+                    "A glowing cookie. Eating it makes you feel stronger.", 1, "maxWeight:+20");
             default:
                 return null;
         }
