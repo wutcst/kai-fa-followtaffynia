@@ -6,6 +6,7 @@ import cn.edu.whut.sept.zuul.engine.GameEngine;
 import cn.edu.whut.sept.zuul.infra.GameLogger;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.MapObjects;
@@ -27,6 +28,7 @@ public class RoomController
     private static final Logger LOG = GameLogger.get();
 
     private final GameEngine engine;
+    private final SpriteBatch batch;
     private final float tile;
     private final float playerW;
     private final float playerH;
@@ -47,12 +49,14 @@ public class RoomController
         this.itemManager = ipm;
     }
 
-    public RoomController(GameEngine engine, float tile, float playerW, float playerH,
+    public RoomController(GameEngine engine, SpriteBatch batch, float tile,
+                           float playerW, float playerH,
                            NpcPlaceholderManager npcManager,
                            ItemPlaceholderManager itemManager,
                            Consumer<Runnable> deferDispose)
     {
         this.engine = engine;
+        this.batch = batch;
         this.tile = tile;
         this.playerW = playerW;
         this.playerH = playerH;
@@ -107,12 +111,12 @@ public class RoomController
         return mapPixelHeight() - tiledTopY - objectHeight;
     }
 
-    public void loadCurrentRoom(boolean snapAfterLoad)
+    /** 加载地图。返回 [spawnX, spawnY] 或 snapAfterLoad=false 时返回 null */
+    public float[] loadCurrentRoom(boolean snapAfterLoad)
     {
         String tmxPath = engine.getCurrentRoom().getScene().getTmxPath();
         if (tmxPath.equals(currentMapPath) && map != null) {
-            if (snapAfterLoad) return;
-            return;
+            return snapAfterLoad ? resolveSpawn() : null;
         }
         disposeMap();
         try {
@@ -120,7 +124,7 @@ public class RoomController
             LOG.info("loadMap: room=" + roomId + " | tmx=" + tmxPath
                 + " | entryDir=" + engine.getEntryDirection().toExitKey());
             map = new TmxMapLoader().load(tmxPath);
-            mapRenderer = new OrthogonalTiledMapRenderer(map, 1f, null);
+            mapRenderer = new OrthogonalTiledMapRenderer(map, 1f, batch);
             wallLayer = (TiledMapTileLayer) map.getLayers().get("wall");
             MapLayer objLayer = map.getLayers().get("objects");
             objectsLayer = objLayer == null ? null : objLayer.getObjects();
@@ -128,6 +132,7 @@ public class RoomController
             itemManager.buildItemPlaceholders(roomId);
             currentMapPath = tmxPath;
             exitCooldown = 0.3f;
+            return snapAfterLoad ? resolveSpawn() : null;
         } catch (Exception e) {
             LOG.warning("loadMap: FAILED " + tmxPath + " | " + e.getMessage());
             map = null;
@@ -135,37 +140,38 @@ public class RoomController
             wallLayer = null;
             objectsLayer = null;
             npcManager.getPlaceholders().clear();
+            return null;
         }
     }
 
-    public void snapToSpawn()
+    /** 返回当前房间的出生点坐标 [x, y] */
+    public float[] resolveSpawn()
     {
         cn.edu.whut.sept.zuul.domain.RoomScene.SpawnPoint spawn = engine.resolveCurrentSpawn();
         float x = spawn.tileX * tile + tile / 2f - playerW / 2f;
         float y = tileRowToGdxY(spawn.tileY);
-        // return position without clamping (caller handles)
         LOG.info("spawn: tile=(" + spawn.tileX + "," + spawn.tileY + ") entryDir="
             + engine.getEntryDirection().toExitKey());
-        // Results must be read by caller since we don't manage playerX/Y
+        return new float[]{x, y};
     }
 
-    public float getSpawnX()
+    /** 出口重叠检测的结果 */
+    public static class ExitResult
     {
-        cn.edu.whut.sept.zuul.domain.RoomScene.SpawnPoint spawn = engine.resolveCurrentSpawn();
-        return spawn.tileX * tile + tile / 2f - playerW / 2f;
-    }
-
-    public float getSpawnY()
-    {
-        cn.edu.whut.sept.zuul.domain.RoomScene.SpawnPoint spawn = engine.resolveCurrentSpawn();
-        return tileRowToGdxY(spawn.tileY);
+        public final String message;
+        public final float spawnX, spawnY;
+        public final boolean hasSpawn;
+        public ExitResult(String message, float spawnX, float spawnY, boolean hasSpawn) {
+            this.message = message; this.spawnX = spawnX; this.spawnY = spawnY;
+            this.hasSpawn = hasSpawn;
+        }
     }
 
     /**
      * 检查玩家与出口的重叠并触发房间切换。
-     * @return 新的 actionMessage 若切换房间，否则 null
+     * @return ExitResult 若切换房间，否则 null
      */
-    public String checkExitOverlap(float playerX, float playerY)
+    public ExitResult checkExitOverlap(float playerX, float playerY)
     {
         if (exitCooldown > 0f || objectsLayer == null) return null;
         Rectangle playerRect = new Rectangle(playerX, playerY, playerW, playerH);
@@ -187,13 +193,14 @@ public class RoomController
             }
             LOG.info("exit: trigger target=" + target + " dir=" + dir.toExitKey());
             if (dir != Direction.DEFAULT && engine.movePlayer(dir)) {
-                loadCurrentRoom(true);
+                float[] spawn = loadCurrentRoom(true);
                 exitCooldown = 0.5f;
-                return "进入 " + engine.getCurrentRoom().getRoomId();
+                return new ExitResult("进入 " + engine.getCurrentRoom().getRoomId(),
+                    spawn[0], spawn[1], true);
             }
             if (dir != Direction.DEFAULT) {
                 exitCooldown = 0.5f;
-                return engine.getLastMessage();
+                return new ExitResult(engine.getLastMessage(), 0, 0, false);
             }
             break;
         }
