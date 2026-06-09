@@ -11,10 +11,14 @@ import cn.edu.whut.sept.zuul.domain.Room;
 import cn.edu.whut.sept.zuul.domain.RoomScene;
 import cn.edu.whut.sept.zuul.engine.CombatAction;
 import cn.edu.whut.sept.zuul.engine.CombatMode;
+import cn.edu.whut.sept.zuul.engine.CombatOutcome;
 import cn.edu.whut.sept.zuul.engine.CombatSnapshot;
+import cn.edu.whut.sept.zuul.engine.CombatSystem;
 import cn.edu.whut.sept.zuul.engine.EncounterMenu;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
 import cn.edu.whut.sept.zuul.engine.ItemUseCheck;
+import cn.edu.whut.sept.zuul.engine.UndertaleCombatEngine;
+import cn.edu.whut.sept.zuul.engine.UndertaleCombatPhase;
 import cn.edu.whut.sept.zuul.infra.GameLogger;
 import cn.edu.whut.sept.zuul.infra.GameState;
 import cn.edu.whut.sept.zuul.infra.SaveGameService;
@@ -514,7 +518,11 @@ public class GameScreen implements Screen
             return;
         }
         if (engine.isInCombat()) {
-            handleCombatInput();
+            if (engine.isUndertaleCombat()) {
+                handleUtCombatInput(delta);
+            } else {
+                handleCombatInput();
+            }
             return;
         }
 
@@ -781,6 +789,92 @@ public class GameScreen implements Screen
         if (!engine.isInCombat()) {
             activeCombatSnapshot = null;
         }
+    }
+
+    private UndertaleCombatEngine utEngine()
+    {
+        CombatSystem cs = engine.getCombatSystem();
+        return (cs instanceof UndertaleCombatEngine) ? (UndertaleCombatEngine) cs : null;
+    }
+
+    private void handleUtCombatInput(float delta)
+    {
+        UndertaleCombatEngine ut = utEngine();
+        if (ut == null) {
+            activeCombatSnapshot = null;
+            return;
+        }
+
+        // 每帧推进
+        ut.updateFightBar(delta);
+        ut.updateEnemyTurn(delta);
+
+        UndertaleCombatPhase phase = ut.getPhase();
+
+        if (phase == UndertaleCombatPhase.MENU) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
+                ut.selectFight();
+            } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
+                // ACT: 显示可用 ACT 选项（简化：只用第一个）
+                if (!ut.getDef().actOptions.isEmpty()) {
+                    String actId = ut.getDef().actOptions.keySet().iterator().next();
+                    ut.selectAct(actId);
+                }
+            } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
+                // ITEM: 用背包第一件可战斗物品
+                for (Item it : engine.getPlayer().getInventory()) {
+                    ut.selectItem(it.getItemId());
+                    break;
+                }
+            } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_4)) {
+                ut.selectMercy();
+            }
+        } else if (phase == UndertaleCombatPhase.FIGHT_BAR) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
+                || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                ut.pressFightBar();
+            }
+        } else if (phase == UndertaleCombatPhase.ENEMY_TURN) {
+            float dx = 0f, dy = 0f;
+            if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) dy = 1f;
+            if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) dy = -1f;
+            if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) dx = -1f;
+            if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) dx = 1f;
+            ut.moveSoul(dx, dy);
+        }
+
+        activeCombatSnapshot = ut.snapshot();
+        actionMessage = formatUtCombat(ut);
+
+        if (ut.getOutcome() != CombatOutcome.ONGOING) {
+            engine.applyCombatOutcome();
+            activeCombatSnapshot = null;
+        }
+    }
+
+    private String formatUtCombat(UndertaleCombatEngine ut)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[UT] ").append(ut.getDef().displayName)
+            .append(" HP:").append(ut.snapshot().npcHp).append("/").append(ut.getDef().maxHp)
+            .append(" | 你 HP:").append(ut.snapshot().playerHp).append("/").append(engine.getPlayer().getMaxHp())
+            .append("\n");
+        sb.append(ut.getPhaseMessage()).append("\n");
+
+        UndertaleCombatPhase phase = ut.getPhase();
+        if (phase == UndertaleCombatPhase.MENU) {
+            sb.append("1=FIGHT 2=ACT 3=ITEM 4=MERCY");
+        } else if (phase == UndertaleCombatPhase.FIGHT_BAR) {
+            sb.append("ENTER/Space=攻击! [");
+            int pos = (int)(ut.getFightBarPos() * 20);
+            for (int i = 0; i < 20; i++)
+                sb.append(i == 10 ? "|" : i == pos ? "▌" : "·");
+            sb.append("]");
+        } else if (phase == UndertaleCombatPhase.ENEMY_TURN) {
+            sb.append("WASD=躲避! 子弹:").append(ut.getBullets().size())
+                .append(" [").append(ut.getSoulX()).append(",").append(ut.getSoulY()).append("]");
+        }
+        return sb.toString();
     }
 
     private String formatDialogue(Dialogue d)

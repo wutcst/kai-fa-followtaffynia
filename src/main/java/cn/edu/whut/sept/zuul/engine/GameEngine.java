@@ -228,14 +228,26 @@ public class GameEngine
         }
         CombatSnapshot snapshot = activeCombat.processPlayerAction(action, itemIdOrNull);
         lastCombatOutcome = snapshot.outcome;
-        if (snapshot.outcome == CombatOutcome.VICTORY) {
+        applyCombatOutcome();
+        return snapshot;
+    }
+
+    /**
+     * 检查当前战斗是否结束并结算（UT 引擎用——它的 outcome 由弹幕阶段自己设置，
+     * 不走 processPlayerAction 流程）。
+     */
+    public void applyCombatOutcome()
+    {
+        if (activeCombat == null) return;
+        CombatOutcome oc = activeCombat.getOutcome();
+        if (oc == CombatOutcome.VICTORY) {
             applyCombatVictory(activeCombat.getDef());
+            lastCombatOutcome = oc;
             clearCombat();
-        } else if (snapshot.outcome == CombatOutcome.DEFEAT
-            || snapshot.outcome == CombatOutcome.FLED) {
+        } else if (oc == CombatOutcome.DEFEAT || oc == CombatOutcome.FLED) {
+            lastCombatOutcome = oc;
             clearCombat();
         }
-        return snapshot;
     }
 
     private void applyCombatVictory(NpcCombatDef def)
