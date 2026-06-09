@@ -14,6 +14,7 @@ import cn.edu.whut.sept.zuul.engine.CombatMode;
 import cn.edu.whut.sept.zuul.engine.CombatOutcome;
 import cn.edu.whut.sept.zuul.engine.CombatSnapshot;
 import cn.edu.whut.sept.zuul.engine.CombatSystem;
+import cn.edu.whut.sept.zuul.engine.Bullet;
 import cn.edu.whut.sept.zuul.engine.EncounterMenu;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
 import cn.edu.whut.sept.zuul.engine.ItemUseCheck;
@@ -256,6 +257,11 @@ public class GameScreen implements Screen
 
         applyFullViewport();
         batch.setProjectionMatrix(uiCamera.combined);
+
+        if (engine.isInCombat() && engine.isUndertaleCombat()) {
+            drawUtCombatOverlay();
+        }
+
         batch.begin();
         drawUiPanels();
         drawHud();
@@ -875,6 +881,170 @@ public class GameScreen implements Screen
                 .append(" [").append(ut.getSoulX()).append(",").append(ut.getSoulY()).append("]");
         }
         return sb.toString();
+    }
+
+    // ========== UT 战斗画中画渲染 ==========
+
+    private void drawUtCombatOverlay()
+    {
+        UndertaleCombatEngine ut = utEngine();
+        if (ut == null) return;
+
+        int sw = Gdx.graphics.getWidth();
+        int sh = Gdx.graphics.getHeight();
+
+        // 暗色遮罩
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        shapes.setProjectionMatrix(uiCamera.combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0f, 0f, 0f, 0.55f);
+        shapes.rect(0, 0, sw, sh);
+        shapes.end();
+
+        // 战斗框
+        float boxW = sw * 0.64f;
+        float boxH = sh * 0.56f;
+        float boxX = (sw - boxW) / 2f;
+        float boxY = (sh - boxH) / 2f;
+
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.02f, 0.02f, 0.05f, 0.92f);
+        shapes.rect(boxX, boxY, boxW, boxH);
+        shapes.end();
+        shapes.begin(ShapeRenderer.ShapeType.Line);
+        shapes.setColor(1f, 1f, 1f, 0.9f);
+        shapes.rect(boxX, boxY, boxW, boxH);
+        shapes.end();
+
+        UndertaleCombatPhase phase = ut.getPhase();
+
+        // 弹幕 + 灵魂
+        if (phase == UndertaleCombatPhase.ENEMY_TURN) {
+            drawUtBullets(ut, boxX, boxY, boxW, boxH);
+        }
+        drawUtSoul(ut, boxX, boxY, boxW, boxH);
+
+        // 节奏条
+        if (phase == UndertaleCombatPhase.FIGHT_BAR) {
+            drawUtFightBar(ut, boxX, boxY, boxW, boxH);
+        }
+
+        // HP 条
+        batch.begin();
+        float topY = boxY + boxH + 8f;
+        font.setColor(Color.WHITE);
+        font.draw(batch, ut.getDef().displayName, boxX, topY);
+        drawHpBar(boxX + sw * 0.28f, topY - 14f, sw * 0.18f, 10f,
+            (float) ut.snapshot().npcHp / ut.getDef().maxHp, true);
+
+        font.draw(batch, engine.getPlayer().getName(), boxX + boxW - sw * 0.22f, topY);
+        drawHpBar(boxX + boxW - sw * 0.22f + sw * 0.06f, topY - 14f, sw * 0.16f, 10f,
+            (float) ut.snapshot().playerHp / engine.getPlayer().getMaxHp(), false);
+        batch.end();
+
+        // 菜单 / 提示
+        batch.begin();
+        float bottomY = boxY - 12f;
+        smallFont.setColor(Color.WHITE);
+        if (phase == UndertaleCombatPhase.MENU) {
+            float btnW = 110f;
+            float btnH = 28f;
+            String[] labels = {"1 FIGHT", "2 ACT", "3 ITEM", "4 MERCY"};
+            for (int i = 0; i < 4; i++) {
+                float bx = boxX + i * (btnW + 6f);
+                drawUtButton(bx, boxY - btnH - 6f, btnW, btnH, labels[i]);
+            }
+        } else {
+            smallFont.draw(batch, ut.getPhaseMessage(), boxX, bottomY);
+        }
+        batch.end();
+
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    private void drawUtSoul(UndertaleCombatEngine ut,
+        float boxX, float boxY, float boxW, float boxH)
+    {
+        float sx = boxX + (1f - ut.getSoulY()) * boxW;  // flip Y for LibGDX
+        float sy = boxY + ut.getSoulX() * boxH;
+        float sr = 7f;
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(1f, 0.15f, 0.15f, 1f);
+        shapes.circle(sx, sy, sr, 14);
+        shapes.setColor(1f, 0.35f, 0.35f, 0.4f);
+        shapes.circle(sx, sy, sr + 2f, 14);
+        shapes.end();
+    }
+
+    private void drawUtBullets(UndertaleCombatEngine ut,
+        float boxX, float boxY, float boxW, float boxH)
+    {
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        for (Bullet b : ut.getBullets()) {
+            if (!b.alive) continue;
+            float bx = boxX + b.x * boxW;
+            float by = boxY + (1f - b.y) * boxH;  // flip Y
+            if (b.shape == Bullet.Shape.CIRCLE) {
+                float br = b.radius * boxW * 0.8f;
+                shapes.setColor(1f, 1f, 0.85f, 1f);
+                shapes.circle(bx, by, Math.max(br, 3f), 8);
+            } else {
+                float bw = b.width * boxW;
+                float bh = b.height * boxH;
+                shapes.setColor(1f, 1f, 0.85f, 1f);
+                shapes.rect(bx, by, Math.max(bw, 4f), Math.max(bh, 4f));
+            }
+        }
+        shapes.end();
+    }
+
+    private void drawUtFightBar(UndertaleCombatEngine ut,
+        float boxX, float boxY, float boxW, float boxH)
+    {
+        float barW = boxW * 0.5f;
+        float barH = 10f;
+        float barX = boxX + (boxW - barW) / 2f;
+        float barY = boxY + boxH * 0.72f;
+
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.12f, 0.12f, 0.12f, 1f);
+        shapes.rect(barX, barY, barW, barH);
+        shapes.setColor(0.05f, 0.5f, 0.05f, 0.45f);
+        shapes.rect(barX + barW * 0.4f, barY, barW * 0.2f, barH);
+
+        float dotX = barX + ut.getFightBarPos() * barW - 3f;
+        shapes.setColor(1f, 0.85f, 0.2f, 1f);
+        shapes.rect(dotX, barY - 1f, 6f, barH + 2f);
+        shapes.end();
+    }
+
+    private void drawUtButton(float x, float y, float w, float h, String text)
+    {
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.12f, 0.12f, 0.18f, 0.9f);
+        shapes.rect(x, y, w, h);
+        shapes.end();
+        shapes.begin(ShapeRenderer.ShapeType.Line);
+        shapes.setColor(1f, 0.55f, 0.1f, 0.65f);
+        shapes.rect(x, y, w, h);
+        shapes.end();
+        batch.begin();
+        smallFont.setColor(Color.WHITE);
+        smallFont.draw(batch, text, x + 8f, y + h - 8f);
+        batch.end();
+    }
+
+    private void drawHpBar(float x, float y, float w, float h,
+        float ratio, boolean enemy)
+    {
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.12f, 0.12f, 0.12f, 1f);
+        shapes.rect(x, y, w, h);
+        if (ratio > 0f) {
+            shapes.setColor(enemy ? 0.95f : 0.15f, enemy ? 0.2f : 0.75f, enemy ? 0.1f : 0.15f, 1f);
+            shapes.rect(x, y, w * Math.min(ratio, 1f), h);
+        }
+        shapes.end();
     }
 
     private String formatDialogue(Dialogue d)
