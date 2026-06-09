@@ -29,6 +29,7 @@ class SaveGameServiceTest
         state.setReputation(5);
         state.getInventory().add("welcome-note");
         state.getExploredRoomIds().add("outside");
+        state.getRoomItems().put("outside", java.util.Arrays.asList("torch", "magic-cookie"));
 
         SaveGameService.save(savePath, state);
         GameState loaded = SaveGameService.load(savePath);
@@ -44,5 +45,7 @@ class SaveGameServiceTest
         assertEquals(5, loaded.getReputation());
         assertEquals("welcome-note", loaded.getInventory().get(0));
         assertTrue(loaded.getExploredRoomIds().contains("outside"));
+        assertEquals(2, loaded.getRoomItems().get("outside").size());
+        assertEquals("magic-cookie", loaded.getRoomItems().get("outside").get(1));
     }
 }

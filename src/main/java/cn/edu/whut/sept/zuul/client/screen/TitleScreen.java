@@ -32,6 +32,7 @@ public class TitleScreen implements Screen
     private final RpgMain game;
     private final SpriteBatch batch;
     private final BitmapFont font;
+    private final BitmapFont smallFont;
     private final GameUiSkin uiSkin;
     private final GlyphLayout layout;
     private final OrthographicCamera uiCamera;
@@ -45,6 +46,7 @@ public class TitleScreen implements Screen
         this.game = game;
         this.batch = batch;
         this.font = game.getFonts().copyDefault(1.2f);
+        this.smallFont = game.getFonts().copyDefault(0.86f);
         this.uiSkin = new GameUiSkin();
         this.layout = new GlyphLayout();
         this.uiCamera = new OrthographicCamera();
@@ -112,7 +114,7 @@ public class TitleScreen implements Screen
         uiSkin.drawWindow(batch, panelX, panelY, panelWidth, panelHeight);
         uiSkin.drawInset(batch, panelX + UI_PAD * 2f, panelY + 152f,
             panelWidth - UI_PAD * 4f, 64f);
-        uiSkin.drawLightButton(batch, panelX + 96f, panelY + 84f, panelWidth - 192f, 48f);
+        uiSkin.drawLightButton(batch, panelX + 104f, panelY + 70f, panelWidth - 208f, 44f);
 
         font.setColor(LIGHT_TEXT);
         drawCentered("Chronicle of the Lost Realms", centerX, panelY + panelHeight - 64f);
@@ -120,12 +122,12 @@ public class TitleScreen implements Screen
 
         font.setColor(DARK_TEXT);
         drawCentered("姓名: " + playerName, centerX, panelY + 192f);
-        drawCenteredInBox("Enter 开始新游戏", panelX + 96f, panelY + 84f,
-            panelWidth - 192f, 48f);
+        drawCenteredInBox("Enter 开始新游戏", panelX + 104f, panelY + 70f,
+            panelWidth - 208f, 44f);
 
-        font.setColor(LIGHT_TEXT);
-        drawCentered("直接输入文字修改姓名", centerX, panelY + 144f);
-        drawCentered(statusMessage, centerX, panelY + 56f);
+        smallFont.setColor(LIGHT_TEXT);
+        drawCenteredSmall("直接输入文字修改姓名", centerX, panelY + 136f);
+        drawCenteredSmall(statusMessage, centerX, panelY + 42f);
         batch.end();
     }
 
@@ -187,6 +189,12 @@ public class TitleScreen implements Screen
             Math.round(y + (height + layout.height) / 2f + 1f));
     }
 
+    private void drawCenteredSmall(String text, float centerX, float y)
+    {
+        layout.setText(smallFont, text);
+        smallFont.draw(batch, text, Math.round(centerX - layout.width / 2f), Math.round(y));
+    }
+
     private float grid(float value)
     {
         return Math.round(value / UI_GRID) * UI_GRID;
@@ -218,6 +226,7 @@ public class TitleScreen implements Screen
     public void dispose()
     {
         font.dispose();
+        smallFont.dispose();
         uiSkin.dispose();
     }
 
