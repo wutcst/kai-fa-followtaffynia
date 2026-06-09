@@ -10,6 +10,7 @@ import cn.edu.whut.sept.zuul.domain.Item;
 import cn.edu.whut.sept.zuul.domain.Room;
 import cn.edu.whut.sept.zuul.domain.RoomScene;
 import cn.edu.whut.sept.zuul.engine.CombatAction;
+import cn.edu.whut.sept.zuul.engine.CombatMode;
 import cn.edu.whut.sept.zuul.engine.CombatSnapshot;
 import cn.edu.whut.sept.zuul.engine.EncounterMenu;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
@@ -633,6 +634,9 @@ public class GameScreen implements Screen
         if (menu.canFight) {
             sb.append("按 2 杀害。 ");
         }
+        if (menu.canUndertaleFight) {
+            sb.append("按 4 UT战斗。 ");
+        }
         if (menu.canLeave) {
             sb.append("按 3 离开。 ");
         }
@@ -683,6 +687,19 @@ public class GameScreen implements Screen
             }
             encounterMenuOpen = false;
             encounterMenu = null;
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_4)) {
+            if (!encounterMenu.canUndertaleFight) {
+                actionMessage = "UT 战斗不可用。";
+                return;
+            }
+            activeCombatSnapshot = engine.startCombat(npcId, CombatMode.UNDERTALE);
+            encounterMenuOpen = false;
+            encounterMenu = null;
+            activeDialogue = null;
+            actionMessage = "[UT] " + formatCombatSnapshot(activeCombatSnapshot);
+            return;
         }
     }
 

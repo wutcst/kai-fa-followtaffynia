@@ -166,10 +166,11 @@ public class GameEngine
     {
         leaveEncounter();
         encounterNpcId = npcId;
-        boolean canTalk = true;
-        boolean canFight = !"merchant".equals(npcId)
-            && !defeatedNpcs.contains(npcId);
-        return new EncounterMenu(npcId, canTalk, canFight, true);
+        boolean isDefeated = defeatedNpcs.contains(npcId);
+        boolean canTalk = !isDefeated;
+        boolean canFight = !"merchant".equals(npcId) && !isDefeated;
+        boolean canUtFight = canFight && CombatLoader.exists(npcId);
+        return new EncounterMenu(npcId, canTalk, canFight, canUtFight, true);
     }
 
     public void leaveEncounter()

@@ -33,6 +33,12 @@ public final class CombatLoader
     {
     }
 
+    public static boolean exists(String npcId)
+    {
+        return CombatLoader.class.getClassLoader()
+            .getResource("combat/" + npcId + ".json") != null;
+    }
+
     public static NpcCombatDef load(String npcId) throws IOException
     {
         String path = "combat/" + npcId + ".json";
