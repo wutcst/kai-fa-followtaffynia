@@ -14,7 +14,7 @@ import java.util.Random;
 /**
  * 单场回合制战斗逻辑（无 LibGDX 依赖）。
  */
-public final class CombatEngine
+public final class CombatEngine implements CombatSystem
 {
     private static final int BASE_ATTACK = 10;
     private static final int SWORD_BONUS = 5;

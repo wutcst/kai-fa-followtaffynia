@@ -55,7 +55,8 @@ public class GameEngine
     private String activeDialogueNodeId;
     private EndingType currentEnding;
     private String encounterNpcId;
-    private CombatEngine activeCombat;
+    private CombatSystem activeCombat;
+    private CombatMode combatMode;
     private CombatOutcome lastCombatOutcome;
 
     public GameEngine(String playerName)
@@ -173,20 +174,44 @@ public class GameEngine
 
     public CombatSnapshot startCombat(String npcId)
     {
+        return startCombat(npcId, CombatMode.TURN_BASED);
+    }
+
+    /**
+     * 按指定模式开战。mode=TURN_BASED 用传统回合制，UNDERTALE 用弹幕系统。
+     */
+    public CombatSnapshot startCombat(String npcId, CombatMode mode)
+    {
         endDialogue();
         leaveEncounter();
         try {
             NpcCombatDef def = CombatLoader.load(npcId);
-            activeCombat = new CombatEngine(player, def, combatActionRegistry);
+            combatMode = mode;
+            if (mode == CombatMode.UNDERTALE) {
+                activeCombat = new UndertaleCombatEngine(player, def, combatActionRegistry);
+            } else {
+                activeCombat = new CombatEngine(player, def, combatActionRegistry);
+            }
             encounterNpcId = npcId;
             lastCombatOutcome = CombatOutcome.ONGOING;
-            LOG.info("startCombat: " + npcId + " hp=" + def.maxHp);
+            LOG.info("startCombat: " + npcId + " mode=" + mode + " hp=" + def.maxHp);
             return activeCombat.snapshot();
         } catch (IOException ex) {
             LOG.warning("startCombat: failed for " + npcId + ": " + ex.getMessage());
             lastMessage = "无法与 " + npcId + " 开战。";
             return null;
         }
+    }
+
+    /** 获取当前战斗系统，UI 可强转为 UndertaleCombatEngine 访问 UT 专用 API。 */
+    public CombatSystem getCombatSystem()
+    {
+        return activeCombat;
+    }
+
+    public boolean isUndertaleCombat()
+    {
+        return combatMode == CombatMode.UNDERTALE && activeCombat != null;
     }
 
     public CombatSnapshot combatAction(CombatAction action, String itemIdOrNull)

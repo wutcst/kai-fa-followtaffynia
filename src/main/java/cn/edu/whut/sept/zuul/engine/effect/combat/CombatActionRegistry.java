@@ -2,14 +2,14 @@ package cn.edu.whut.sept.zuul.engine.effect.combat;
 
 import cn.edu.whut.sept.zuul.domain.Item;
 import cn.edu.whut.sept.zuul.domain.Player;
-import cn.edu.whut.sept.zuul.engine.CombatEngine;
+import cn.edu.whut.sept.zuul.engine.CombatSystem;
 
 /**
  * 战斗中使用物品的效果（combat: 前缀或已知 itemId）。
  */
 public final class CombatActionRegistry
 {
-    public CombatItemResult apply(CombatEngine combat, Player player, String itemId)
+    public CombatItemResult apply(CombatSystem combat, Player player, String itemId)
     {
         Item item = player.getInventory().stream()
             .filter(i -> i.getItemId().equals(itemId))
@@ -41,7 +41,7 @@ public final class CombatActionRegistry
         return CombatItemResult.fail(item.getName() + " 无法在战斗中使用。");
     }
 
-    private CombatItemResult applyCombatPrefix(CombatEngine combat, Player player, Item item, String effect)
+    private CombatItemResult applyCombatPrefix(CombatSystem combat, Player player, Item item, String effect)
     {
         if (effect.startsWith("combat:heal:")) {
             int amount = parseTrailingInt(effect, "combat:heal:", 20);

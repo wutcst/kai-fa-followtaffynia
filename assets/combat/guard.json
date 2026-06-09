@@ -26,5 +26,10 @@
     "reputation": -15,
     "unlock": "guard-gate",
     "markDefeated": true
+  },
+  "actOptions": {
+    "check": "守卫 HP: 80  ATK: 8  DEF: 0\n他紧握着长矛，眼神坚定。",
+    "talk": "你试图和守卫交谈……\n但他只是摇了摇头。\n守卫的攻击似乎变慢了一点。",
+    "intimidate": "你摆出战斗姿态！\n守卫稍微后退了一步。\n他的攻击力下降了。"
   }
 }

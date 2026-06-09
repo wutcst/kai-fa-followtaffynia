@@ -21,5 +21,10 @@
   "onDefeat": {
     "reputation": -20,
     "markDefeated": true
+  },
+  "actOptions": {
+    "check": "隐士 HP: 60  ATK: 12  DEF: 0\n他漂浮在空中，周身环绕着奥术能量。",
+    "listen": "你静静聆听隐士的低语……\n他似乎愿意分享更多秘密。\n隐士的防御下降了。",
+    "question": "你问他关于 Realm 的真相。\n隐士沉默了许久……\n他似乎动摇了。"
   }
 }

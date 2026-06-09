@@ -90,7 +90,8 @@ public final class CombatLoader
         }
 
         return new NpcCombatDef(npcId, displayName, maxHp, defaultState,
-            stateThresholds, stateSkills, skills, onRep, unlock, markDefeated);
+            stateThresholds, stateSkills, skills, onRep, unlock, markDefeated,
+            parseActOptions(json));
     }
 
     private static void parseStates(String json,
@@ -250,5 +251,24 @@ public final class CombatLoader
             }
         }
         return sb.toString();
+    }
+
+    private static Map<String, String> parseActOptions(String json)
+    {
+        Map<String, String> act = new HashMap<>();
+        int actIdx = json.indexOf("\"actOptions\"");
+        if (actIdx < 0) return act;
+
+        String actBlock = extractBalancedBlock(json, json.indexOf('{', actIdx));
+        // 简单键值对： "actId": "响应文本"
+        Matcher m = Pattern.compile("\"([^\"]+)\"\\s*:\\s*\"([^\"]*)\"").matcher(actBlock);
+        while (m.find()) {
+            String key = m.group(1);
+            String val = m.group(2);
+            if (!"actOptions".equals(key)) {
+                act.put(key, val);
+            }
+        }
+        return act;
     }
 }
