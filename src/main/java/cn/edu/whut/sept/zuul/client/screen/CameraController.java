@@ -2,6 +2,7 @@ package cn.edu.whut.sept.zuul.client.screen;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.glutils.HdpiUtils;
 
 /**
  * 相机/视口控制器 —— 负责世界相机和 UI 相机的视口计算。
@@ -65,12 +66,12 @@ public class CameraController
 
     public void applyWorldViewport()
     {
-        Gdx.gl.glViewport(worldViewportX, worldViewportY, worldViewportWidth, worldViewportHeight);
+        HdpiUtils.glViewport(worldViewportX, worldViewportY, worldViewportWidth, worldViewportHeight);
     }
 
     public void applyFullViewport()
     {
-        Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
     }
 
     public void resize(int width, int height)

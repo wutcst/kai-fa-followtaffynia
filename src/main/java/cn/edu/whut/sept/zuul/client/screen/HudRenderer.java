@@ -95,13 +95,14 @@ public class HudRenderer
             width - 128f, 16f, 2);
 
         float gap = UI_CHIP_GAP;
-        float totalWidth = 80f + 56f * 3f + 72f + gap * 4f;
+        float totalWidth = 80f + 56f * 4f + 72f + gap * 5f;
         float x = draw.grid(Math.max(20f, (width - totalWidth) / 2f));
         float y = 16f;
         x = draw.drawHintChip(batch, "WASD", x, y, 80f, UI_CHIP_HEIGHT, UiDrawUtils.ICON_MOVE, 40f) + gap;
         x = draw.drawHintChip(batch, "E", x, y, 56f, UI_CHIP_HEIGHT, UiDrawUtils.ICON_TAKE, 28f) + gap;
         x = draw.drawHintChip(batch, "Q", x, y, 56f, UI_CHIP_HEIGHT, UiDrawUtils.ICON_LOOK, 28f) + gap;
         x = draw.drawHintChip(batch, "I", x, y, 56f, UI_CHIP_HEIGHT, UiDrawUtils.ICON_INVENTORY, 28f) + gap;
+        x = draw.drawHintChip(batch, "M", x, y, 56f, UI_CHIP_HEIGHT, UiDrawUtils.ICON_ROOM, 28f) + gap;
         draw.drawHintChip(batch, "ESC", x, y, 72f, UI_CHIP_HEIGHT, UiDrawUtils.ICON_MENU, 40f);
     }
 
@@ -123,7 +124,7 @@ public class HudRenderer
         draw.drawCenteredWithSmallFont(batch, "按键说明", cx, py + ph - 64);
 
         draw.drawShortcutRow(batch, "ESC", "继续探索 / 打开菜单", UiDrawUtils.ICON_MENU, leftX, rowY);
-        draw.drawShortcutRow(batch, "WASD", "移动角色", UiDrawUtils.ICON_MOVE, leftX, rowY - rowGap);
+        draw.drawShortcutRow(batch, "WASD", "移动角色 / 方向键", UiDrawUtils.ICON_MOVE, leftX, rowY - rowGap);
         draw.drawShortcutRow(batch, "出口", "走入出口切换房间", UiDrawUtils.ICON_ROOM, leftX, rowY - rowGap * 2f);
         draw.drawShortcutRow(batch, "Q", "调查当前房间", UiDrawUtils.ICON_LOOK, leftX, rowY - rowGap * 3f);
         draw.drawShortcutRow(batch, "B", "回退上一个房间", UiDrawUtils.ICON_BACK, leftX, rowY - rowGap * 4f);
@@ -134,6 +135,7 @@ public class HudRenderer
         draw.drawShortcutRow(batch, "U", "使用背包中选中的物品", UiDrawUtils.ICON_USE, rightX, rowY - rowGap * 2f);
         draw.drawShortcutRow(batch, "F5", "保存当前进度", UiDrawUtils.ICON_SAVE, rightX, rowY - rowGap * 3f);
         draw.drawShortcutRow(batch, "F9", "读取存档", UiDrawUtils.ICON_LOAD, rightX, rowY - rowGap * 4f);
+        draw.drawShortcutRow(batch, "M", "查看世界地图", UiDrawUtils.ICON_ROOM, rightX, rowY - rowGap * 5f);
 
         smallFont.setColor(draw.getUiDarkText());
         draw.drawCenteredInBoxWithSmallFont(batch, "ESC 继续", cx - 96f, py + 24f, 192f, 40f);

@@ -5,9 +5,9 @@ import cn.edu.whut.sept.zuul.engine.CombatSystem;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
 import cn.edu.whut.sept.zuul.engine.UndertaleCombatEngine;
 import cn.edu.whut.sept.zuul.engine.UndertaleCombatPhase;
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
@@ -20,6 +20,7 @@ public class UtCombatRenderer
     private final ShapeRenderer shapes;
     private final BitmapFont font;
     private final BitmapFont smallFont;
+    private final GlyphLayout layout;
 
     public UtCombatRenderer(SpriteBatch batch, ShapeRenderer shapes,
                              BitmapFont font, BitmapFont smallFont)
@@ -28,6 +29,7 @@ public class UtCombatRenderer
         this.shapes = shapes;
         this.font = font;
         this.smallFont = smallFont;
+        this.layout = new GlyphLayout();
     }
 
     public String formatUtCombat(UndertaleCombatEngine ut, GameEngine engine)
@@ -77,40 +79,60 @@ public class UtCombatRenderer
             drawUtFightBar(ut, boxX, boxY, boxW, boxH);
         }
 
-        // HP 条
-        batch.begin();
-        int sw = Gdx.graphics.getWidth();
-        float topY = boxY + boxH + 8f;
-        font.setColor(Color.WHITE);
-        font.draw(batch, ut.getDef().displayName, boxX, topY);
-        drawHpBar(boxX + sw * 0.28f, topY - 14f, sw * 0.18f, 10f,
+        float statusY = boxY + boxH + 26f;
+        float hpBarY = boxY + boxH + 8f;
+        float columnGap = 24f;
+        float columnW = Math.max(120f, (boxW - columnGap) / 2f);
+        float enemyX = boxX;
+        float playerX = boxX + columnW + columnGap;
+        drawHpBar(enemyX, hpBarY, columnW, 10f,
             (float) ut.snapshot().npcHp / ut.getDef().maxHp, true);
-
-        font.draw(batch, engine.getPlayer().getName(), boxX + boxW - sw * 0.22f, topY);
-        drawHpBar(boxX + boxW - sw * 0.22f + sw * 0.06f, topY - 14f, sw * 0.16f, 10f,
+        drawHpBar(playerX, hpBarY, columnW, 10f,
             (float) ut.snapshot().playerHp / engine.getPlayer().getMaxHp(), false);
-        batch.end();
 
-        // 菜单 / 提示
-        batch.begin();
-        float bottomY = boxY - 12f;
-        smallFont.setColor(Color.WHITE);
+        float btnGap = 8f;
+        float btnH = 32f;
+        float btnW = (boxW - btnGap * 3f) / 4f;
+        float btnY = boxY - btnH - 12f;
         if (phase == UndertaleCombatPhase.MENU) {
-            float btnW = 110f;
-            float btnH = 28f;
-            String[] labels = {"1 FIGHT", "2 ACT", "3 ITEM", "4 MERCY"};
             for (int i = 0; i < 4; i++) {
-                float bx = boxX + i * (btnW + 6f);
-                drawUtButtonBg(bx, boxY - btnH - 6f, btnW, btnH);
-            }
-            for (int i = 0; i < 4; i++) {
-                float bx = boxX + i * (btnW + 6f);
-                smallFont.draw(batch, labels[i], bx + 8f, boxY - btnH - 6f + btnH - 8f);
+                drawUtButtonBg(boxX + i * (btnW + btnGap), btnY, btnW, btnH);
             }
         } else {
-            smallFont.draw(batch, ut.getPhaseMessage(), boxX, bottomY);
+            drawUtMessageBg(boxX, boxY - 40f, boxW, 28f);
+        }
+
+        // 文本必须在所有 ShapeRenderer 绘制结束后再画，避免 GL 状态互相污染。
+        batch.begin();
+        font.setColor(Color.WHITE);
+        font.draw(batch, hpLabel(ut.getDef().displayName, ut.snapshot().npcHp, ut.getDef().maxHp),
+            enemyX, statusY);
+        font.draw(batch, hpLabel(engine.getPlayer().getName(), ut.snapshot().playerHp,
+            engine.getPlayer().getMaxHp()), playerX, statusY);
+
+        smallFont.setColor(Color.WHITE);
+        if (phase == UndertaleCombatPhase.MENU) {
+            String[] labels = {"1 FIGHT", "2 ACT", "3 ITEM", "4 MERCY"};
+            for (int i = 0; i < 4; i++) {
+                float bx = boxX + i * (btnW + btnGap);
+                drawCenteredSmall(labels[i], bx, btnY, btnW, btnH);
+            }
+        } else {
+            smallFont.draw(batch, ut.getPhaseMessage(), boxX + 12f, boxY - 20f);
         }
         batch.end();
+    }
+
+    private String hpLabel(String name, int hp, int maxHp)
+    {
+        return name + "  " + hp + "/" + maxHp;
+    }
+
+    private void drawCenteredSmall(String text, float x, float y, float w, float h)
+    {
+        layout.setText(smallFont, text);
+        smallFont.draw(batch, text, x + (w - layout.width) / 2f,
+            y + (h + layout.height) / 2f + 1f);
     }
 
     public void drawUtSoul(UndertaleCombatEngine ut,
@@ -172,11 +194,23 @@ public class UtCombatRenderer
     public void drawUtButtonBg(float x, float y, float w, float h)
     {
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(0.12f, 0.12f, 0.18f, 0.9f);
+        shapes.setColor(0.12f, 0.12f, 0.18f, 0.94f);
         shapes.rect(x, y, w, h);
         shapes.end();
         shapes.begin(ShapeRenderer.ShapeType.Line);
-        shapes.setColor(1f, 0.55f, 0.1f, 0.65f);
+        shapes.setColor(1f, 0.62f, 0.18f, 0.82f);
+        shapes.rect(x, y, w, h);
+        shapes.end();
+    }
+
+    public void drawUtMessageBg(float x, float y, float w, float h)
+    {
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.06f, 0.055f, 0.09f, 0.94f);
+        shapes.rect(x, y, w, h);
+        shapes.end();
+        shapes.begin(ShapeRenderer.ShapeType.Line);
+        shapes.setColor(1f, 1f, 1f, 0.35f);
         shapes.rect(x, y, w, h);
         shapes.end();
     }

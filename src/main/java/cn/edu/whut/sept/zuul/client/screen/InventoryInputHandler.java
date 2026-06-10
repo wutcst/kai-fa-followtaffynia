@@ -21,16 +21,21 @@ public class InventoryInputHandler
         this.engine = engine;
     }
 
-    public void handleInput()
+    public String handleInput()
     {
         List<Item> items = engine.getPlayer().getInventory();
-        if (items.isEmpty()) { panel.resetSelection(); return; }
+        if (items.isEmpty()) {
+            panel.resetSelection();
+            return null;
+        }
         panel.clampIndex();
-        if (!panel.isInspectMode()) handleListInput(items);
-        else handleInspectInput();
+        if (!panel.isInspectMode()) {
+            return handleListInput(items);
+        }
+        return handleInspectInput();
     }
 
-    private void handleListInput(List<Item> items)
+    private String handleListInput(List<Item> items)
     {
         if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) panel.moveSelection(-1);
         if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) panel.moveSelection(1);
@@ -38,32 +43,48 @@ public class InventoryInputHandler
             if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1 + i)) panel.selectIndex(i);
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.X)) panel.enterInspect();
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F)) tryEatSelected();
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F)) return tryEatSelected();
         if (Gdx.input.isKeyJustPressed(Input.Keys.U) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
-            || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) tryUseSelected();
+            || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) return tryUseSelected();
+        return null;
     }
 
-    private void handleInspectInput()
+    private String handleInspectInput()
     {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) panel.exitInspect();
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            panel.exitInspect();
+            return "已返回背包列表";
+        }
+        return null;
     }
 
-    private void tryUseSelected()
+    private String tryUseSelected()
     {
         List<Item> items = engine.getPlayer().getInventory();
-        if (items.isEmpty()) { panel.close(); return; }
+        if (items.isEmpty()) {
+            panel.close();
+            return "背包为空";
+        }
         Item selected = items.get(panel.getInspectIndex());
-        engine.checkItemUse(selected.getItemId());
-        engine.tryUseItem(selected.getItemId());
+        String msg = engine.tryUseItem(selected.getItemId());
         panel.exitInspect();
         panel.clampSelection();
+        return msg;
     }
 
-    private void tryEatSelected()
+    private String tryEatSelected()
     {
         List<Item> items = engine.getPlayer().getInventory();
-        if (items.isEmpty()) { panel.close(); return; }
-        engine.eatItem(items.get(panel.getInspectIndex()).getItemId());
+        if (items.isEmpty()) {
+            panel.close();
+            return "背包为空";
+        }
+        Item selected = items.get(panel.getInspectIndex());
+        boolean edible = selected.isMagicCookie();
+        engine.eatItem(selected.getItemId());
         panel.clampSelection();
+        return edible
+            ? "食用了 " + selected.getName() + "，负重上限提升"
+            : selected.getName() + " 不能食用";
     }
 }

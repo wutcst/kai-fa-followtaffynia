@@ -291,6 +291,11 @@ public class GameScreen implements Screen
     private void handleInput(float delta)
     {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            if (worldMapOpen) {
+                worldMapOpen = false;
+                actionMessage = "地图已关闭";
+                return;
+            }
             if (encounterUi.isMenuOpen()) {
                 engine.leaveEncounter();
                 actionMessage = "已关闭遭遇菜单";
@@ -305,10 +310,15 @@ public class GameScreen implements Screen
             actionMessage = paused ? "已暂停" : "继续探索";
             return;
         }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
-            worldMapOpen = !worldMapOpen;
+
+        if (worldMapOpen) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+                worldMapOpen = false;
+                actionMessage = "地图已关闭";
+            }
             return;
         }
+
         if (paused) { handlePauseInput(); return; }
         if (encounterUi.isMenuOpen()) {
             String msg = encounterUi.handleMenuInput();
@@ -339,7 +349,17 @@ public class GameScreen implements Screen
             actionMessage = inventory.isOpen()
                 ? "背包已打开：↑↓选择，U使用，X查看详情" : "背包已关闭";
         }
-        if (inventory.isOpen()) { inventoryInput.handleInput(); return; }
+        if (inventory.isOpen()) {
+            String msg = inventoryInput.handleInput();
+            if (msg != null) actionMessage = msg;
+            return;
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+            worldMapOpen = true;
+            actionMessage = "已打开世界地图";
+            return;
+        }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.J) && movement.canStartAttack()) {
             movement.startAttack(1.0f);

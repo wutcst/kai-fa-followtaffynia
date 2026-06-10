@@ -195,6 +195,10 @@ public class RoomController
             if (dir != Direction.DEFAULT && engine.movePlayer(dir)) {
                 float[] spawn = loadCurrentRoom(true);
                 exitCooldown = 0.5f;
+                if (spawn == null) {
+                    return new ExitResult("地图加载失败: " + engine.getCurrentRoom().getRoomId(),
+                        0, 0, false);
+                }
                 return new ExitResult("进入 " + engine.getCurrentRoom().getRoomId(),
                     spawn[0], spawn[1], true);
             }
