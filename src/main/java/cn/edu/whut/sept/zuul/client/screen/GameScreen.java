@@ -206,7 +206,6 @@ public class GameScreen implements Screen
         npcManager.drawNpcPlaceholders(shapes);
         shapes.setProjectionMatrix(camera.getWorldCamera().combined);
         itemManager.drawItemPlaceholders(shapes);
-        dialogueUi.drawNpcDialogueBubble();
         interaction.drawPlayer(playerX, playerY);
         interaction.drawInteractionPrompt(playerX, playerY, paused, inventory.isOpen(),
             encounterUi.isMenuOpen(), dialogueUi.isActive(),
@@ -296,10 +295,10 @@ public class GameScreen implements Screen
         float boxX = 16f;
         float boxW = sw - 32f;
 
-        boolean playerSpeaking = d.isActive() && d.getOptionTexts() != null
-            && !d.getOptionTexts().isEmpty();
+        String playerChoice = dialogueUi.getPlayerLastChoice();
+        boolean showingChoice = playerChoice != null && !playerChoice.isEmpty();
 
-        // 暗色遮罩（仅覆盖对话区域）
+        // 暗色遮罩
         Gdx.gl.glEnable(GL20.GL_BLEND);
         shapes.setProjectionMatrix(camera.getUiCamera().combined);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
@@ -313,50 +312,70 @@ public class GameScreen implements Screen
         shapes.rect(boxX, boxY, boxW, boxH);
         shapes.end();
 
-        // 立绘区（左侧 NPC，右侧 主角）
+        // 立绘区
         float npcPx = boxX + 16f;
         float npcPy = boxY + (boxH - DIALOG_PORTRAIT_H) / 2f;
         float playerPx = boxX + boxW - DIALOG_PORTRAIT_W - 16f;
         float playerPy = npcPy;
 
-        // NPC 立绘
+        // NPC 立绘：玩家选择时灰，NPC 说话时亮
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-        if (playerSpeaking) {
-            shapes.setColor(0.12f, 0.12f, 0.12f, 0.6f); // 玩家"说话"时 NPC 变灰
-        } else {
-            shapes.setColor(0.3f, 0.3f, 0.5f, 1f);       // NPC 说话时亮起
-        }
+        shapes.setColor(showingChoice ? 0.12f : 0.3f,
+                        showingChoice ? 0.12f : 0.3f,
+                        showingChoice ? 0.12f : 0.5f,
+                        showingChoice ? 0.6f : 1f);
         shapes.rect(npcPx, npcPy, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
         shapes.end();
 
-        // 主角立绘
+        // 主角立绘：玩家选择时亮，NPC 说话时灰
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-        if (playerSpeaking) {
-            shapes.setColor(0.4f, 0.6f, 0.3f, 1f);       // 玩家说话时亮起
-        } else {
-            shapes.setColor(0.12f, 0.12f, 0.12f, 0.6f); // NPC 说话时变灰
-        }
+        shapes.setColor(showingChoice ? 0.4f : 0.12f,
+                        showingChoice ? 0.6f : 0.12f,
+                        showingChoice ? 0.3f : 0.12f,
+                        showingChoice ? 1f : 0.6f);
         shapes.rect(playerPx, playerPy, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
         shapes.end();
 
-        // 文字区域
+        // 文字
         batch.setProjectionMatrix(camera.getUiCamera().combined);
         batch.begin();
         float textX = npcPx + DIALOG_PORTRAIT_W + 16f;
         float textW = playerPx - textX - 16f;
-        float textY = boxY + boxH - 24f;
 
-        // NPC 名称
         String npcName = d.getNpcId();
-        font.setColor(playerSpeaking ? new Color(0.5f, 0.5f, 0.5f, 1f) : Color.WHITE);
-        font.draw(batch, npcName, textX, textY + 16f);
 
-        // 对话文本
-        String text = dialogueUi.formatDialogue(d);
-        int lastNewline = text.lastIndexOf('\n');
-        String body = lastNewline > 0 ? text.substring(0, lastNewline) : text;
-        smallFont.draw(batch, body, textX, textY, textW,
-            com.badlogic.gdx.utils.Align.left, true);
+        if (showingChoice) {
+            // 玩家刚说的话 — 绿色高亮
+            float playerTextY = boxY + boxH - 20f;
+            smallFont.setColor(0.6f, 1f, 0.5f, 1f);
+            smallFont.draw(batch, "你", textX, playerTextY + 14f);
+            smallFont.draw(batch, "\"" + playerChoice + "\"", textX, playerTextY, textW,
+                com.badlogic.gdx.utils.Align.left, true);
+
+            // NPC 回应（如果有的话）
+            String npcText = dialogueUi.formatDialogue(d);
+            int ln = npcText.lastIndexOf('\n');
+            String npcBody = ln > 0 ? npcText.substring(0, ln) : npcText;
+            if (npcBody != null && !npcBody.trim().isEmpty()) {
+                float npcTextY = boxY + boxH - 52f;
+                font.setColor(0.6f, 0.6f, 0.6f, 1f);
+                font.draw(batch, npcName, textX, npcTextY + 14f);
+                smallFont.setColor(Color.WHITE);
+                smallFont.draw(batch, npcBody, textX, npcTextY, textW,
+                    com.badlogic.gdx.utils.Align.left, true);
+            }
+        } else {
+            // NPC 说话
+            float textY = boxY + boxH - 24f;
+            font.setColor(Color.WHITE);
+            font.draw(batch, npcName, textX, textY + 16f);
+
+            String text = dialogueUi.formatDialogue(d);
+            int ln = text.lastIndexOf('\n');
+            String body = ln > 0 ? text.substring(0, ln) : text;
+            smallFont.draw(batch, body, textX, textY, textW,
+                com.badlogic.gdx.utils.Align.left, true);
+        }
         batch.end();
 
         Gdx.gl.glDisable(GL20.GL_BLEND);

@@ -34,6 +34,7 @@ public class DialogueUi
     private Dialogue activeDialogue;
     private final List<String> dialoguePages = new ArrayList<>();
     private int dialoguePageIndex;
+    private String playerLastChoice;  // 玩家刚选的对话选项文本
 
     public DialogueUi(GameEngine engine, SpriteBatch batch, BitmapFont smallFont,
                        ShapeRenderer shapes, UiDrawUtils draw, GlyphLayout layout,
@@ -51,10 +52,12 @@ public class DialogueUi
 
     public boolean isActive() { return activeDialogue != null; }
     public Dialogue getActiveDialogue() { return activeDialogue; }
+    public String getPlayerLastChoice() { return playerLastChoice; }
 
     public void clear()
     {
         activeDialogue = null;
+        playerLastChoice = null;
         dialoguePages.clear();
         dialoguePageIndex = 0;
     }
@@ -62,6 +65,7 @@ public class DialogueUi
     public void startDialogue(Dialogue d)
     {
         activeDialogue = d;
+        playerLastChoice = null;
         dialoguePages.clear();
         dialoguePageIndex = 0;
     }
@@ -87,11 +91,13 @@ public class DialogueUi
             List<String> opts = activeDialogue.getOptionTexts();
             if (opts == null || opts.isEmpty() || !activeDialogue.isActive()) {
                 activeDialogue = null;
+                playerLastChoice = null;
                 engine.endDialogue();
                 actionMessage.setLength(0);
                 actionMessage.append("对话结束。");
                 return;
             }
+            playerLastChoice = null;  // Enter 翻到选项页时清空上次选择
             actionMessage.setLength(0);
             actionMessage.append(formatDialogue(activeDialogue));
             return;
@@ -104,6 +110,7 @@ public class DialogueUi
 
         for (int i = 0; i < Math.min(9, opts.size()); i++) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1 + i)) {
+                playerLastChoice = opts.get(i);  // 记录玩家说了什么
                 activeDialogue = engine.chooseDialogueOption(i);
                 prepareDialoguePages(activeDialogue);
                 actionMessage.setLength(0);
