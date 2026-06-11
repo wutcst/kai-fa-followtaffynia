@@ -14,6 +14,7 @@ import cn.edu.whut.sept.zuul.infra.GameState;
 import cn.edu.whut.sept.zuul.infra.SaveGameService;
 
 import java.util.logging.Logger;
+import java.util.List;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
@@ -375,6 +376,19 @@ public class GameScreen implements Screen
             String body = ln > 0 ? text.substring(0, ln) : text;
             smallFont.draw(batch, body, textX, textY, textW,
                 com.badlogic.gdx.utils.Align.left, true);
+
+            // 如果有选项，显示在底部
+            if (d.isActive() && d.getOptionTexts() != null && !d.getOptionTexts().isEmpty()) {
+                List<String> opts = d.getOptionTexts();
+                StringBuilder optLine = new StringBuilder();
+                for (int i = 0; i < opts.size(); i++) {
+                    optLine.append(i + 1).append(". ").append(opts.get(i)).append("  ");
+                }
+                float optY = boxY + 26f;
+                smallFont.setColor(1f, 0.85f, 0.3f, 1f);
+                smallFont.draw(batch, optLine.toString(), textX, optY, textW,
+                    com.badlogic.gdx.utils.Align.left, true);
+            }
         }
         batch.end();
 
