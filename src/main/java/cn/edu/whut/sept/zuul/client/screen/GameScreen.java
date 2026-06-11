@@ -6,6 +6,7 @@ import cn.edu.whut.sept.zuul.client.render.UtCombatRenderer;
 import cn.edu.whut.sept.zuul.client.ui.GameUiSkin;
 import cn.edu.whut.sept.zuul.client.ui.UiDrawUtils;
 import cn.edu.whut.sept.zuul.client.ui.WorldMapRenderer;
+import cn.edu.whut.sept.zuul.domain.Dialogue;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
 import cn.edu.whut.sept.zuul.engine.UndertaleCombatEngine;
 import cn.edu.whut.sept.zuul.infra.GameLogger;
@@ -217,6 +218,8 @@ public class GameScreen implements Screen
 
         if (engine.isInCombat() && engine.isUndertaleCombat()) {
             renderUtCombatOverlay();
+        } else if (dialogueUi.isActive()) {
+            renderDialogueOverlay();
         }
 
         batch.begin();
@@ -234,7 +237,9 @@ public class GameScreen implements Screen
                 float py = draw.grid(Math.max(112f, h - 64f - ph - 16f));
                 inventory.render(px, py, pw, ph);
             }
-            hud.drawFooter(w, actionMessage);
+            if (!dialogueUi.isActive()) {
+                hud.drawFooter(w, actionMessage);
+            }
         }
         batch.end();
 
@@ -271,6 +276,89 @@ public class GameScreen implements Screen
         shapes.end();
 
         utRenderer.render(ut, engine, boxX, boxY, boxW, boxH);
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    // ========== 传统 RPG 对话窗口（底部 1/4 屏幕） ==========
+
+    private static final float DIALOG_PORTRAIT_W = 96f;
+    private static final float DIALOG_PORTRAIT_H = 96f;
+
+    private void renderDialogueOverlay()
+    {
+        Dialogue d = dialogueUi.getActiveDialogue();
+        if (d == null) return;
+
+        int sw = Gdx.graphics.getWidth();
+        int sh = Gdx.graphics.getHeight();
+        float boxH = sh * 0.28f;
+        float boxY = FOOTER_HEIGHT;
+        float boxX = 16f;
+        float boxW = sw - 32f;
+
+        boolean playerSpeaking = d.isActive() && d.getOptionTexts() != null
+            && !d.getOptionTexts().isEmpty();
+
+        // 暗色遮罩（仅覆盖对话区域）
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        shapes.setProjectionMatrix(camera.getUiCamera().combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.02f, 0.02f, 0.06f, 0.95f);
+        shapes.rect(boxX, boxY, boxW, boxH);
+        shapes.end();
+
+        // 边框
+        shapes.begin(ShapeRenderer.ShapeType.Line);
+        shapes.setColor(1f, 0.7f, 0.3f, 0.8f);
+        shapes.rect(boxX, boxY, boxW, boxH);
+        shapes.end();
+
+        // 立绘区（左侧 NPC，右侧 主角）
+        float npcPx = boxX + 16f;
+        float npcPy = boxY + (boxH - DIALOG_PORTRAIT_H) / 2f;
+        float playerPx = boxX + boxW - DIALOG_PORTRAIT_W - 16f;
+        float playerPy = npcPy;
+
+        // NPC 立绘
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        if (playerSpeaking) {
+            shapes.setColor(0.12f, 0.12f, 0.12f, 0.6f); // 玩家"说话"时 NPC 变灰
+        } else {
+            shapes.setColor(0.3f, 0.3f, 0.5f, 1f);       // NPC 说话时亮起
+        }
+        shapes.rect(npcPx, npcPy, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
+        shapes.end();
+
+        // 主角立绘
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        if (playerSpeaking) {
+            shapes.setColor(0.4f, 0.6f, 0.3f, 1f);       // 玩家说话时亮起
+        } else {
+            shapes.setColor(0.12f, 0.12f, 0.12f, 0.6f); // NPC 说话时变灰
+        }
+        shapes.rect(playerPx, playerPy, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
+        shapes.end();
+
+        // 文字区域
+        batch.setProjectionMatrix(camera.getUiCamera().combined);
+        batch.begin();
+        float textX = npcPx + DIALOG_PORTRAIT_W + 16f;
+        float textW = playerPx - textX - 16f;
+        float textY = boxY + boxH - 24f;
+
+        // NPC 名称
+        String npcName = d.getNpcId();
+        font.setColor(playerSpeaking ? new Color(0.5f, 0.5f, 0.5f, 1f) : Color.WHITE);
+        font.draw(batch, npcName, textX, textY + 16f);
+
+        // 对话文本
+        String text = dialogueUi.formatDialogue(d);
+        int lastNewline = text.lastIndexOf('\n');
+        String body = lastNewline > 0 ? text.substring(0, lastNewline) : text;
+        smallFont.draw(batch, body, textX, textY, textW,
+            com.badlogic.gdx.utils.Align.left, true);
+        batch.end();
+
         Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
