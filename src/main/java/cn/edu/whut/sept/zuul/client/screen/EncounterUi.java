@@ -73,6 +73,7 @@ public class EncounterUi
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
             if (!encounterMenu.canTalk) return "你不能交流。";
             Dialogue d = engine.talkNpc(npcId);
+            dialogueUi.startDialogue(d);
             encounterMenuOpen = false;
             encounterMenu = null;
             activeCombatSnapshot = null;

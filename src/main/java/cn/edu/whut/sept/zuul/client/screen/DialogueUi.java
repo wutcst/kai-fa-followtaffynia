@@ -59,6 +59,13 @@ public class DialogueUi
         dialoguePageIndex = 0;
     }
 
+    public void startDialogue(Dialogue d)
+    {
+        activeDialogue = d;
+        dialoguePages.clear();
+        dialoguePageIndex = 0;
+    }
+
     /**
      * 处理对话输入，返回 UI 是否仍处于对话状态。
      */
