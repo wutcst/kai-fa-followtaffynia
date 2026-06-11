@@ -1,5 +1,6 @@
 package cn.edu.whut.sept.zuul.client;
 
+import cn.edu.whut.sept.zuul.client.audio.GameAudio;
 import cn.edu.whut.sept.zuul.client.screen.TitleScreen;
 import cn.edu.whut.sept.zuul.client.ui.GameFonts;
 import com.badlogic.gdx.Game;
@@ -9,12 +10,14 @@ public class RpgMain extends Game
 {
     private SpriteBatch batch;
     private GameFonts fonts;
+    private GameAudio audio;
 
     @Override
     public void create()
     {
         batch = new SpriteBatch();
         fonts = new GameFonts();
+        audio = new GameAudio();
         setScreen(new TitleScreen(this, batch));
     }
 
@@ -28,6 +31,11 @@ public class RpgMain extends Game
         return fonts;
     }
 
+    public GameAudio getAudio()
+    {
+        return audio;
+    }
+
     @Override
     public void dispose()
     {
@@ -36,6 +44,9 @@ public class RpgMain extends Game
         }
         if (batch != null) {
             batch.dispose();
+        }
+        if (audio != null) {
+            audio.dispose();
         }
         super.dispose();
     }

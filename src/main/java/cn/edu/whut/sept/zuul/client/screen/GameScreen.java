@@ -1,6 +1,7 @@
 package cn.edu.whut.sept.zuul.client.screen;
 
 import cn.edu.whut.sept.zuul.client.RpgMain;
+import cn.edu.whut.sept.zuul.client.audio.GameAudio.Cue;
 import cn.edu.whut.sept.zuul.client.render.PlayerRenderer;
 import cn.edu.whut.sept.zuul.client.render.UtCombatRenderer;
 import cn.edu.whut.sept.zuul.client.ui.GameUiSkin;
@@ -80,6 +81,10 @@ public class GameScreen implements Screen
     private boolean screenChanged;
     private boolean worldMapOpen;
     private int moveLogFrame;
+    private int lastObservedHp;
+    private float stepAccumulator;
+    private float feedbackFlashTimer;
+    private final Color feedbackFlashColor;
 
     public GameScreen(RpgMain game, SpriteBatch batch, GameEngine engine)
     {
@@ -128,6 +133,8 @@ public class GameScreen implements Screen
         this.inventoryInput = new InventoryInputHandler(inventory, engine);
         this.hud = new HudRenderer(engine, batch, font, smallFont, uiSkin, draw);
         this.actionMessage = initialStatus;
+        this.lastObservedHp = engine.getPlayer().getHp();
+        this.feedbackFlashColor = new Color(1f, 1f, 1f, 0f);
 
         movement.setFacing((savedFacing != null && !savedFacing.isEmpty()) ? savedFacing : "south");
 
@@ -183,9 +190,18 @@ public class GameScreen implements Screen
             RoomController.ExitResult exit = room.checkExitOverlap(playerX, playerY);
             if (exit != null) {
                 actionMessage = exit.message;
+                if (exit.hasSpawn) {
+                    game.getAudio().play(Cue.DOOR);
+                    flash(1f, 0.82f, 0.38f, 0.18f);
+                } else {
+                    game.getAudio().play(Cue.ERROR);
+                    flash(1f, 0.24f, 0.18f, 0.16f);
+                }
                 if (exit.hasSpawn) { playerX = exit.spawnX; playerY = exit.spawnY; }
             }
         }
+        updateDamageFeedback();
+        updateFeedbackFlash(delta);
 
         Gdx.gl.glClearColor(0.06f, 0.06f, 0.1f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -231,6 +247,9 @@ public class GameScreen implements Screen
             hud.drawUiPanels(w, h, paused, inventory.isOpen(),
                 inventory.inventoryPanelHeight());
             hud.drawHud(w, h, paused, actionMessage);
+            if (!paused && !inventory.isOpen()) {
+                hud.drawQuestTracker(w, h, camera.getWorldViewportX(), camera.getWorldViewportWidth());
+            }
             if (inventory.isOpen()) {
                 float pw = draw.grid(Math.min(520f, w - 96f));
                 float ph = draw.grid(inventory.inventoryPanelHeight());
@@ -245,6 +264,7 @@ public class GameScreen implements Screen
         batch.end();
 
         if (worldMapOpen) drawWorldMap(delta);
+        drawFeedbackFlash();
     }
 
     private void renderUtCombatOverlay()
@@ -416,20 +436,24 @@ public class GameScreen implements Screen
             if (worldMapOpen) {
                 worldMapOpen = false;
                 actionMessage = "地图已关闭";
+                game.getAudio().play(Cue.MENU_CLOSE);
                 return;
             }
             if (encounterUi.isMenuOpen()) {
                 engine.leaveEncounter();
                 actionMessage = "已关闭遭遇菜单";
+                game.getAudio().play(Cue.MENU_CLOSE);
                 return;
             }
             if (inventory.isOpen()) {
                 inventory.close();
                 actionMessage = "背包已关闭";
+                game.getAudio().play(Cue.MENU_CLOSE);
                 return;
             }
             paused = !paused;
             actionMessage = paused ? "已暂停" : "继续探索";
+            game.getAudio().play(paused ? Cue.MENU_OPEN : Cue.MENU_CLOSE);
             return;
         }
 
@@ -437,6 +461,7 @@ public class GameScreen implements Screen
             if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
                 worldMapOpen = false;
                 actionMessage = "地图已关闭";
+                game.getAudio().play(Cue.MENU_CLOSE);
             }
             return;
         }
@@ -444,27 +469,48 @@ public class GameScreen implements Screen
         if (paused) { handlePauseInput(); return; }
         if (encounterUi.isMenuOpen()) {
             String msg = encounterUi.handleMenuInput();
-            if (msg != null) actionMessage = msg;
+            if (msg != null) {
+                actionMessage = msg;
+                game.getAudio().play(isFailureMessage(msg) ? Cue.ERROR : Cue.CLICK);
+            }
             return;
         }
-
         boolean nowInDialogueOrCombat = dialogueUi.isActive() || engine.isInDialogue()
             || engine.isInCombat();
         if (nowInDialogueOrCombat) {
             lastFrameInDialogueOrCombat = true;
             if (dialogueUi.isActive() || engine.isInDialogue()) {
+                String before = actionMessage;
                 StringBuilder sb = new StringBuilder(actionMessage);
                 dialogueUi.handleInput(sb);
                 actionMessage = sb.toString();
+                if (!actionMessage.equals(before)) {
+                    game.getAudio().play(Cue.CLICK);
+                }
                 return;
             }
             if (engine.isInCombat()) {
                 if (engine.isUndertaleCombat()) {
+                    int beforeHp = engine.getPlayer().getHp();
                     String msg = encounterUi.handleUtCombatInput(delta, utRenderer.utEngine(engine));
                     if (msg != null) actionMessage = msg;
+                    if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)
+                        || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
+                        || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                        game.getAudio().playThrottled(Cue.ATTACK, 140L);
+                    } else if (engine.getPlayer().getHp() < beforeHp) {
+                        game.getAudio().playThrottled(Cue.HIT, 120L);
+                    }
                 } else {
+                    int beforeHp = engine.getPlayer().getHp();
                     String msg = encounterUi.handleCombatInput();
-                    if (msg != null) actionMessage = msg;
+                    if (msg != null) {
+                        actionMessage = msg;
+                        game.getAudio().play(msg.contains("造成") ? Cue.ATTACK : Cue.CLICK);
+                    }
+                    if (engine.getPlayer().getHp() < beforeHp) {
+                        game.getAudio().play(Cue.HIT);
+                    }
                 }
                 return;
             }
@@ -479,26 +525,39 @@ public class GameScreen implements Screen
             inventory.toggle();
             actionMessage = inventory.isOpen()
                 ? "背包已打开：↑↓选择，U使用，X查看详情" : "背包已关闭";
+            game.getAudio().play(inventory.isOpen() ? Cue.MENU_OPEN : Cue.MENU_CLOSE);
         }
         if (inventory.isOpen()) {
             String msg = inventoryInput.handleInput();
-            if (msg != null) actionMessage = msg;
+            if (msg != null) {
+                actionMessage = msg;
+                if (isFailureMessage(msg)) {
+                    game.getAudio().play(Cue.ERROR);
+                    flash(1f, 0.22f, 0.15f, 0.14f);
+                } else {
+                    game.getAudio().play(Cue.USE);
+                    flash(0.45f, 0.9f, 0.55f, 0.12f);
+                }
+            }
             return;
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
             worldMapOpen = true;
             actionMessage = "已打开世界地图";
+            game.getAudio().play(Cue.MENU_OPEN);
             return;
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.J) && movement.canStartAttack()) {
             movement.startAttack(1.0f);
             actionMessage = "攻击！";
+            game.getAudio().play(Cue.ATTACK);
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.F) && movement.canStartDash()) {
             movement.startDash();
             actionMessage = "冲刺！";
+            game.getAudio().play(Cue.DASH);
         }
 
         movePlayer(delta);
@@ -509,32 +568,48 @@ public class GameScreen implements Screen
                 float[] sp = room.loadCurrentRoom(true);
                 if (sp != null) { playerX = sp[0]; playerY = sp[1]; }
                 actionMessage = "已回退至 " + engine.getCurrentRoom().getRoomId();
-            } else actionMessage = "无法回退";
+                game.getAudio().play(Cue.DOOR);
+            } else {
+                actionMessage = "无法回退";
+                game.getAudio().play(Cue.ERROR);
+            }
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
             String npcId = npcManager.findNearbyNpcId(playerX, playerY, PLAYER_W, PLAYER_H);
             if (npcId != null) {
                 encounterUi.openMenu(npcId);
                 actionMessage = "遇到 " + npcId + "。按 1 交流 / 2 杀害 / 3 离开 / 4 UT战斗";
+                game.getAudio().play(Cue.MENU_OPEN);
             } else {
                 String itemId = itemManager.findNearbyItemId(playerX, playerY, PLAYER_W, PLAYER_H);
                 if (itemId != null) {
                     if (engine.takeItem(itemId)) {
                         itemManager.rebuildItemPlaceholders();
                         actionMessage = "拾取了 " + itemId;
-                    } else actionMessage = "拾取失败（可能超重）";
+                        game.getAudio().play(Cue.PICKUP);
+                        flash(1f, 0.85f, 0.35f, 0.14f);
+                    } else {
+                        actionMessage = "拾取失败（可能超重）";
+                        game.getAudio().play(Cue.ERROR);
+                        flash(1f, 0.22f, 0.15f, 0.14f);
+                    }
                 }
             }
         }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.U))
+        if (Gdx.input.isKeyJustPressed(Input.Keys.U)) {
             actionMessage = "按 I 打开背包，选择物品后按 U 使用";
+            game.getAudio().play(Cue.ERROR);
+        }
     }
 
     private void handlePauseInput()
     {
         if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) saveGame();
         if (Gdx.input.isKeyJustPressed(Input.Keys.F9)) loadGame();
-        if (Gdx.input.isKeyJustPressed(Input.Keys.T)) switchToTitle();
+        if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
+            game.getAudio().play(Cue.CLICK);
+            switchToTitle();
+        }
     }
 
     private void movePlayer(float delta)
@@ -554,6 +629,13 @@ public class GameScreen implements Screen
         PlayerMovementController.MoveResult r = movement.applyMovement(
             delta, playerX, playerY, w, s, a, d,
             room.getWallLayer(), room.mapPixelWidth(), room.mapPixelHeight());
+        if (r.isMoving && (Math.abs(r.newX - playerX) > 0.01f || Math.abs(r.newY - playerY) > 0.01f)) {
+            stepAccumulator += Math.abs(r.newX - playerX) + Math.abs(r.newY - playerY);
+            if (stepAccumulator >= 48f) {
+                stepAccumulator = 0f;
+                game.getAudio().playThrottled(Cue.STEP, 90L);
+            }
+        }
         playerX = r.newX;
         playerY = r.newY;
     }
@@ -569,8 +651,12 @@ public class GameScreen implements Screen
             state.setFacing(movement.getFacing());
             SaveGameService.save(state);
             actionMessage = "已保存到 " + SaveGameService.defaultSavePath();
+            game.getAudio().play(Cue.SAVE);
+            flash(0.45f, 0.9f, 0.55f, 0.13f);
         } catch (Exception e) {
             actionMessage = "存档失败: " + e.getClass().getSimpleName();
+            game.getAudio().play(Cue.ERROR);
+            flash(1f, 0.22f, 0.15f, 0.16f);
         }
     }
 
@@ -581,11 +667,14 @@ public class GameScreen implements Screen
             GameEngine loaded = new GameEngine(state.getPlayerName());
             loaded.restoreState(state);
             screenChanged = true;
+            game.getAudio().play(Cue.LOAD);
             game.setScreen(new GameScreen(game, batch, loaded,
                 state.getPlayerX(), state.getPlayerY(), "已读取存档", state.getFacing()));
             deferDispose();
         } catch (Exception e) {
             actionMessage = "读档失败: " + e.getClass().getSimpleName();
+            game.getAudio().play(Cue.ERROR);
+            flash(1f, 0.22f, 0.15f, 0.16f);
         }
     }
 
@@ -613,5 +702,59 @@ public class GameScreen implements Screen
         worldMapRenderer.render(shapes, batch, smallFont, px, py, pw, ph,
             engine.getCurrentRoom().getRoomId(), engine.getExploredRoomIds(),
             engine::isLockUnlocked, delta);
+    }
+
+    private void updateDamageFeedback()
+    {
+        int hp = engine.getPlayer().getHp();
+        if (hp < lastObservedHp) {
+            game.getAudio().play(Cue.HIT);
+            flash(1f, 0.08f, 0.04f, 0.22f);
+        }
+        lastObservedHp = hp;
+    }
+
+    private void flash(float r, float g, float b, float alpha)
+    {
+        feedbackFlashColor.set(r, g, b, alpha);
+        feedbackFlashTimer = 0.18f;
+    }
+
+    private void updateFeedbackFlash(float delta)
+    {
+        if (feedbackFlashTimer <= 0f) {
+            return;
+        }
+        feedbackFlashTimer = Math.max(0f, feedbackFlashTimer - delta);
+    }
+
+    private void drawFeedbackFlash()
+    {
+        if (feedbackFlashTimer <= 0f) {
+            return;
+        }
+        float ratio = feedbackFlashTimer / 0.18f;
+        camera.applyFullViewport();
+        shapes.setProjectionMatrix(camera.getUiCamera().combined);
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(feedbackFlashColor.r, feedbackFlashColor.g,
+            feedbackFlashColor.b, feedbackFlashColor.a * ratio);
+        shapes.rect(0f, 0f, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        shapes.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    private boolean isFailureMessage(String message)
+    {
+        if (message == null) {
+            return false;
+        }
+        return message.contains("不能")
+            || message.contains("不可")
+            || message.contains("没有")
+            || message.contains("失败")
+            || message.contains("需位置")
+            || message.contains("已经打开");
     }
 }

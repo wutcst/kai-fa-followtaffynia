@@ -1,6 +1,7 @@
 package cn.edu.whut.sept.zuul.client.screen;
 
 import cn.edu.whut.sept.zuul.client.RpgMain;
+import cn.edu.whut.sept.zuul.client.audio.GameAudio.Cue;
 import cn.edu.whut.sept.zuul.client.ui.GameUiSkin;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
 import cn.edu.whut.sept.zuul.infra.GameState;
@@ -69,13 +70,16 @@ public class TitleScreen implements Screen
             {
                 if (keycode == Input.Keys.BACKSPACE && playerName.length() > 0) {
                     playerName = playerName.substring(0, playerName.length() - 1);
+                    game.getAudio().playThrottled(Cue.CLICK, 40L);
                     return true;
                 }
                 if (keycode == Input.Keys.ENTER) {
+                    game.getAudio().play(Cue.CLICK);
                     startGame();
                     return true;
                 }
                 if (keycode == Input.Keys.L) {
+                    game.getAudio().play(Cue.LOAD);
                     loadGame();
                     return true;
                 }
@@ -153,6 +157,7 @@ public class TitleScreen implements Screen
         } catch (Exception e) {
             Gdx.app.error(LOG_TAG, "Load from title failed", e);
             statusMessage = "读档失败: " + e.getClass().getSimpleName();
+            game.getAudio().play(Cue.ERROR);
         }
     }
 

@@ -2,7 +2,9 @@ package cn.edu.whut.sept.zuul.client.screen;
 
 import cn.edu.whut.sept.zuul.client.ui.GameUiSkin;
 import cn.edu.whut.sept.zuul.client.ui.UiDrawUtils;
+import cn.edu.whut.sept.zuul.domain.Item;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
+import cn.edu.whut.sept.zuul.engine.QuestManager;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
@@ -106,6 +108,43 @@ public class HudRenderer
         draw.drawHintChip(batch, "ESC", x, y, 72f, UI_CHIP_HEIGHT, UiDrawUtils.ICON_MENU, 40f);
     }
 
+    public void drawQuestTracker(float width, float height, int worldViewportX, int worldViewportWidth)
+    {
+        float leftSpace = worldViewportX;
+        float rightSpace = width - (worldViewportX + worldViewportWidth);
+        float sideSpace = Math.max(leftSpace, rightSpace);
+        if (sideSpace < 132f || height < 430f) {
+            return;
+        }
+
+        boolean useRight = rightSpace >= leftSpace;
+        float panelW = draw.grid(Math.min(248f, sideSpace - 16f));
+        float panelH = draw.grid(Math.min(176f, height - TOP_BAR_HEIGHT - FOOTER_HEIGHT - 48f));
+        if (panelW < 112f || panelH < 136f) {
+            return;
+        }
+
+        float panelX = useRight
+            ? draw.grid(worldViewportX + worldViewportWidth + (rightSpace - panelW) / 2f)
+            : draw.grid((leftSpace - panelW) / 2f);
+        float panelY = draw.grid(height - TOP_BAR_HEIGHT - panelH - 24f);
+        uiSkin.drawWindow(batch, panelX, panelY, panelW, panelH);
+        draw.drawPanelHeader(batch, "当前目标", UiDrawUtils.ICON_ROOM,
+            panelX + 12f, panelY + panelH - 42f, panelW - 24f);
+
+        String[] lines = objectiveLines();
+        float textX = panelX + 20f;
+        float textY = panelY + panelH - 62f;
+        smallFont.setColor(draw.getUiLightText());
+        draw.drawMultilineClamped(batch, smallFont, lines[0], textX, textY,
+            panelW - 40f, 16f, 2);
+
+        smallFont.setColor(draw.getUiDarkText());
+        draw.drawClampedLine(batch, smallFont, lines[1], textX, panelY + 66f, panelW - 40f);
+        draw.drawClampedLine(batch, smallFont, lines[2], textX, panelY + 46f, panelW - 40f);
+        draw.drawClampedLine(batch, smallFont, lines[3], textX, panelY + 26f, panelW - 40f);
+    }
+
     private void drawPauseMenu(float width, float height)
     {
         float pw = draw.grid(Math.min(672f, width - 72f));
@@ -139,5 +178,44 @@ public class HudRenderer
 
         smallFont.setColor(draw.getUiDarkText());
         draw.drawCenteredInBoxWithSmallFont(batch, "ESC 继续", cx - 96f, py + 24f, 192f, 40f);
+    }
+
+    private String[] objectiveLines()
+    {
+        boolean vaultDone = engine.getQuestManager().isCompleted(QuestManager.QUEST_VAULT);
+        boolean throneDone = engine.getQuestManager().isCompleted(QuestManager.QUEST_THRONE);
+        boolean exploreDone = engine.getQuestManager().isCompleted(QuestManager.QUEST_EXPLORE);
+        boolean hasGem = hasItem("gem-light");
+        int explored = engine.getExploredRoomIds().size();
+
+        String primary;
+        if (!vaultDone && !hasGem) {
+            primary = engine.isLockUnlocked("vault-door")
+                ? "进入 vault，拾取 Light Gem。"
+                : "寻找金库钥匙，打开 vault。";
+        } else if (!throneDone) {
+            primary = engine.isLockUnlocked("guard-gate")
+                ? "穿过守卫之门，抵达 throne-hall。"
+                : "找到打开守卫之门的方法。";
+        } else if (!exploreDone) {
+            primary = "继续探索 Realm 的未知房间。";
+        } else {
+            primary = "主线线索已齐，选择你的结局。";
+        }
+
+        String vault = (vaultDone || hasGem) ? "Light Gem: 已取得" : "Light Gem: 未取得";
+        String gate = engine.isLockUnlocked("guard-gate") ? "守卫之门: 已开启" : "守卫之门: 未开启";
+        String explore = "探索进度: " + Math.min(explored, 8) + "/8";
+        return new String[] {primary, vault, gate, explore};
+    }
+
+    private boolean hasItem(String itemId)
+    {
+        for (Item item : engine.getPlayer().getInventory()) {
+            if (item.getItemId().equals(itemId)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
