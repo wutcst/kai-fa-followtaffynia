@@ -377,8 +377,8 @@ public class GameScreen implements Screen
             smallFont.draw(batch, body, textX, textY, textW,
                 com.badlogic.gdx.utils.Align.left, true);
 
-            // 如果有选项，显示在底部
-            if (d.isActive() && d.getOptionTexts() != null && !d.getOptionTexts().isEmpty()) {
+            // 如果有选项且已翻完所有文字，显示在底部
+            if (dialogueUi.isAtChoicePoint()) {
                 List<String> opts = d.getOptionTexts();
                 StringBuilder optLine = new StringBuilder();
                 for (int i = 0; i < opts.size(); i++) {

@@ -50,6 +50,16 @@ public class DialogueUi
         this.worldCamera = worldCamera;
     }
 
+    public boolean isAtChoicePoint()
+    {
+        if (activeDialogue == null) return false;
+        if (!activeDialogue.isActive()) return false;
+        List<String> opts = activeDialogue.getOptionTexts();
+        if (opts == null || opts.isEmpty()) return false;
+        if (dialoguePages.isEmpty()) prepareDialoguePages(activeDialogue);
+        return dialoguePageIndex + 1 >= dialoguePages.size() && playerLastChoice == null;
+    }
+
     public boolean isActive() { return activeDialogue != null; }
     public Dialogue getActiveDialogue() { return activeDialogue; }
     public String getPlayerLastChoice() { return playerLastChoice; }
