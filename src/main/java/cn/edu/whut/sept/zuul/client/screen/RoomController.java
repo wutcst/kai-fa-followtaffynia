@@ -128,7 +128,9 @@ public class RoomController
             wallLayer = (TiledMapTileLayer) map.getLayers().get("wall");
             MapLayer objLayer = map.getLayers().get("objects");
             objectsLayer = objLayer == null ? null : objLayer.getObjects();
-            npcManager.buildNpcPlaceholders(roomId, objectsLayer);
+            npcManager.buildNpcPlaceholders(roomId, objectsLayer,
+                engine.getDefeatedNpcs(),
+                engine.isLockUnlocked("guard-gate"));
             itemManager.buildItemPlaceholders(roomId);
             currentMapPath = tmxPath;
             exitCooldown = 0.3f;
@@ -240,6 +242,14 @@ public class RoomController
             }
         }
         return null;
+    }
+
+    public void rebuildNpcs()
+    {
+        String roomId = engine.getCurrentRoom().getRoomId();
+        npcManager.buildNpcPlaceholders(roomId, objectsLayer,
+            engine.getDefeatedNpcs(),
+            engine.isLockUnlocked("guard-gate"));
     }
 
     public void disposeMap()

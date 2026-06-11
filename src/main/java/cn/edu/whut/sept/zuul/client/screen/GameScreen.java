@@ -64,6 +64,7 @@ public class GameScreen implements Screen
     private final PlayerMovementController movement;
     private final UtCombatRenderer utRenderer;
     private final WorldMapRenderer worldMapRenderer;
+    private boolean lastFrameInDialogueOrCombat;
     private final PlayerRenderer playerRenderer;
     private final DialogueUi dialogueUi;
     private final EncounterUi encounterUi;
@@ -446,21 +447,30 @@ public class GameScreen implements Screen
             if (msg != null) actionMessage = msg;
             return;
         }
-        if (dialogueUi.isActive() || engine.isInDialogue()) {
-            StringBuilder sb = new StringBuilder(actionMessage);
-            dialogueUi.handleInput(sb);
-            actionMessage = sb.toString();
-            return;
-        }
-        if (engine.isInCombat()) {
-            if (engine.isUndertaleCombat()) {
-                String msg = encounterUi.handleUtCombatInput(delta, utRenderer.utEngine(engine));
-                if (msg != null) actionMessage = msg;
-            } else {
-                String msg = encounterUi.handleCombatInput();
-                if (msg != null) actionMessage = msg;
+
+        boolean nowInDialogueOrCombat = dialogueUi.isActive() || engine.isInDialogue()
+            || engine.isInCombat();
+        if (nowInDialogueOrCombat) {
+            lastFrameInDialogueOrCombat = true;
+            if (dialogueUi.isActive() || engine.isInDialogue()) {
+                StringBuilder sb = new StringBuilder(actionMessage);
+                dialogueUi.handleInput(sb);
+                actionMessage = sb.toString();
+                return;
             }
-            return;
+            if (engine.isInCombat()) {
+                if (engine.isUndertaleCombat()) {
+                    String msg = encounterUi.handleUtCombatInput(delta, utRenderer.utEngine(engine));
+                    if (msg != null) actionMessage = msg;
+                } else {
+                    String msg = encounterUi.handleCombatInput();
+                    if (msg != null) actionMessage = msg;
+                }
+                return;
+            }
+        } else if (lastFrameInDialogueOrCombat) {
+            lastFrameInDialogueOrCombat = false;
+            room.rebuildNpcs();
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) saveGame();
