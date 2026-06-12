@@ -6,6 +6,9 @@ import cn.edu.whut.sept.zuul.engine.UseResult;
 
 /**
  * 处理 effect 格式：light 或 light:&lt;mode&gt;
+ *
+ * 当前无暗室机制，光照道具仅提供信息提示，不消耗物品。
+ * 战斗中通过 {@code CombatActionRegistry} 单独处理致盲效果。
  */
 public class LightEffect implements UseEffect
 {
@@ -18,10 +21,12 @@ public class LightEffect implements UseEffect
     @Override
     public UseResult apply(GameEngine engine, Item item, String effect)
     {
-        // 当前没有暗室机制，不消耗物品
         if ("light:full".equals(effect)) {
-            return UseResult.fail(item.getName() + " 闪耀着纯净的光芒，但这里不需要光源。");
+            return UseResult.fail(item.getName()
+                + " 散发着纯净的光芒。传说它曾属于 Realm 的初代编年史者——\n"
+                + "拥有它的人，将面临最终的选择。");
         }
-        return UseResult.fail(item.getName() + " 照亮了周围，但这里足够明亮，不需要它。");
+        return UseResult.fail(item.getName()
+            + " 照亮了周围。战斗中用它可以让敌人短暂失明。");
     }
 }
