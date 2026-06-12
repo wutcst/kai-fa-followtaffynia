@@ -2,6 +2,7 @@ package cn.edu.whut.sept.zuul.client.screen;
 
 import cn.edu.whut.sept.zuul.client.RpgMain;
 import cn.edu.whut.sept.zuul.client.audio.GameAudio.Cue;
+import cn.edu.whut.sept.zuul.client.audio.GameAudio.Track;
 import cn.edu.whut.sept.zuul.client.ui.GameUiSkin;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
 import cn.edu.whut.sept.zuul.infra.GameState;
@@ -92,6 +93,7 @@ public class TitleScreen implements Screen
     @Override
     public void show()
     {
+        game.getAudio().playMusic(Track.TITLE);
         Gdx.input.setInputProcessor(inputAdapter);
     }
 
