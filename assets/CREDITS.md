@@ -9,6 +9,8 @@
 | `sprites/npc-*.png` | | | | |
 | `ui/kenney-rpg/*.png` | UI Pack: RPG Expansion | Kenney Vleugels | CC0 | https://kenney.nl/assets/ui-pack-rpg-expansion |
 | `fonts/game.ttf` | Fusion Pixel Font 10px Proportional zh_hans | TakWolf | SIL Open Font License 1.1 | https://github.com/TakWolf/fusion-pixel-font |
+| `audio/sfx/*.ogg` | RPG Audio; Interface Sounds | Kenney Vleugels | CC0 | https://kenney.nl/assets/rpg-audio ; https://kenney.nl/assets/interface-sounds |
+| `audio/music/*.wav` | 5 Action Chiptunes | Juhani Junkala | CC0 | https://opengameart.org/content/5-chiptunes-action |
 
 **AI 生成说明**（若使用）：模型名称、生成日期、人工修改内容。
 

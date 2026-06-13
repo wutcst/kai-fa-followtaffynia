@@ -2,6 +2,7 @@ package cn.edu.whut.sept.zuul.client.screen;
 
 import cn.edu.whut.sept.zuul.client.RpgMain;
 import cn.edu.whut.sept.zuul.client.audio.GameAudio.Cue;
+import cn.edu.whut.sept.zuul.client.audio.GameAudio.Track;
 import cn.edu.whut.sept.zuul.client.render.PlayerRenderer;
 import cn.edu.whut.sept.zuul.client.render.UtCombatRenderer;
 import cn.edu.whut.sept.zuul.client.ui.GameUiSkin;
@@ -154,7 +155,7 @@ public class GameScreen implements Screen
 
     // ==================== Screen lifecycle ====================
 
-    @Override public void show() {}
+    @Override public void show() { updateMusic(); }
     @Override public void pause() {}
     @Override public void resume() {}
     @Override public void hide() {}
@@ -182,6 +183,7 @@ public class GameScreen implements Screen
     {
         handleInput(delta);
         if (screenChanged) return;
+        updateMusic();
 
         if (!paused) {
             if (room.getExitCooldown() > 0f) room.setExitCooldown(room.getExitCooldown() - delta);
@@ -712,6 +714,32 @@ public class GameScreen implements Screen
             flash(1f, 0.08f, 0.04f, 0.22f);
         }
         lastObservedHp = hp;
+    }
+
+    private void updateMusic()
+    {
+        game.getAudio().playMusic(resolveMusicTrack());
+    }
+
+    private Track resolveMusicTrack()
+    {
+        if (engine.isInCombat()) {
+            return Track.COMBAT;
+        }
+
+        String roomId = engine.getCurrentRoom() == null
+            ? ""
+            : engine.getCurrentRoom().getRoomId().toLowerCase();
+        if (roomId.contains("cellar")
+            || roomId.contains("vault")
+            || roomId.contains("guard")
+            || roomId.contains("armory")
+            || roomId.contains("forge")
+            || roomId.contains("teleport")
+            || roomId.contains("throne")) {
+            return Track.DUNGEON;
+        }
+        return Track.EXPLORE;
     }
 
     private void flash(float r, float g, float b, float alpha)
