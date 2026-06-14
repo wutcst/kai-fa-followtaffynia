@@ -19,7 +19,8 @@ public final class UseEffectRegistry
             new MaxWeightEffect(),
             new LightEffect(),
             new ReputationEffect(),
-            new LoreEffect()
+            new LoreEffect(),
+            new PassiveHeldEffect()
         );
     }
 

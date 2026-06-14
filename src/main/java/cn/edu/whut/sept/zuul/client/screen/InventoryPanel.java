@@ -214,7 +214,7 @@ public class InventoryPanel
     private String itemUseStatus(ItemUseCheck check)
     {
         if (check.canUse) {
-            return "可用";
+            return check.hint.startsWith("被动") ? "被动" : "可用";
         }
         if (check.requiresLocation) {
             return "需位置";

@@ -21,6 +21,11 @@ public final class ItemUseCheck
         return new ItemUseCheck(true, false, "可随时使用");
     }
 
+    public static ItemUseCheck allowed(String hint)
+    {
+        return new ItemUseCheck(true, false, hint);
+    }
+
     public static ItemUseCheck needLocation(String hint)
     {
         return new ItemUseCheck(false, true, hint);

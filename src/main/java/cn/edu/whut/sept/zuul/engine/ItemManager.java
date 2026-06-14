@@ -69,6 +69,10 @@ public class ItemManager
         String effect = item.getEffect();
         if (effect == null || effect.trim().isEmpty())
             return ItemUseCheck.blocked(item.getName() + " 没有可使用的效果。");
+        if (effect.startsWith("passive:")) {
+            String desc = effect.substring("passive:".length());
+            return ItemUseCheck.allowed("被动: " + desc);
+        }
         if (effect.startsWith("unlock:")) {
             String lockId = effect.substring("unlock:".length()).trim();
             if (lockId.isEmpty()) return ItemUseCheck.blocked("这把钥匙似乎坏了。");

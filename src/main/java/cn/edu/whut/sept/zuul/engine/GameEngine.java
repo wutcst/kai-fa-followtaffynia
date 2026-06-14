@@ -593,10 +593,12 @@ public class GameEngine
                     "A fragrant herb that restores vitality.", 2, "heal:20");
             case "sword-rusty":
                 return new Item("sword-rusty", "Rusty Sword",
-                    "An old sword, still sharp enough.", 25, null);
+                    "An old sword, still sharp enough. Adds damage in combat while held.",
+                    25, "passive:UT战斗攻击+8，回合制攻击+5（背包中持有即生效）");
             case "shield-wooden":
                 return new Item("shield-wooden", "Wooden Shield",
-                    "A battered wooden shield.", 18, null);
+                    "A battered wooden shield. Reduces damage taken while held.",
+                    18, "passive:受到攻击伤害-3（背包中持有即生效）");
             case "warp-dust":
                 return new Item("warp-dust", "Warp Dust",
                     "Fine dust that sparkles with teleport energy.", 2, null);

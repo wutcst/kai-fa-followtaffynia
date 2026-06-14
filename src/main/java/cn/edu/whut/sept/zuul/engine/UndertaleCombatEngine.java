@@ -363,8 +363,10 @@ public class UndertaleCombatEngine implements CombatSystem
                 b.update(delta);
                 if (b.collidesWith(soulX, soulY, SOUL_RADIUS)) {
                     b.alive = false; hitsTaken++;
-                    player.setHp(Math.max(0, player.getHp() - b.damage));
-                    log.add("被击中了！-" + b.damage + " HP");
+                    int dmg = b.damage;
+                    if (hasItem("shield-wooden")) dmg = Math.max(1, dmg - 2);
+                    player.setHp(Math.max(0, player.getHp() - dmg));
+                    log.add("被击中了！-" + dmg + " HP");
                 }
             }
         }
