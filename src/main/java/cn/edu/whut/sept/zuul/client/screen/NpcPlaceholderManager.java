@@ -51,23 +51,7 @@ public class NpcPlaceholderManager
 
         if (!placeholders.isEmpty()) return;
 
-        // 兼容：地图没放 NPC 对象时用色块占位
-        if (!shouldSkip("guard", roomId, defeatedNpcs, guardGateUnlocked)
-            && "guard-room".equals(roomId)) {
-            placeholders.add(NpcPlaceholder.guard(tileToWorld.apply(15, 7)));
-        }
-        if (!shouldSkip("guard", roomId, defeatedNpcs, guardGateUnlocked)
-            && "garden".equals(roomId)) {
-            placeholders.add(NpcPlaceholder.guard(tileToWorld.apply(12, 15)));
-        }
-        if (!shouldSkip("hermit", roomId, defeatedNpcs, guardGateUnlocked)
-            && "hidden-shrine".equals(roomId)) {
-            placeholders.add(NpcPlaceholder.hermit(tileToWorld.apply(15, 7)));
-        }
-        if (!shouldSkip("merchant", roomId, defeatedNpcs, guardGateUnlocked)
-            && "forge".equals(roomId)) {
-            placeholders.add(NpcPlaceholder.merchant(tileToWorld.apply(15, 7)));
-        }
+        // 所有 NPC 已改用 tmx 地图贴图，不再生成色块占位
     }
 
     private boolean shouldSkip(String npcId, String roomId,
@@ -94,6 +78,7 @@ public class NpcPlaceholderManager
         if (placeholders.isEmpty()) return;
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         for (NpcPlaceholder npc : placeholders) {
+            if (npc.hasMapSprite) continue; // 有地图贴图的 NPC 不画色块
             shapes.setColor(npc.color);
             shapes.rect(npc.bounds.x, npc.bounds.y, npc.bounds.width, npc.bounds.height);
         }
@@ -135,25 +120,27 @@ public class NpcPlaceholderManager
         public final String npcId;
         public final Rectangle bounds;
         public final Color color;
+        public final boolean hasMapSprite;
 
-        private NpcPlaceholder(String npcId, Rectangle bounds, Color color)
+        private NpcPlaceholder(String npcId, Rectangle bounds, Color color, boolean hasMapSprite)
         {
             this.npcId = npcId; this.bounds = bounds; this.color = color;
+            this.hasMapSprite = hasMapSprite;
         }
         public static NpcPlaceholder guard(Rectangle bounds) {
-            return new NpcPlaceholder("guard", bounds, new Color(0.85f, 0.2f, 0.2f, 1f));
+            return new NpcPlaceholder("guard", bounds, new Color(0.85f, 0.2f, 0.2f, 1f), false);
         }
         public static NpcPlaceholder hermit(Rectangle bounds) {
-            return new NpcPlaceholder("hermit", bounds, new Color(0.2f, 0.8f, 0.35f, 1f));
+            return new NpcPlaceholder("hermit", bounds, new Color(0.2f, 0.8f, 0.35f, 1f), false);
         }
         public static NpcPlaceholder merchant(Rectangle bounds) {
-            return new NpcPlaceholder("merchant", bounds, new Color(0.95f, 0.65f, 0.15f, 1f));
+            return new NpcPlaceholder("merchant", bounds, new Color(0.95f, 0.65f, 0.15f, 1f), false);
         }
         public static NpcPlaceholder forNpc(String npcId, Rectangle bounds) {
-            if ("guard".equals(npcId)) return guard(bounds);
-            if ("hermit".equals(npcId)) return hermit(bounds);
-            if ("merchant".equals(npcId)) return merchant(bounds);
-            return new NpcPlaceholder(npcId, bounds, new Color(0.55f, 0.3f, 0.9f, 1f));
+            if ("guard".equals(npcId)) return new NpcPlaceholder("guard", bounds, new Color(0.85f, 0.2f, 0.2f, 1f), true);
+            if ("hermit".equals(npcId)) return new NpcPlaceholder("hermit", bounds, new Color(0.2f, 0.8f, 0.35f, 1f), true);
+            if ("merchant".equals(npcId)) return new NpcPlaceholder("merchant", bounds, new Color(0.95f, 0.65f, 0.15f, 1f), true);
+            return new NpcPlaceholder(npcId, bounds, new Color(0.55f, 0.3f, 0.9f, 1f), true);
         }
     }
 }
