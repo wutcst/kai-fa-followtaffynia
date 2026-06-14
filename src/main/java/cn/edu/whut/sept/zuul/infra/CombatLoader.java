@@ -97,7 +97,7 @@ public final class CombatLoader
 
         return new NpcCombatDef(npcId, displayName, maxHp, defaultState,
             stateThresholds, stateSkills, skills, onRep, unlock, markDefeated,
-            parseActOptions(json));
+            parseActOptions(json), parseBattleLines(json));
     }
 
     private static void parseStates(String json,
@@ -276,5 +276,22 @@ public final class CombatLoader
             }
         }
         return act;
+    }
+
+    private static Map<String, NpcCombatDef.BattleLine> parseBattleLines(String json)
+    {
+        Map<String, NpcCombatDef.BattleLine> lines = new HashMap<>();
+        int idx = json.indexOf("\"battleLines\"");
+        if (idx < 0) return lines;
+
+        String block = extractBalancedBlock(json, json.indexOf('{', idx));
+        Matcher m = Pattern.compile(
+            "\"([^\"]+)\"\\s*:\\s*\\{\\s*\"text\"\\s*:\\s*\"([^\"]*)\"\\s*,\\s*\"color\"\\s*:\\s*\"([^\"]*)\"\\s*}")
+            .matcher(block);
+        while (m.find()) {
+            lines.put(m.group(1),
+                new NpcCombatDef.BattleLine(m.group(2), m.group(3)));
+        }
+        return lines;
     }
 }

@@ -165,6 +165,9 @@ public final class CombatEngine implements CombatSystem
             damage = Math.max(1, damage / 2);
             playerDefenseBuffTurns--;
         }
+        if (hasItem("shield-wooden")) {
+            damage = Math.max(1, damage - 3);
+        }
 
         player.setHp(Math.max(0, player.getHp() - damage));
         log.add("你受到 " + damage + " 点伤害。");

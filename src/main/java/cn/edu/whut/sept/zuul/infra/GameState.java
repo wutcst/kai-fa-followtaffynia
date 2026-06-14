@@ -23,7 +23,7 @@ public class GameState implements Serializable
     private String entryDirection;
     private int hp;
     private int maxHp;
-    private int maxWeight;
+    private double maxWeight;
     private int reputation;
     private List<String> inventory;
     private Set<String> unlockedLocks;
@@ -126,12 +126,12 @@ public class GameState implements Serializable
         this.maxHp = maxHp;
     }
 
-    public int getMaxWeight()
+    public double getMaxWeight()
     {
         return maxWeight;
     }
 
-    public void setMaxWeight(int maxWeight)
+    public void setMaxWeight(double maxWeight)
     {
         this.maxWeight = maxWeight;
     }

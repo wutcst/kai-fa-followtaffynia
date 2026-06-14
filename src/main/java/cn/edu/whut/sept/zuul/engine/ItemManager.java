@@ -69,6 +69,13 @@ public class ItemManager
         String effect = item.getEffect();
         if (effect == null || effect.trim().isEmpty())
             return ItemUseCheck.blocked(item.getName() + " 没有可使用的效果。");
+        if (effect.startsWith("passive:")) {
+            String desc = effect.substring("passive:".length());
+            return ItemUseCheck.allowed("被动: " + desc);
+        }
+        if (effect.equals("barter")) {
+            return ItemUseCheck.blocked("商人可能会收这个——找他聊聊吧。");
+        }
         if (effect.startsWith("unlock:")) {
             String lockId = effect.substring("unlock:".length()).trim();
             if (lockId.isEmpty()) return ItemUseCheck.blocked("这把钥匙似乎坏了。");
@@ -91,7 +98,7 @@ public class ItemManager
     {
         Item item = engine.getPlayer().removeItem(itemId);
         if (item != null && item.isMagicCookie()) {
-            int before = engine.getPlayer().getMaxWeight();
+            double before = engine.getPlayer().getMaxWeight();
             engine.getPlayer().setMaxWeight(before + Item.COOKIE_WEIGHT_BOOST);
         } else if (item != null) {
             engine.getPlayer().addItem(item);

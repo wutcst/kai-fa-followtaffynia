@@ -10,20 +10,35 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Undertale 式战斗引擎：菜单 → 玩家行动 → 弹幕躲避 → 循环。
+ * Undertale 式战斗引擎。
  *
- * <p>UI 调用流程：
- * <ol>
- *   <li>{@link #getPhase()} 判断当前阶段</li>
- *   <li>MENU: 调 {@link #selectFight()} / {@link #selectAct(String)} /
- *       {@link #selectItem(String)} / {@link #selectMercy()}</li>
- *   <li>FIGHT_BAR: 每帧 {@link #updateFightBar(float)}，调 {@link #pressFightBar()} 按键</li>
- *   <li>ENEMY_TURN: 每帧 {@link #updateEnemyTurn(float)}，调 {@link #moveSoul(float, float)}
- *       移动灵魂，{@link #getBullets()} 获取弹幕用于渲染</li>
- *   <li>any → {@link #snapshot()} 获取渲染数据</li>
- * </ol>
+ * <h3>回合流转</h3>
+ * <pre>
+ *   MENU ──→ FIGHT_BAR ──→ ENEMY_TURN ──→ MENU  （循环）
+ *     │                        │
+ *     ├── ACT / ITEM ──────────┤ （跳过节奏攻击，直入敌人回合）
+ *     └── MERCY ───────────────┤ （台词 → 敌人回合 → 菜单）
+ *                                  │
+ *                            MERCY×2 → RESULT（战斗结束）
+ * </pre>
  *
- * <p>同时实现 {@link CombatSystem} 以保证 GameEngine 兼容。
+ * <h3>战斗台词系统</h3>
+ * 台词弹出时 {@link #battleLineActive} = true，屏蔽所有战斗输入。
+ * 玩家按 Enter 调用 {@link #dismissBattleLine()}，根据 {@link #phaseAfterBattleLine}
+ * 决定下一阶段：
+ * <ul>
+ *   <li>start 台词 → MENU（玩家先手）</li>
+ *   <li>mercy1 / ACT / ITEM / HP阈值 → ENEMY_TURN（NPC 反击）</li>
+ *   <li>mercy2 → RESULT → 调用方检测 {@link #isMercyExited()} 后切入交谈</li>
+ * </ul>
+ *
+ * <h3>数据驱动</h3>
+ * 所有 NPC 战斗参数（HP、技能、actOptions、battleLines）从
+ * {@code assets/combat/<npcId>.json} 加载，运行时零硬编码。
+ *
+ * @see NpcCombatDef
+ * @see NpcCombatDef.BattleLine
+ * @see UndertaleCombatPhase
  */
 public class UndertaleCombatEngine implements CombatSystem
 {
@@ -34,42 +49,51 @@ public class UndertaleCombatEngine implements CombatSystem
     private static final float SOUL_SPEED = 2.5f;
     private static final float SOUL_RADIUS = 0.04f;
     private static final float ENEMY_TURN_DURATION = 4.0f;
-    private static final int CONTACT_DAMAGE = 5;
 
-    // ---- 注入 ----
     private final Player player;
     private final NpcCombatDef def;
     private final CombatActionRegistry itemRegistry;
     private final Random rng;
 
-    // ---- 阶段 ----
     private UndertaleCombatPhase phase;
     private String phaseMessage;
+    private String currentBattleLine;
+    private String currentBattleLineColor;
 
-    // ---- 生命 ----
+    /** 战斗台词画中画：true 时玩家只能按 Enter 继续 */
+    private boolean battleLineActive;
+    private String pendingBattleLineText;
+    private String pendingBattleLineColor;
+
+    /** 台词关闭后进入哪个阶段 */
+    private UndertaleCombatPhase phaseAfterBattleLine;
+
     private int npcHp;
     private int npcMaxHp;
+    private int mercyCount;
+    private boolean mercyExited;
+    private boolean triggerHp50Line;
+    private boolean triggerHp10Line;
 
-    // ---- 节奏条 ----
     private float fightBarPos;
     private boolean fightBarForward;
 
-    // ---- 弹幕 ----
     private final List<Bullet> bullets;
     private BulletPattern activePattern;
     private float enemyTurnTimer;
     private float enemyTurnDuration;
-    private int enemyTurnDamage;
-    private int hitsTaken; // 本轮中弹次数
+    private int hitsTaken;
 
-    // ---- 饶恕 ----
+    private float soulX, soulY;
+    private final List<String> log;
     private boolean spared;
 
-    // ---- 灵魂 ----
-    private float soulX, soulY;
-
-    // ---- 日志 ----
-    private final List<String> log;
+    /** ACT 效果：敌人攻击力下降 */
+    private boolean atkDebuff;
+    /** ACT 效果：敌人防御下降（受到伤害+6） */
+    private boolean defDebuff;
+    /** ACT 效果：下次敌人回合弹幕速度-30% */
+    private boolean bulletSlow;
 
     public UndertaleCombatEngine(Player player, NpcCombatDef def,
         CombatActionRegistry itemRegistry)
@@ -85,7 +109,11 @@ public class UndertaleCombatEngine implements CombatSystem
         this.phase = UndertaleCombatPhase.MENU;
         this.soulX = 0.5f;
         this.soulY = 0.5f;
-        this.phaseMessage = def.displayName + " 出现了！";
+        this.mercyCount = 0;
+        this.triggerHp50Line = true;
+        this.triggerHp10Line = true;
+
+        showBattleLinePopup("start", UndertaleCombatPhase.MENU);
     }
 
     // ========== CombatSystem ==========
@@ -93,14 +121,13 @@ public class UndertaleCombatEngine implements CombatSystem
     @Override
     public CombatOutcome getOutcome()
     {
-        if (spared) return CombatOutcome.VICTORY;
+        if (spared || mercyExited) return CombatOutcome.VICTORY;
         if (player.isDead()) return CombatOutcome.DEFEAT;
         if (npcHp <= 0) return CombatOutcome.VICTORY;
         return CombatOutcome.ONGOING;
     }
 
-    @Override
-    public NpcCombatDef getDef() { return def; }
+    @Override public NpcCombatDef getDef() { return def; }
 
     @Override
     public CombatSnapshot snapshot()
@@ -108,125 +135,182 @@ public class UndertaleCombatEngine implements CombatSystem
         return new CombatSnapshot(def.npcId, def.displayName,
             player.getHp(), player.getMaxHp(), npcHp, npcMaxHp,
             "ut-" + phase.name().toLowerCase(), getOutcome(),
-            new ArrayList<>(log), phase == UndertaleCombatPhase.MENU);
+            new ArrayList<>(log), phase == UndertaleCombatPhase.MENU && !battleLineActive);
     }
 
     @Override
     public CombatSnapshot processPlayerAction(CombatAction action, String itemId)
-    {
-        log.add("UT 引擎不支持传统回合制指令，请使用 selectFight/selectAct/selectItem/selectMercy。");
-        return snapshot();
-    }
-
-    @Override
-    public void addPlayerDefenseBuff(int turns)
-    {
-        log.add("防御暂时提升。");
-    }
-
-    @Override
-    public void addNpcBlindTurns(int turns)
-    {
-        log.add("敌人被致盲——弹幕密度降低。");
-    }
+    { log.add("UT 引擎不支持传统回合制指令。"); return snapshot(); }
+    @Override public void addPlayerDefenseBuff(int turns) { log.add("防御暂时提升。"); }
+    @Override public void addNpcBlindTurns(int turns) { log.add("敌人被致盲。"); }
 
     // ========== 公开访问器 ==========
 
     public UndertaleCombatPhase getPhase() { return phase; }
     public String getPhaseMessage() { return phaseMessage; }
+    public boolean isShowingBattleLine() { return battleLineActive; }
+    public String getBattleLineText() { return pendingBattleLineText; }
+    public String getBattleLineColor() { return pendingBattleLineColor; }
+    public String getCurrentBattleLine() { return currentBattleLine; }
+    public String getCurrentBattleLineColor() { return currentBattleLineColor; }
+    public boolean isMercyExited() { return mercyExited; }
     public float getSoulX() { return soulX; }
     public float getSoulY() { return soulY; }
     public float getFightBarPos() { return fightBarPos; }
-    public float getEnemyTurnProgress()
+    public float getEnemyTurnProgress() { return enemyTurnDuration > 0 ? enemyTurnTimer / enemyTurnDuration : 0f; }
+    public List<Bullet> getBullets() { return Collections.unmodifiableList(bullets); }
+
+    /**
+     * 关闭战斗台词画中画，根据触发来源决定下一阶段。
+     *
+     * <table>
+     *   <tr><th>台词来源</th><th>phaseAfterBattleLine</th><th>动作</th></tr>
+     *   <tr><td>start（开局战吼）</td><td>MENU</td><td>进入菜单，玩家先手</td></tr>
+     *   <tr><td>mercy1 / ACT / ITEM</td><td>ENEMY_TURN</td><td>进入弹幕躲避</td></tr>
+     *   <tr><td>HP50 / HP10</td><td>ENEMY_TURN</td><td>进入弹幕躲避</td></tr>
+     *   <tr><td>mercy2</td><td>（无视）</td><td>mercyExited=true → RESULT</td></tr>
+     * </table>
+     *
+     * <p>调用方在 {@code dismissBattleLine()} 之后应立即检查
+     * {@link #isMercyExited()} 和 {@link #getOutcome()}：
+     * <pre>{@code
+     *   ut.dismissBattleLine();
+     *   if (ut.isMercyExited()) {
+     *       engine.talkNpcWithPrefix(ut.getDef().npcId, ut.getCurrentBattleLine());
+     *       dialogueUi.startDialogue(engine.talkNpc(ut.getDef().npcId));
+     *   }
+     * }</pre>
+     */
+    public void dismissBattleLine()
     {
-        return enemyTurnDuration > 0 ? enemyTurnTimer / enemyTurnDuration : 0f;
-    }
-    /** UI 渲染用：当前所有的存活子弹。 */
-    public List<Bullet> getBullets()
-    {
-        return Collections.unmodifiableList(bullets);
+        if (!battleLineActive) return;
+        battleLineActive = false;
+        pendingBattleLineText = null;
+
+        if (mercyExited) {
+            // 二次 MERCY：战斗结束
+            phase = UndertaleCombatPhase.RESULT;
+            phaseMessage = currentBattleLine;
+            return;
+        }
+
+        if (phaseAfterBattleLine == UndertaleCombatPhase.ENEMY_TURN) {
+            // 玩家行动后 → 敌人回合
+            phase = UndertaleCombatPhase.ENEMY_TURN;
+            startEnemyTurn();
+        } else {
+            // 开局台词等 → 回到菜单
+            phase = phaseAfterBattleLine;
+            phaseMessage = "你的回合。";
+        }
     }
 
     // ========== 菜单 ==========
 
     public void selectFight()
     {
-        if (phase != UndertaleCombatPhase.MENU) return;
+        if (phase != UndertaleCombatPhase.MENU || battleLineActive) return;
         phase = UndertaleCombatPhase.FIGHT_BAR;
         fightBarPos = 0f;
         fightBarForward = true;
         phaseMessage = "在中心区域按键攻击！";
     }
 
+    /**
+     * ACT 行动，根据 actId 产生实际战斗效果：
+     * <ul>
+     *   <li>check / listen / observe → 弹幕减速（下回合-30%）</li>
+     *   <li>talk / question / distract → 降攻击（敌人伤害-3）</li>
+     *   <li>intimidate / threaten → 降防御（玩家造成伤害+6）</li>
+     * </ul>
+     */
     public void selectAct(String actId)
     {
-        if (phase != UndertaleCombatPhase.MENU) return;
+        if (phase != UndertaleCombatPhase.MENU || battleLineActive) return;
         String response = def.actOptions.getOrDefault(actId,
             "你对 " + def.displayName + " 使用了 " + actId + "。");
+
+        // 根据 actId 前缀施加效果
+        String key = actId.toLowerCase();
+        if (key.contains("check") || key.contains("listen") || key.contains("observe")) {
+            bulletSlow = true;
+            response += "\n（弹幕速度下降！）";
+        } else if (key.contains("talk") || key.contains("question") || key.contains("distract")) {
+            atkDebuff = true;
+            response += "\n（敌人攻击力下降！）";
+        } else if (key.contains("intimidate") || key.contains("threaten")) {
+            defDebuff = true;
+            response += "\n（敌人防御下降！）";
+        }
+
+        showBattleLine(response, "white", UndertaleCombatPhase.ENEMY_TURN);
         phaseMessage = response;
         log.add(response);
-        phase = UndertaleCombatPhase.ENEMY_TURN;
-        startEnemyTurn();
+        if (!battleLineActive) { phase = UndertaleCombatPhase.ENEMY_TURN; startEnemyTurn(); }
     }
 
     public void selectItem(String itemId)
     {
-        if (phase != UndertaleCombatPhase.MENU) return;
-        CombatActionRegistry.CombatItemResult result =
-            itemRegistry.apply(this, player, itemId);
+        if (phase != UndertaleCombatPhase.MENU || battleLineActive) return;
+        CombatActionRegistry.CombatItemResult result = itemRegistry.apply(this, player, itemId);
+        showBattleLine(result.message, "white", UndertaleCombatPhase.ENEMY_TURN);
         phaseMessage = result.message;
         log.add(result.message);
-        phase = UndertaleCombatPhase.ENEMY_TURN;
-        startEnemyTurn();
+        if (!battleLineActive) { phase = UndertaleCombatPhase.ENEMY_TURN; startEnemyTurn(); }
     }
 
+    /**
+     * MERCY 双连机制：
+     * <ol>
+     *   <li>第 1 次：弹出 {@code mercy1} 嘲讽台词，敌人回合照常</li>
+     *   <li>第 2 次：弹出 {@code mercy2} 和解台词，设置 {@code mercyExited=true}</li>
+     * </ol>
+     * 调用方在检测到 {@code mercyExited} 后应关闭战斗并切入对话。
+     */
     public void selectMercy()
     {
-        if (phase != UndertaleCombatPhase.MENU) return;
-        // HP ≤30% 可饶恕，或已通过 ACT 满足条件
-        boolean canSpare = npcHp <= npcMaxHp * 0.3f;
-        if (canSpare) {
-            spared = true;
-            phase = UndertaleCombatPhase.RESULT;
-            phaseMessage = "你饶恕了 " + def.displayName + "。";
-            log.add(phaseMessage);
+        if (phase != UndertaleCombatPhase.MENU || battleLineActive) return;
+        mercyCount++;
+
+        if (mercyCount >= 2) {
+            mercyExited = true;
+            showBattleLinePopup("mercy2", UndertaleCombatPhase.MENU /* 不执行，mercyExited 优先 */);
         } else {
-            phaseMessage = def.displayName + " 的名字还不是黄色的……";
-            phase = UndertaleCombatPhase.ENEMY_TURN;
-            startEnemyTurn();
+            showBattleLinePopup("mercy1", UndertaleCombatPhase.ENEMY_TURN);
         }
     }
 
     // ========== 节奏攻击 ==========
 
+    /**
+     * 节奏攻击确认。浮动条位置越靠近中心伤害越高：
+     * <ul>
+     *   <li>距离 &lt; 0.1 → 完美（BASE + SWORD_BONUS）</li>
+     *   <li>距离 &lt; 0.2 → 正常（BASE）</li>
+     *   <li>其余 → 偏离（BASE / 2）</li>
+     * </ul>
+     * 装备锈剑额外 +SWORD_BONUS。攻击后检查 HP 阈值台词，
+     * 若无台词则进入敌人弹幕回合。
+     */
     public void pressFightBar()
     {
         if (phase != UndertaleCombatPhase.FIGHT_BAR) return;
         float dist = Math.abs(fightBarPos - 0.5f);
         int damage;
         String quality;
-        if (dist < 0.1f) {
-            damage = BASE_DAMAGE + SWORD_BONUS;
-            quality = "完美！";
-        } else if (dist < 0.2f) {
-            damage = BASE_DAMAGE;
-            quality = "不错。";
-        } else {
-            damage = BASE_DAMAGE / 2;
-            quality = "偏离了……";
-        }
+        if (dist < 0.1f) { damage = BASE_DAMAGE + SWORD_BONUS; quality = "完美！"; }
+        else if (dist < 0.2f) { damage = BASE_DAMAGE; quality = "不错。"; }
+        else { damage = BASE_DAMAGE / 2; quality = "偏离了……"; }
         if (hasItem("sword-rusty")) damage += SWORD_BONUS;
+        if (defDebuff) damage += 6;
         npcHp = Math.max(0, npcHp - damage);
         log.add(quality + " 造成 " + damage + " 点伤害。");
         phaseMessage = quality + " 造成 " + damage + " 点伤害。";
 
-        if (npcHp <= 0) {
-            phase = UndertaleCombatPhase.RESULT;
-            phaseMessage = "你击败了 " + def.displayName + "！";
-            return;
-        }
-        phase = UndertaleCombatPhase.ENEMY_TURN;
-        startEnemyTurn();
+        checkHpThresholdLines();
+
+        if (npcHp <= 0) { phase = UndertaleCombatPhase.RESULT; phaseMessage = "你击败了 " + def.displayName + "！"; return; }
+        if (!battleLineActive) { phase = UndertaleCombatPhase.ENEMY_TURN; startEnemyTurn(); }
     }
 
     public void updateFightBar(float delta)
@@ -241,6 +325,45 @@ public class UndertaleCombatEngine implements CombatSystem
         }
     }
 
+    // ========== 战斗台词系统 ==========
+
+    private void showBattleLinePopup(String key, UndertaleCombatPhase after)
+    {
+        NpcCombatDef.BattleLine line = def.battleLines.get(key);
+        if (line == null) return;
+
+        battleLineActive = true;
+        pendingBattleLineText = line.text;
+        pendingBattleLineColor = line.color;
+        currentBattleLine = line.text;
+        currentBattleLineColor = line.color;
+        phaseAfterBattleLine = after;
+    }
+
+    private void showBattleLine(String text, String color, UndertaleCombatPhase after)
+    {
+        if (text == null || text.isEmpty()) return;
+        battleLineActive = true;
+        pendingBattleLineText = text;
+        pendingBattleLineColor = color;
+        currentBattleLine = text;
+        currentBattleLineColor = color;
+        phaseAfterBattleLine = after;
+    }
+
+    private void checkHpThresholdLines()
+    {
+        float ratio = (float) npcHp / npcMaxHp;
+        if (triggerHp50Line && ratio <= 0.5f) {
+            triggerHp50Line = false;
+            showBattleLinePopup("hp50", UndertaleCombatPhase.ENEMY_TURN);
+        }
+        if (triggerHp10Line && ratio <= 0.1f) {
+            triggerHp10Line = false;
+            showBattleLinePopup("hp10", UndertaleCombatPhase.ENEMY_TURN);
+        }
+    }
+
     // ========== 弹幕 ==========
 
     private void startEnemyTurn()
@@ -249,8 +372,6 @@ public class UndertaleCombatEngine implements CombatSystem
         enemyTurnDuration = ENEMY_TURN_DURATION;
         hitsTaken = 0;
         bullets.clear();
-
-        // 根据 ncp 不同阶段选不同弹幕图案
         int idx = rng.nextInt(4);
         switch (idx) {
             case 0: activePattern = BulletPattern.wave(enemyTurnDuration, 16, 5, rng); break;
@@ -263,54 +384,37 @@ public class UndertaleCombatEngine implements CombatSystem
 
     public void updateEnemyTurn(float delta)
     {
-        if (phase != UndertaleCombatPhase.ENEMY_TURN) return;
+        if (phase != UndertaleCombatPhase.ENEMY_TURN || battleLineActive) return;
 
-        // 更新弹幕图案
-        if (activePattern != null) {
-            activePattern.update(delta, bullets);
-        }
-
-        // 更新所有子弹位置
+        if (activePattern != null) activePattern.update(delta, bullets);
+        float bulletDelta = bulletSlow ? delta * 0.7f : delta;
         for (Bullet b : bullets) {
             if (b.alive) {
-                b.update(delta);
-                // 碰撞检测
+                b.update(bulletDelta);
                 if (b.collidesWith(soulX, soulY, SOUL_RADIUS)) {
-                    b.alive = false;
-                    hitsTaken++;
-                    player.setHp(Math.max(0, player.getHp() - b.damage));
-                    log.add("被击中了！-" + b.damage + " HP");
+                    b.alive = false; hitsTaken++;
+                    int dmg = b.damage;
+                    if (atkDebuff) dmg = Math.max(1, dmg - 3);
+                    if (hasItem("shield-wooden")) dmg = Math.max(1, dmg - 2);
+                    player.setHp(Math.max(0, player.getHp() - dmg));
+                    log.add("被击中了！-" + dmg + " HP");
                 }
             }
         }
-
-        // 清理死亡子弹
         bullets.removeIf(b -> !b.alive);
-
-        // 计时
         enemyTurnTimer += delta;
         if (enemyTurnTimer >= enemyTurnDuration) {
+            bulletSlow = false;
             endEnemyTurn();
         }
     }
 
     private void endEnemyTurn()
     {
-        bullets.clear();
-        activePattern = null;
-
-        // 如果没有被弹幕击中过，显示完美躲避
-        if (hitsTaken == 0) {
-            log.add("完美躲避！");
-        }
-
-        if (player.isDead()) {
-            phase = UndertaleCombatPhase.RESULT;
-            phaseMessage = "你倒下了……";
-        } else {
-            phase = UndertaleCombatPhase.MENU;
-            phaseMessage = "你的回合。";
-        }
+        bullets.clear(); activePattern = null;
+        if (hitsTaken == 0) log.add("完美躲避！");
+        if (player.isDead()) { phase = UndertaleCombatPhase.RESULT; phaseMessage = "你倒下了……"; }
+        else { phase = UndertaleCombatPhase.MENU; phaseMessage = "你的回合。"; }
     }
 
     public void moveSoul(float dx, float dy)
@@ -319,15 +423,6 @@ public class UndertaleCombatEngine implements CombatSystem
         soulY = clamp(soulY + dy * SOUL_SPEED * 0.016f, SOUL_RADIUS, 1f - SOUL_RADIUS);
     }
 
-    // ========== 工具 ==========
-
-    private boolean hasItem(String itemId)
-    {
-        return player.getInventory().stream().anyMatch(i -> itemId.equals(i.getItemId()));
-    }
-
-    private static float clamp(float v, float min, float max)
-    {
-        return Math.max(min, Math.min(max, v));
-    }
+    private boolean hasItem(String itemId) { return player.getInventory().stream().anyMatch(i -> itemId.equals(i.getItemId())); }
+    private static float clamp(float v, float min, float max) { return Math.max(min, Math.min(max, v)); }
 }

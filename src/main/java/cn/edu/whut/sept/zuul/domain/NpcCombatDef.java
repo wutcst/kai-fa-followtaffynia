@@ -7,7 +7,7 @@ import java.util.Map;
 
 /**
  * 从 assets/combat/&lt;npcId&gt;.json 解析的战斗定义。
- * v2: 支持 ACT 选项（Undertale 模式）。
+ * v3: 支持 battleLines（战前/半血/低血/MERCY 台词 + 颜色）。
  */
 public final class NpcCombatDef
 {
@@ -21,9 +21,10 @@ public final class NpcCombatDef
     public final int onDefeatReputation;
     public final String onDefeatUnlock;
     public final boolean onDefeatMarkDefeated;
-
-    /** ACT 选项：选项名 → 响应文本（Undertale 战斗菜单） */
     public final Map<String, String> actOptions;
+
+    /** 战斗台词：key=start|hp50|hp10|mercy1|mercy2 → "color: text" */
+    public final Map<String, BattleLine> battleLines;
 
     public NpcCombatDef(String npcId, String displayName, int maxHp, String defaultState,
         Map<String, Double> stateHpThresholds,
@@ -34,7 +35,7 @@ public final class NpcCombatDef
         this(npcId, displayName, maxHp, defaultState,
             stateHpThresholds, stateSkills, skills,
             onDefeatReputation, onDefeatUnlock, onDefeatMarkDefeated,
-            Collections.emptyMap());
+            Collections.emptyMap(), Collections.emptyMap());
     }
 
     public NpcCombatDef(String npcId, String displayName, int maxHp, String defaultState,
@@ -42,7 +43,8 @@ public final class NpcCombatDef
         Map<String, List<String>> stateSkills,
         Map<String, NpcSkill> skills,
         int onDefeatReputation, String onDefeatUnlock, boolean onDefeatMarkDefeated,
-        Map<String, String> actOptions)
+        Map<String, String> actOptions,
+        Map<String, BattleLine> battleLines)
     {
         this.npcId = npcId;
         this.displayName = displayName;
@@ -55,6 +57,7 @@ public final class NpcCombatDef
         this.onDefeatUnlock = onDefeatUnlock;
         this.onDefeatMarkDefeated = onDefeatMarkDefeated;
         this.actOptions = Collections.unmodifiableMap(new HashMap<>(actOptions));
+        this.battleLines = Collections.unmodifiableMap(new HashMap<>(battleLines));
     }
 
     public static final class NpcSkill
@@ -66,10 +69,19 @@ public final class NpcCombatDef
 
         public NpcSkill(String id, int damage, String text, boolean appliesDefense)
         {
-            this.id = id;
-            this.damage = damage;
-            this.text = text;
-            this.appliesDefense = appliesDefense;
+            this.id = id; this.damage = damage; this.text = text; this.appliesDefense = appliesDefense;
+        }
+    }
+
+    /** 战斗台词：文本 + 颜色标签 */
+    public static final class BattleLine
+    {
+        public final String text;
+        public final String color;  // red|green|blue|white|pink
+
+        public BattleLine(String text, String color)
+        {
+            this.text = text; this.color = color;
         }
     }
 }

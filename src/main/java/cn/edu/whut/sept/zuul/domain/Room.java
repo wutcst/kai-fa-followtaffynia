@@ -99,9 +99,9 @@ public class Room
         return null;
     }
 
-    public int totalItemWeight()
+    public double totalItemWeight()
     {
-        int total = 0;
+        double total = 0;
         for (Item item : items) {
             total += item.getWeight();
         }

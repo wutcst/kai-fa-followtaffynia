@@ -297,6 +297,29 @@ public class GameEngine
     public String tryUseItem(String itemId) { return itemManager.tryUseItem(itemId); }
     public void eatItem(String itemId) { itemManager.eatItem(itemId); }
 
+    /** 以物易物：用全部破烂换草药。每个破烂换 1 个草药。 */
+    public String barterJunkForHerbs()
+    {
+        List<String> junkIds = java.util.Arrays.asList(
+            "gold-coins", "ale-mug", "old-barrel", "ancient-tome",
+            "warp-dust", "welcome-note");
+        int traded = 0;
+        for (String id : junkIds) {
+            while (player.getInventory().stream().anyMatch(i -> i.getItemId().equals(id))) {
+                player.removeItem(id);
+                traded++;
+            }
+        }
+        if (traded == 0) {
+            return "商人翻了翻你的背包……\"你身上没有我感兴趣的东西。\"";
+        }
+        // 每件破烂换 1 个草药
+        for (int i = 0; i < traded; i++) {
+            player.addItem(cloneItem(createKnownItem("healing-herb")));
+        }
+        return "商人眼睛一亮！收下了你 " + traded + " 件杂物，给了你 " + traded + " 株草药。\n\"下次再带些有趣的东西来。\"";
+    }
+
     public String useItem(String itemId)
     {
         Item item = player.getInventory().stream()
@@ -310,6 +333,13 @@ public class GameEngine
 
     public Dialogue talkNpc(String npcId)
     {
+        return dialogueManager.talkNpc(npcId);
+    }
+
+    /** MERCY 退出后自动对话——前缀拼接在正常对话前 */
+    public Dialogue talkNpcWithPrefix(String npcId, String prefix)
+    {
+        lastMessage = prefix;
         return dialogueManager.talkNpc(npcId);
     }
 
@@ -552,50 +582,58 @@ public class GameEngine
     private Item createKnownItem(String itemId)
     {
         switch (itemId) {
-            case "welcome-note":
-                return new Item("welcome-note", "note", "A crumpled welcome note.", 1, null);
             case "torch":
                 return new Item("torch", "Torch",
-                    "A flickering torch. Useful in dark places.", 3, "light");
-            case "ale-mug":
-                return new Item("ale-mug", "Ale Mug",
-                    "A half-empty mug of ale.", 2, null);
+                    "A flickering torch. Useful in dark places.", 1, "light");
             case "key-vault":
                 return new Item("key-vault", "Rusty Key",
-                    "A rusty key, inscribed 'Vault'.", 1, "unlock:vault-door");
+                    "A rusty key, inscribed 'Vault'.", 0.5, "unlock:vault-door");
             case "key-guard":
                 return new Item("key-guard", "Iron Key",
-                    "A heavy iron key, marked 'Guard Gate'.", 2, "unlock:guard-gate");
+                    "A heavy iron key, marked 'Guard Gate'.", 0.5, "unlock:guard-gate");
             case "gem-light":
                 return new Item("gem-light", "Light Gem",
-                    "A radiant gem pulsing with pure light.", 5, "light:full");
+                    "A radiant gem pulsing with pure light.", 3, "light:full");
             case "gold-coins":
                 return new Item("gold-coins", "Gold Coins",
-                    "A small pile of gold coins.", 10, null);
+                    "A small pile of gold coins. The merchant might find these interesting.",
+                    0.5, "barter");
             case "ancient-tome":
                 return new Item("ancient-tome", "Ancient Tome",
-                    "A heavy tome bound in cracked leather.", 15, "lore");
+                    "A heavy tome bound in cracked leather. A collector would pay handsomely.",
+                    6, "barter");
             case "old-barrel":
                 return new Item("old-barrel", "Old Barrel",
-                    "A rotting barrel. It might contain something.", 20, null);
-            case "crystal-shard":
-                return new Item("crystal-shard", "Crystal Shard",
-                    "A fragment of crystal that hums softly.", 3, "reputation:+5");
-            case "healing-herb":
-                return new Item("healing-herb", "Healing Herb",
-                    "A fragrant herb that restores vitality.", 2, "heal:20");
-            case "sword-rusty":
-                return new Item("sword-rusty", "Rusty Sword",
-                    "An old sword, still sharp enough.", 25, null);
-            case "shield-wooden":
-                return new Item("shield-wooden", "Wooden Shield",
-                    "A battered wooden shield.", 18, null);
+                    "A rotting barrel. Maybe someone can make use of it.", 8, "barter");
             case "warp-dust":
                 return new Item("warp-dust", "Warp Dust",
-                    "Fine dust that sparkles with teleport energy.", 2, null);
+                    "Fine dust that sparkles with teleport energy. A curious trinket.",
+                    0.5, "barter");
+            case "ale-mug":
+                return new Item("ale-mug", "Ale Mug",
+                    "A half-empty mug of ale. The merchant collects these.",
+                    0.1, "barter");
+            case "welcome-note":
+                return new Item("welcome-note", "note",
+                    "A crumpled welcome note. Worth something to the right person.",
+                    0.1, "barter");
+            case "crystal-shard":
+                return new Item("crystal-shard", "Crystal Shard",
+                    "A fragment of crystal that hums softly.", 0.5, "reputation:+5");
+            case "healing-herb":
+                return new Item("healing-herb", "Healing Herb",
+                    "A fragrant herb that restores vitality.", 0.5, "heal:20");
+            case "sword-rusty":
+                return new Item("sword-rusty", "Rusty Sword",
+                    "An old sword, still sharp enough. Adds damage in combat while held.",
+                    15, "passive:UT战斗攻击+8，回合制攻击+5（背包中持有即生效）");
+            case "shield-wooden":
+                return new Item("shield-wooden", "Wooden Shield",
+                    "A battered wooden shield. Reduces damage taken while held.",
+                    14, "passive:受到攻击伤害-3（背包中持有即生效）");
             case "magic-cookie":
                 return new Item("magic-cookie", "Magic Cookie",
-                    "A glowing cookie. Eating it makes you feel stronger.", 1, "maxWeight:+20");
+                    "A glowing cookie. Eating it makes you feel stronger.", 0.5, "maxWeight:+20");
             default:
                 return null;
         }

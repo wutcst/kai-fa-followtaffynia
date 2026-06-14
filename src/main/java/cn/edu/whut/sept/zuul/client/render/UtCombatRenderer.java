@@ -110,6 +110,7 @@ public class UtCombatRenderer
         font.draw(batch, hpLabel(engine.getPlayer().getName(), ut.snapshot().playerHp,
             engine.getPlayer().getMaxHp()), playerX, statusY);
 
+        // 状态文字
         smallFont.setColor(Color.WHITE);
         if (phase == UndertaleCombatPhase.MENU) {
             String[] labels = {"1 FIGHT", "2 ACT", "3 ITEM", "4 MERCY"};
@@ -126,6 +127,18 @@ public class UtCombatRenderer
     private String hpLabel(String name, int hp, int maxHp)
     {
         return name + "  " + hp + "/" + maxHp;
+    }
+
+    private Color colorFromTag(String tag)
+    {
+        if (tag == null) return Color.WHITE;
+        switch (tag) {
+            case "red":   return new Color(1f, 0.25f, 0.2f, 1f);
+            case "green": return new Color(0.3f, 1f, 0.35f, 1f);
+            case "blue":  return new Color(0.35f, 0.55f, 1f, 1f);
+            case "pink":  return new Color(1f, 0.5f, 0.7f, 1f);
+            default:      return Color.WHITE;
+        }
     }
 
     private void drawCenteredSmall(String text, float x, float y, float w, float h)

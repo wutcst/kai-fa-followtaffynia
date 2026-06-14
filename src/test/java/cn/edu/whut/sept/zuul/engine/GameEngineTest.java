@@ -64,7 +64,9 @@ class GameEngineTest
     @Test
     void takeItem_overWeightFails()
     {
-        engine.getPlayer().setMaxWeight(0);
+        engine.getPlayer().setMaxWeight(0.0);
+        // ...
+        assertTrue(engine.getPlayer().totalWeight() <= engine.getPlayer().getMaxWeight());
         assertFalse(engine.takeItem("welcome-note"));
         assertEquals(1, engine.getCurrentRoom().getItems().size());
     }
@@ -141,12 +143,12 @@ class GameEngineTest
     @Test
     void eatCookie_increasesMaxWeight()
     {
-        int before = engine.getPlayer().getMaxWeight();
+        double before = engine.getPlayer().getMaxWeight();
         // 模拟获得并吃掉 cookie
         engine.getPlayer().addItem(new Item("magic-cookie", "Magic Cookie",
             "test", 1, "maxWeight:+20"));
         engine.eatItem("magic-cookie");
-        assertEquals(before + 20, engine.getPlayer().getMaxWeight());
+        assertEquals(before + 20.0, engine.getPlayer().getMaxWeight(), 0.01);
         // cookie 已从背包移除
         assertTrue(engine.getPlayer().getInventory().stream()
             .noneMatch(i -> i.getItemId().equals("magic-cookie")));
