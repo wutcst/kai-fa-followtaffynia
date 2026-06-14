@@ -6,17 +6,33 @@
   "states": {
     "calm": {
       "whenHpBelow": 1.0,
-      "skills": ["mind_blast", "shield"]
+      "skills": [
+        "mind_blast",
+        "shield"
+      ]
     },
     "warned": {
       "whenHpBelow": 0.5,
-      "skills": ["mind_blast", "mind_storm"]
+      "skills": [
+        "mind_blast",
+        "mind_storm"
+      ]
     }
   },
   "skills": {
-    "mind_blast": { "damage": 12, "text": "隐士释放精神冲击！" },
-    "shield": { "damage": 0, "selfBuff": "defense", "text": "隐士展开奥术屏障。" },
-    "mind_storm": { "damage": 22, "text": "隐士召唤心灵风暴！" }
+    "mind_blast": {
+      "damage": 12,
+      "text": "隐士释放精神冲击！"
+    },
+    "shield": {
+      "damage": 0,
+      "selfBuff": "defense",
+      "text": "隐士展开奥术屏障。"
+    },
+    "mind_storm": {
+      "damage": 22,
+      "text": "隐士召唤心灵风暴！"
+    }
   },
   "onDefeat": {
     "reputation": -20,
@@ -28,10 +44,25 @@
     "question": "你问他关于 Realm 的真相。\n隐士沉默了许久……\n他似乎动摇了。"
   },
   "battleLines": {
-    "start":  { "text": "又一个迷途的灵魂……\n你以为武力能解开 Realm 的秘密吗？", "color": "blue" },
-    "hp50":   { "text": "有趣……你的意志比外表更坚韧。\n但秘密不会轻易交给半途而废之人！", "color": "blue" },
-    "hp10":   { "text": "我看见了……你灵魂深处的光。\n或许……你真的是那个人……", "color": "pink" },
-    "mercy1": { "text": "退缩了吗？也对，\n真相往往比刀剑更伤人。", "color": "blue" },
-    "mercy2": { "text": "你放下了武器……原来你寻求的不是毁灭，\n而是理解。来吧，我会告诉你我所知的一切。", "color": "green" }
+    "start": {
+      "text": "又一个迷途的灵魂……\n你以为武力能解开 Realm 的秘密吗？",
+      "color": "blue"
+    },
+    "hp50": {
+      "text": "有趣……你的意志比外表更坚韧。\n但秘密不会轻易交给半途而废之人！",
+      "color": "blue"
+    },
+    "hp10": {
+      "text": "我看见了……你灵魂深处的光。\n或许……你真的是那个人……",
+      "color": "pink"
+    },
+    "mercy1": {
+      "text": "退缩了吗？也对，\n真相往往比刀剑更伤人。",
+      "color": "blue"
+    },
+    "mercy2": {
+      "text": "你放下了武器……原来你寻求的不是毁灭，\n而是理解。来吧，我会告诉你我所知的一切。",
+      "color": "green"
+    }
   }
 }

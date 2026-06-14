@@ -236,13 +236,20 @@ public class GameScreen implements Screen
         batch.setProjectionMatrix(camera.getUiCamera().combined);
 
         if (engine.isInCombat() && engine.isUndertaleCombat()) {
-            renderUtCombatOverlay();
+            UndertaleCombatEngine ut = utRenderer.utEngine(engine);
+            if (ut != null && ut.isShowingBattleLine()) {
+                renderBattleLineOverlay(ut);
+            } else {
+                renderUtCombatOverlay();
+            }
         } else if (dialogueUi.isActive()) {
             renderDialogueOverlay();
         }
 
         batch.begin();
-        if (!(engine.isInCombat() && engine.isUndertaleCombat())) {
+        boolean utCombatActive = engine.isInCombat() && engine.isUndertaleCombat()
+            && !utRenderer.utEngine(engine).isShowingBattleLine();
+        if (!utCombatActive) {
             float w = Gdx.graphics.getWidth();
             float h = Gdx.graphics.getHeight();
             inventory.setWorldViewportHeight(camera.getWorldViewportHeight());
@@ -300,6 +307,81 @@ public class GameScreen implements Screen
 
         utRenderer.render(ut, engine, boxX, boxY, boxW, boxH);
         Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    // ========== 战斗台词画中画（底部对话风格，Enter 继续）==========
+
+    private void renderBattleLineOverlay(UndertaleCombatEngine ut)
+    {
+        String text = ut.getBattleLineText();
+        if (text == null || text.isEmpty()) return;
+        String colorTag = ut.getBattleLineColor();
+
+        int sw = Gdx.graphics.getWidth();
+        int sh = Gdx.graphics.getHeight();
+        float boxH = sh * 0.28f;
+        float boxY = FOOTER_HEIGHT;
+        float boxX = 16f;
+        float boxW = sw - 32f;
+
+        Color lineColor = colorFromTag(colorTag);
+
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        shapes.setProjectionMatrix(camera.getUiCamera().combined);
+
+        // 暗色底
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.02f, 0.02f, 0.06f, 0.95f);
+        shapes.rect(boxX, boxY, boxW, boxH);
+        shapes.end();
+
+        // 边框
+        shapes.begin(ShapeRenderer.ShapeType.Line);
+        shapes.setColor(lineColor.r, lineColor.g, lineColor.b, 0.85f);
+        shapes.rect(boxX, boxY, boxW, boxH);
+        shapes.end();
+
+        // NPC 名字
+        batch.setProjectionMatrix(camera.getUiCamera().combined);
+        batch.begin();
+        font.setColor(lineColor);
+        font.draw(batch, ut.getDef().displayName,
+            boxX + 16f, boxY + boxH - 16f);
+
+        // 战斗台词正文
+        float textX = boxX + 16f;
+        float textY = boxY + boxH - 44f;
+        float textW = boxW - 32f;
+        font.setColor(Color.WHITE);
+        font.draw(batch, text, textX, textY, textW,
+            com.badlogic.gdx.utils.Align.left, true);
+
+        // "按 Enter 继续" 提示
+        float hintW = Math.min(textW, 240f);
+        float hintX = boxX + boxW - hintW - 16f;
+        float hintY = boxY + 20f;
+        smallFont.setColor(1f, 1f, 1f, 0.5f);
+        smallFont.draw(batch, "按 Enter 继续",
+            hintX, hintY, hintW,
+            com.badlogic.gdx.utils.Align.right, false);
+        batch.end();
+
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    private Color colorFromTag(String tag)
+    {
+        if (tag == null) return Color.WHITE;
+        switch (tag.toLowerCase()) {
+            case "red":    return Color.RED;
+            case "green":  return Color.GREEN;
+            case "blue":   return Color.CYAN;
+            case "pink":   return Color.PINK;
+            case "yellow": return Color.YELLOW;
+            case "orange": return Color.ORANGE;
+            case "white":  return Color.WHITE;
+            default:       return new Color(0.7f, 0.7f, 0.9f, 1f);
+        }
     }
 
     // ========== 传统 RPG 对话窗口（底部 1/4 屏幕） ==========

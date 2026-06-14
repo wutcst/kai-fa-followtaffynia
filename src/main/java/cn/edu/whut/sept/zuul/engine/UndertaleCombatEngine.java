@@ -12,7 +12,7 @@ import java.util.Random;
 /**
  * Undertale 式战斗引擎：菜单 → 玩家行动 → 弹幕躲避 → 循环。
  *
- * <p>v3: MERCY 双连退出 + 战斗台词（start/hp50/hp10/mercy1/mercy2）。
+ * <p>v3: MERCY 双连退出 + 战斗台词（对话画中画 + Enter 继续）。
  */
 public class UndertaleCombatEngine implements CombatSystem
 {
@@ -23,7 +23,6 @@ public class UndertaleCombatEngine implements CombatSystem
     private static final float SOUL_SPEED = 2.5f;
     private static final float SOUL_RADIUS = 0.04f;
     private static final float ENEMY_TURN_DURATION = 4.0f;
-    private static final int CONTACT_DAMAGE = 5;
 
     private final Player player;
     private final NpcCombatDef def;
@@ -34,6 +33,11 @@ public class UndertaleCombatEngine implements CombatSystem
     private String phaseMessage;
     private String currentBattleLine;
     private String currentBattleLineColor;
+
+    /** 战斗台词画中画：true 时玩家只能按 Enter 继续 */
+    private boolean battleLineActive;
+    private String pendingBattleLineText;
+    private String pendingBattleLineColor;
 
     private int npcHp;
     private int npcMaxHp;
@@ -73,14 +77,10 @@ public class UndertaleCombatEngine implements CombatSystem
         this.triggerHp50Line = true;
         this.triggerHp10Line = true;
 
-        // 开战台词
-        NpcCombatDef.BattleLine startLine = def.battleLines.get("start");
-        if (startLine != null) {
-            currentBattleLine = startLine.text;
-            currentBattleLineColor = startLine.color;
+        showBattleLinePopup("start");
+        if (!battleLineActive) {
+            phaseMessage = def.displayName + " 出现了！";
         }
-        phaseMessage = currentBattleLine != null
-            ? currentBattleLine : def.displayName + " 出现了！";
     }
 
     // ========== CombatSystem ==========
@@ -94,8 +94,7 @@ public class UndertaleCombatEngine implements CombatSystem
         return CombatOutcome.ONGOING;
     }
 
-    @Override
-    public NpcCombatDef getDef() { return def; }
+    @Override public NpcCombatDef getDef() { return def; }
 
     @Override
     public CombatSnapshot snapshot()
@@ -103,42 +102,51 @@ public class UndertaleCombatEngine implements CombatSystem
         return new CombatSnapshot(def.npcId, def.displayName,
             player.getHp(), player.getMaxHp(), npcHp, npcMaxHp,
             "ut-" + phase.name().toLowerCase(), getOutcome(),
-            new ArrayList<>(log), phase == UndertaleCombatPhase.MENU);
+            new ArrayList<>(log), phase == UndertaleCombatPhase.MENU && !battleLineActive);
     }
 
     @Override
     public CombatSnapshot processPlayerAction(CombatAction action, String itemId)
-    {
-        log.add("UT 引擎不支持传统回合制指令。");
-        return snapshot();
-    }
-
-    @Override
-    public void addPlayerDefenseBuff(int turns) { log.add("防御暂时提升。"); }
-    @Override
-    public void addNpcBlindTurns(int turns) { log.add("敌人被致盲。"); }
+    { log.add("UT 引擎不支持传统回合制指令。"); return snapshot(); }
+    @Override public void addPlayerDefenseBuff(int turns) { log.add("防御暂时提升。"); }
+    @Override public void addNpcBlindTurns(int turns) { log.add("敌人被致盲。"); }
 
     // ========== 公开访问器 ==========
 
     public UndertaleCombatPhase getPhase() { return phase; }
     public String getPhaseMessage() { return phaseMessage; }
+    public boolean isShowingBattleLine() { return battleLineActive; }
+    public String getBattleLineText() { return pendingBattleLineText; }
+    public String getBattleLineColor() { return pendingBattleLineColor; }
     public String getCurrentBattleLine() { return currentBattleLine; }
     public String getCurrentBattleLineColor() { return currentBattleLineColor; }
     public boolean isMercyExited() { return mercyExited; }
     public float getSoulX() { return soulX; }
     public float getSoulY() { return soulY; }
     public float getFightBarPos() { return fightBarPos; }
-    public float getEnemyTurnProgress()
-    {
-        return enemyTurnDuration > 0 ? enemyTurnTimer / enemyTurnDuration : 0f;
-    }
+    public float getEnemyTurnProgress() { return enemyTurnDuration > 0 ? enemyTurnTimer / enemyTurnDuration : 0f; }
     public List<Bullet> getBullets() { return Collections.unmodifiableList(bullets); }
+
+    /** 玩家按 Enter 关闭战斗台词画中画 */
+    public void dismissBattleLine()
+    {
+        if (!battleLineActive) return;
+        battleLineActive = false;
+        pendingBattleLineText = null;
+
+        if (mercyExited) {
+            phase = UndertaleCombatPhase.RESULT;
+            phaseMessage = currentBattleLine;
+        } else {
+            phaseMessage = "你的回合。";
+        }
+    }
 
     // ========== 菜单 ==========
 
     public void selectFight()
     {
-        if (phase != UndertaleCombatPhase.MENU) return;
+        if (phase != UndertaleCombatPhase.MENU || battleLineActive) return;
         phase = UndertaleCombatPhase.FIGHT_BAR;
         fightBarPos = 0f;
         fightBarForward = true;
@@ -147,61 +155,35 @@ public class UndertaleCombatEngine implements CombatSystem
 
     public void selectAct(String actId)
     {
-        if (phase != UndertaleCombatPhase.MENU) return;
+        if (phase != UndertaleCombatPhase.MENU || battleLineActive) return;
         String response = def.actOptions.getOrDefault(actId,
             "你对 " + def.displayName + " 使用了 " + actId + "。");
-        currentBattleLine = response;
-        currentBattleLineColor = "white";
+        showBattleLine(response, "white");
         phaseMessage = response;
         log.add(response);
-        phase = UndertaleCombatPhase.ENEMY_TURN;
-        startEnemyTurn();
+        if (!battleLineActive) { phase = UndertaleCombatPhase.ENEMY_TURN; startEnemyTurn(); }
     }
 
     public void selectItem(String itemId)
     {
-        if (phase != UndertaleCombatPhase.MENU) return;
-        CombatActionRegistry.CombatItemResult result =
-            itemRegistry.apply(this, player, itemId);
+        if (phase != UndertaleCombatPhase.MENU || battleLineActive) return;
+        CombatActionRegistry.CombatItemResult result = itemRegistry.apply(this, player, itemId);
+        showBattleLine(result.message, "white");
         phaseMessage = result.message;
         log.add(result.message);
-        phase = UndertaleCombatPhase.ENEMY_TURN;
-        startEnemyTurn();
+        if (!battleLineActive) { phase = UndertaleCombatPhase.ENEMY_TURN; startEnemyTurn(); }
     }
 
     public void selectMercy()
     {
-        if (phase != UndertaleCombatPhase.MENU) return;
+        if (phase != UndertaleCombatPhase.MENU || battleLineActive) return;
         mercyCount++;
 
         if (mercyCount >= 2) {
-            // 第二次 MERCY → NPC 接受，退出战斗
-            NpcCombatDef.BattleLine m2 = def.battleLines.get("mercy2");
-            if (m2 != null) {
-                currentBattleLine = m2.text;
-                currentBattleLineColor = m2.color;
-            } else {
-                currentBattleLine = def.displayName + " 放下了武器。";
-                currentBattleLineColor = "green";
-            }
             mercyExited = true;
-            phase = UndertaleCombatPhase.RESULT;
-            phaseMessage = currentBattleLine;
-            log.add(currentBattleLine);
+            showBattleLinePopup("mercy2");
         } else {
-            // 第一次 MERCY → NPC 嘲讽
-            NpcCombatDef.BattleLine m1 = def.battleLines.get("mercy1");
-            if (m1 != null) {
-                currentBattleLine = m1.text;
-                currentBattleLineColor = m1.color;
-            } else {
-                currentBattleLine = "怎么？这就怕了？";
-                currentBattleLineColor = "blue";
-            }
-            phaseMessage = currentBattleLine;
-            log.add(currentBattleLine);
-            phase = UndertaleCombatPhase.ENEMY_TURN;
-            startEnemyTurn();
+            showBattleLinePopup("mercy1");
         }
     }
 
@@ -213,16 +195,9 @@ public class UndertaleCombatEngine implements CombatSystem
         float dist = Math.abs(fightBarPos - 0.5f);
         int damage;
         String quality;
-        if (dist < 0.1f) {
-            damage = BASE_DAMAGE + SWORD_BONUS;
-            quality = "完美！";
-        } else if (dist < 0.2f) {
-            damage = BASE_DAMAGE;
-            quality = "不错。";
-        } else {
-            damage = BASE_DAMAGE / 2;
-            quality = "偏离了……";
-        }
+        if (dist < 0.1f) { damage = BASE_DAMAGE + SWORD_BONUS; quality = "完美！"; }
+        else if (dist < 0.2f) { damage = BASE_DAMAGE; quality = "不错。"; }
+        else { damage = BASE_DAMAGE / 2; quality = "偏离了……"; }
         if (hasItem("sword-rusty")) damage += SWORD_BONUS;
         npcHp = Math.max(0, npcHp - damage);
         log.add(quality + " 造成 " + damage + " 点伤害。");
@@ -230,13 +205,8 @@ public class UndertaleCombatEngine implements CombatSystem
 
         checkHpThresholdLines();
 
-        if (npcHp <= 0) {
-            phase = UndertaleCombatPhase.RESULT;
-            phaseMessage = "你击败了 " + def.displayName + "！";
-            return;
-        }
-        phase = UndertaleCombatPhase.ENEMY_TURN;
-        startEnemyTurn();
+        if (npcHp <= 0) { phase = UndertaleCombatPhase.RESULT; phaseMessage = "你击败了 " + def.displayName + "！"; return; }
+        if (!battleLineActive) { phase = UndertaleCombatPhase.ENEMY_TURN; startEnemyTurn(); }
     }
 
     public void updateFightBar(float delta)
@@ -251,18 +221,40 @@ public class UndertaleCombatEngine implements CombatSystem
         }
     }
 
+    // ========== 战斗台词系统 ==========
+
+    private void showBattleLinePopup(String key)
+    {
+        NpcCombatDef.BattleLine line = def.battleLines.get(key);
+        if (line == null) return;
+
+        battleLineActive = true;
+        pendingBattleLineText = line.text;
+        pendingBattleLineColor = line.color;
+        currentBattleLine = line.text;
+        currentBattleLineColor = line.color;
+    }
+
+    private void showBattleLine(String text, String color)
+    {
+        if (text == null || text.isEmpty()) return;
+        battleLineActive = true;
+        pendingBattleLineText = text;
+        pendingBattleLineColor = color;
+        currentBattleLine = text;
+        currentBattleLineColor = color;
+    }
+
     private void checkHpThresholdLines()
     {
         float ratio = (float) npcHp / npcMaxHp;
         if (triggerHp50Line && ratio <= 0.5f) {
             triggerHp50Line = false;
-            NpcCombatDef.BattleLine line = def.battleLines.get("hp50");
-            if (line != null) { currentBattleLine = line.text; currentBattleLineColor = line.color; }
+            showBattleLinePopup("hp50");
         }
         if (triggerHp10Line && ratio <= 0.1f) {
             triggerHp10Line = false;
-            NpcCombatDef.BattleLine line = def.battleLines.get("hp10");
-            if (line != null) { currentBattleLine = line.text; currentBattleLineColor = line.color; }
+            showBattleLinePopup("hp10");
         }
     }
 
@@ -274,7 +266,6 @@ public class UndertaleCombatEngine implements CombatSystem
         enemyTurnDuration = ENEMY_TURN_DURATION;
         hitsTaken = 0;
         bullets.clear();
-
         int idx = rng.nextInt(4);
         switch (idx) {
             case 0: activePattern = BulletPattern.wave(enemyTurnDuration, 16, 5, rng); break;
@@ -287,40 +278,30 @@ public class UndertaleCombatEngine implements CombatSystem
 
     public void updateEnemyTurn(float delta)
     {
-        if (phase != UndertaleCombatPhase.ENEMY_TURN) return;
+        if (phase != UndertaleCombatPhase.ENEMY_TURN || battleLineActive) return;
 
         if (activePattern != null) activePattern.update(delta, bullets);
-
         for (Bullet b : bullets) {
             if (b.alive) {
                 b.update(delta);
                 if (b.collidesWith(soulX, soulY, SOUL_RADIUS)) {
-                    b.alive = false;
-                    hitsTaken++;
+                    b.alive = false; hitsTaken++;
                     player.setHp(Math.max(0, player.getHp() - b.damage));
                     log.add("被击中了！-" + b.damage + " HP");
                 }
             }
         }
         bullets.removeIf(b -> !b.alive);
-
         enemyTurnTimer += delta;
         if (enemyTurnTimer >= enemyTurnDuration) endEnemyTurn();
     }
 
     private void endEnemyTurn()
     {
-        bullets.clear();
-        activePattern = null;
+        bullets.clear(); activePattern = null;
         if (hitsTaken == 0) log.add("完美躲避！");
-
-        if (player.isDead()) {
-            phase = UndertaleCombatPhase.RESULT;
-            phaseMessage = "你倒下了……";
-        } else {
-            phase = UndertaleCombatPhase.MENU;
-            phaseMessage = "你的回合。";
-        }
+        if (player.isDead()) { phase = UndertaleCombatPhase.RESULT; phaseMessage = "你倒下了……"; }
+        else { phase = UndertaleCombatPhase.MENU; phaseMessage = "你的回合。"; }
     }
 
     public void moveSoul(float dx, float dy)
@@ -329,13 +310,6 @@ public class UndertaleCombatEngine implements CombatSystem
         soulY = clamp(soulY + dy * SOUL_SPEED * 0.016f, SOUL_RADIUS, 1f - SOUL_RADIUS);
     }
 
-    private boolean hasItem(String itemId)
-    {
-        return player.getInventory().stream().anyMatch(i -> itemId.equals(i.getItemId()));
-    }
-
-    private static float clamp(float v, float min, float max)
-    {
-        return Math.max(min, Math.min(max, v));
-    }
+    private boolean hasItem(String itemId) { return player.getInventory().stream().anyMatch(i -> itemId.equals(i.getItemId())); }
+    private static float clamp(float v, float min, float max) { return Math.max(min, Math.min(max, v)); }
 }

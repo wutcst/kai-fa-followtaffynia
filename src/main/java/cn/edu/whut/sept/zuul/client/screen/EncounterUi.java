@@ -133,6 +133,29 @@ public class EncounterUi
     {
         if (ut == null) { activeCombatSnapshot = null; return null; }
 
+        // 战斗台词画中画：Enter 继续，屏蔽战斗输入
+        if (ut.isShowingBattleLine()) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
+                || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                ut.dismissBattleLine();
+                String msg = ut.getPhaseMessage();
+                activeCombatSnapshot = ut.snapshot();
+                if (ut.getOutcome() != CombatOutcome.ONGOING) {
+                    engine.applyCombatOutcome();
+                    activeCombatSnapshot = null;
+                    if (ut.isMercyExited()) {
+                        String mercyLine = ut.getCurrentBattleLine();
+                        if (mercyLine != null && !mercyLine.isEmpty()) {
+                            engine.talkNpcWithPrefix(ut.getDef().npcId, mercyLine);
+                            dialogueUi.startDialogue(engine.talkNpc(ut.getDef().npcId));
+                        }
+                    }
+                }
+                return msg;
+            }
+            return null;
+        }
+
         ut.updateFightBar(delta);
         ut.updateEnemyTurn(delta);
         UndertaleCombatPhase phase = ut.getPhase();
