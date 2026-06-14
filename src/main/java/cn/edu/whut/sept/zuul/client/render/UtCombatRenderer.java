@@ -110,15 +110,6 @@ public class UtCombatRenderer
         font.draw(batch, hpLabel(engine.getPlayer().getName(), ut.snapshot().playerHp,
             engine.getPlayer().getMaxHp()), playerX, statusY);
 
-        // 战斗台词（带颜色）
-        String battleLine = ut.getCurrentBattleLine();
-        String battleColor = ut.getCurrentBattleLineColor();
-        if (battleLine != null && !battleLine.isEmpty()) {
-            font.setColor(colorFromTag(battleColor));
-            font.draw(batch, battleLine, boxX + 16f, boxY + boxH - 44f, boxW - 32f,
-                com.badlogic.gdx.utils.Align.center, true);
-        }
-
         // 状态文字
         smallFont.setColor(Color.WHITE);
         if (phase == UndertaleCombatPhase.MENU) {
