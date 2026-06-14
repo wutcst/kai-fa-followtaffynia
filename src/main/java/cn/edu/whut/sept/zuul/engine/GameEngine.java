@@ -560,51 +560,51 @@ public class GameEngine
     {
         switch (itemId) {
             case "welcome-note":
-                return new Item("welcome-note", "note", "A crumpled welcome note.", 1, null);
+                return new Item("welcome-note", "note", "A crumpled welcome note.", 0.1, null);
             case "torch":
                 return new Item("torch", "Torch",
-                    "A flickering torch. Useful in dark places.", 3, "light");
+                    "A flickering torch. Useful in dark places.", 1, "light");
             case "ale-mug":
                 return new Item("ale-mug", "Ale Mug",
-                    "A half-empty mug of ale.", 2, null);
+                    "A half-empty mug of ale.", 0.1, null);
             case "key-vault":
                 return new Item("key-vault", "Rusty Key",
-                    "A rusty key, inscribed 'Vault'.", 1, "unlock:vault-door");
+                    "A rusty key, inscribed 'Vault'.", 0.5, "unlock:vault-door");
             case "key-guard":
                 return new Item("key-guard", "Iron Key",
-                    "A heavy iron key, marked 'Guard Gate'.", 2, "unlock:guard-gate");
+                    "A heavy iron key, marked 'Guard Gate'.", 0.5, "unlock:guard-gate");
             case "gem-light":
                 return new Item("gem-light", "Light Gem",
-                    "A radiant gem pulsing with pure light.", 5, "light:full");
+                    "A radiant gem pulsing with pure light.", 3, "light:full");
             case "gold-coins":
                 return new Item("gold-coins", "Gold Coins",
-                    "A small pile of gold coins.", 10, null);
+                    "A small pile of gold coins.", 0.5, null);
             case "ancient-tome":
                 return new Item("ancient-tome", "Ancient Tome",
-                    "A heavy tome bound in cracked leather.", 15, "lore");
+                    "A heavy tome bound in cracked leather.", 6, "lore");
             case "old-barrel":
                 return new Item("old-barrel", "Old Barrel",
-                    "A rotting barrel. It might contain something.", 20, null);
+                    "A rotting barrel. It might contain something.", 8, null);
             case "crystal-shard":
                 return new Item("crystal-shard", "Crystal Shard",
-                    "A fragment of crystal that hums softly.", 3, "reputation:+5");
+                    "A fragment of crystal that hums softly.", 0.5, "reputation:+5");
             case "healing-herb":
                 return new Item("healing-herb", "Healing Herb",
-                    "A fragrant herb that restores vitality.", 2, "heal:20");
+                    "A fragrant herb that restores vitality.", 0.5, "heal:20");
             case "sword-rusty":
                 return new Item("sword-rusty", "Rusty Sword",
                     "An old sword, still sharp enough. Adds damage in combat while held.",
-                    25, "passive:UT战斗攻击+8，回合制攻击+5（背包中持有即生效）");
+                    15, "passive:UT战斗攻击+8，回合制攻击+5（背包中持有即生效）");
             case "shield-wooden":
                 return new Item("shield-wooden", "Wooden Shield",
                     "A battered wooden shield. Reduces damage taken while held.",
-                    18, "passive:受到攻击伤害-3（背包中持有即生效）");
+                    14, "passive:受到攻击伤害-3（背包中持有即生效）");
             case "warp-dust":
                 return new Item("warp-dust", "Warp Dust",
-                    "Fine dust that sparkles with teleport energy.", 2, null);
+                    "Fine dust that sparkles with teleport energy.", 0.5, null);
             case "magic-cookie":
                 return new Item("magic-cookie", "Magic Cookie",
-                    "A glowing cookie. Eating it makes you feel stronger.", 1, "maxWeight:+20");
+                    "A glowing cookie. Eating it makes you feel stronger.", 0.5, "maxWeight:+20");
             default:
                 return null;
         }

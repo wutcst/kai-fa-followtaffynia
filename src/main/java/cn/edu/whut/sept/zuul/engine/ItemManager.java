@@ -95,7 +95,7 @@ public class ItemManager
     {
         Item item = engine.getPlayer().removeItem(itemId);
         if (item != null && item.isMagicCookie()) {
-            int before = engine.getPlayer().getMaxWeight();
+            double before = engine.getPlayer().getMaxWeight();
             engine.getPlayer().setMaxWeight(before + Item.COOKIE_WEIGHT_BOOST);
         } else if (item != null) {
             engine.getPlayer().addItem(item);

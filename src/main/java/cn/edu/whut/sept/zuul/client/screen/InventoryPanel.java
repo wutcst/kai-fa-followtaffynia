@@ -127,7 +127,7 @@ public class InventoryPanel
                 }
                 layout.setText(smallFont, status);
                 float statusWidth = layout.width;
-                String line = (i + 1) + ". " + it.getName() + " (" + it.getWeight() + ")";
+                String line = (i + 1) + ". " + it.getName() + " (" + fmtWeight(it.getWeight()) + ")";
                 smallFont.setColor(i == inventoryInspectIndex ? Color.WHITE : draw.getUiDarkText());
                 draw.drawClampedLine(batch, smallFont, line, innerX + 10f, y + rowH - 9f,
                     Math.max(40f, rowW - statusWidth - 24f));
@@ -166,7 +166,7 @@ public class InventoryPanel
         font.setColor(draw.getUiLightText());
         smallFont.setColor(draw.getUiDarkText());
         smallFont.draw(batch, "物品ID: " + item.getItemId(), innerX, topY);
-        smallFont.draw(batch, "重量: " + item.getWeight(), innerX, topY - 18f);
+        smallFont.draw(batch, "重量: " + fmtWeight(item.getWeight()), innerX, topY - 18f);
         String effect = item.getEffect() == null ? "无" : item.getEffect();
         smallFont.draw(batch, "效果: " + effect, innerX, topY - 36f);
 
@@ -220,5 +220,9 @@ public class InventoryPanel
             return "需位置";
         }
         return "不可用";
+    }
+
+    private static String fmtWeight(double w) {
+        return w == (long) w ? String.valueOf((long) w) : String.format("%.1f", w);
     }
 }

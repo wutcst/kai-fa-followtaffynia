@@ -239,18 +239,20 @@ public class UiDrawUtils
         }
     }
 
-    public void drawStatusBar(SpriteBatch batch, String label, int value, int maxValue,
+    public void drawStatusBar(SpriteBatch batch, String label, double value, double maxValue,
                                float x, float y, float width, boolean hpBar)
     {
         smallFont.setColor(uiLightText);
         smallFont.draw(batch, label, x, y + 16);
         float barX = x + 42;
-        float ratio = maxValue <= 0 ? 0f : (float) value / maxValue;
+        float ratio = maxValue <= 0 ? 0f : (float) (value / maxValue);
         if (hpBar) {
             uiSkin.drawRedBar(batch, barX, y, width, 18, ratio);
         } else {
             uiSkin.drawYellowBar(batch, barX, y, width, 18, ratio);
         }
-        smallFont.draw(batch, value + "/" + maxValue, barX + width + 10, y + 16);
+        String valStr = value == (long) value ? String.valueOf((long) value) : String.format("%.1f", value);
+        String maxStr = maxValue == (long) maxValue ? String.valueOf((long) maxValue) : String.format("%.1f", maxValue);
+        smallFont.draw(batch, valStr + "/" + maxStr, barX + width + 10, y + 16);
     }
 }

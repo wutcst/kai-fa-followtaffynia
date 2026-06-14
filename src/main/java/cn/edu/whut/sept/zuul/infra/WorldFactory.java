@@ -200,14 +200,14 @@ public final class WorldFactory
         Room room = ROOMS.get(picked);
         if (room != null) {
             room.addItem(new Item("magic-cookie", "Magic Cookie",
-                "A glowing cookie. Eating it makes you feel stronger.", 1, "maxWeight:+20"));
+                "A glowing cookie. Eating it makes you feel stronger.", 0.5, "maxWeight:+20"));
             LOG.info("WorldFactory: magic-cookie placed in [" + picked + "]");
         }
     }
 
     // ======================== 工具方法 ========================
 
-    private static Item createItem(String id, String name, String desc, int weight, String effect)
+    private static Item createItem(String id, String name, String desc, double weight, String effect)
     {
         return new Item(id, name, desc, weight, effect);
     }

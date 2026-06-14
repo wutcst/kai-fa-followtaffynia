@@ -25,7 +25,7 @@ class SaveGameServiceTest
         state.setEntryDirection("east");
         state.setHp(80);
         state.setMaxHp(100);
-        state.setMaxWeight(70);
+        state.setMaxWeight(70.0);
         state.setReputation(5);
         state.getInventory().add("welcome-note");
         state.getExploredRoomIds().add("outside");
@@ -41,7 +41,7 @@ class SaveGameServiceTest
         assertEquals(96f, loaded.getPlayerY());
         assertEquals("east", loaded.getEntryDirection());
         assertEquals(80, loaded.getHp());
-        assertEquals(70, loaded.getMaxWeight());
+        assertEquals(70.0, loaded.getMaxWeight(), 0.01);
         assertEquals(5, loaded.getReputation());
         assertEquals("welcome-note", loaded.getInventory().get(0));
         assertTrue(loaded.getExploredRoomIds().contains("outside"));
