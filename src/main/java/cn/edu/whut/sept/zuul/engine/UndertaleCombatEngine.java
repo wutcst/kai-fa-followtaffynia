@@ -10,9 +10,35 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Undertale 式战斗引擎：菜单 → 玩家行动 → 弹幕躲避 → 循环。
+ * Undertale 式战斗引擎。
  *
- * <p>v4: 战斗台词 + 对话画中画 + 台词后继续战斗（敌人回合不跳过）。
+ * <h3>回合流转</h3>
+ * <pre>
+ *   MENU ──→ FIGHT_BAR ──→ ENEMY_TURN ──→ MENU  （循环）
+ *     │                        │
+ *     ├── ACT / ITEM ──────────┤ （跳过节奏攻击，直入敌人回合）
+ *     └── MERCY ───────────────┤ （台词 → 敌人回合 → 菜单）
+ *                                  │
+ *                            MERCY×2 → RESULT（战斗结束）
+ * </pre>
+ *
+ * <h3>战斗台词系统</h3>
+ * 台词弹出时 {@link #battleLineActive} = true，屏蔽所有战斗输入。
+ * 玩家按 Enter 调用 {@link #dismissBattleLine()}，根据 {@link #phaseAfterBattleLine}
+ * 决定下一阶段：
+ * <ul>
+ *   <li>start 台词 → MENU（玩家先手）</li>
+ *   <li>mercy1 / ACT / ITEM / HP阈值 → ENEMY_TURN（NPC 反击）</li>
+ *   <li>mercy2 → RESULT → 调用方检测 {@link #isMercyExited()} 后切入交谈</li>
+ * </ul>
+ *
+ * <h3>数据驱动</h3>
+ * 所有 NPC 战斗参数（HP、技能、actOptions、battleLines）从
+ * {@code assets/combat/<npcId>.json} 加载，运行时零硬编码。
+ *
+ * @see NpcCombatDef
+ * @see NpcCombatDef.BattleLine
+ * @see UndertaleCombatPhase
  */
 public class UndertaleCombatEngine implements CombatSystem
 {
@@ -127,7 +153,27 @@ public class UndertaleCombatEngine implements CombatSystem
     public float getEnemyTurnProgress() { return enemyTurnDuration > 0 ? enemyTurnTimer / enemyTurnDuration : 0f; }
     public List<Bullet> getBullets() { return Collections.unmodifiableList(bullets); }
 
-    /** 玩家按 Enter 关闭战斗台词画中画 */
+    /**
+     * 关闭战斗台词画中画，根据触发来源决定下一阶段。
+     *
+     * <table>
+     *   <tr><th>台词来源</th><th>phaseAfterBattleLine</th><th>动作</th></tr>
+     *   <tr><td>start（开局战吼）</td><td>MENU</td><td>进入菜单，玩家先手</td></tr>
+     *   <tr><td>mercy1 / ACT / ITEM</td><td>ENEMY_TURN</td><td>进入弹幕躲避</td></tr>
+     *   <tr><td>HP50 / HP10</td><td>ENEMY_TURN</td><td>进入弹幕躲避</td></tr>
+     *   <tr><td>mercy2</td><td>（无视）</td><td>mercyExited=true → RESULT</td></tr>
+     * </table>
+     *
+     * <p>调用方在 {@code dismissBattleLine()} 之后应立即检查
+     * {@link #isMercyExited()} 和 {@link #getOutcome()}：
+     * <pre>{@code
+     *   ut.dismissBattleLine();
+     *   if (ut.isMercyExited()) {
+     *       engine.talkNpcWithPrefix(ut.getDef().npcId, ut.getCurrentBattleLine());
+     *       dialogueUi.startDialogue(engine.talkNpc(ut.getDef().npcId));
+     *   }
+     * }</pre>
+     */
     public void dismissBattleLine()
     {
         if (!battleLineActive) return;
@@ -185,6 +231,14 @@ public class UndertaleCombatEngine implements CombatSystem
         if (!battleLineActive) { phase = UndertaleCombatPhase.ENEMY_TURN; startEnemyTurn(); }
     }
 
+    /**
+     * MERCY 双连机制：
+     * <ol>
+     *   <li>第 1 次：弹出 {@code mercy1} 嘲讽台词，敌人回合照常</li>
+     *   <li>第 2 次：弹出 {@code mercy2} 和解台词，设置 {@code mercyExited=true}</li>
+     * </ol>
+     * 调用方在检测到 {@code mercyExited} 后应关闭战斗并切入对话。
+     */
     public void selectMercy()
     {
         if (phase != UndertaleCombatPhase.MENU || battleLineActive) return;
@@ -200,6 +254,16 @@ public class UndertaleCombatEngine implements CombatSystem
 
     // ========== 节奏攻击 ==========
 
+    /**
+     * 节奏攻击确认。浮动条位置越靠近中心伤害越高：
+     * <ul>
+     *   <li>距离 &lt; 0.1 → 完美（BASE + SWORD_BONUS）</li>
+     *   <li>距离 &lt; 0.2 → 正常（BASE）</li>
+     *   <li>其余 → 偏离（BASE / 2）</li>
+     * </ul>
+     * 装备锈剑额外 +SWORD_BONUS。攻击后检查 HP 阈值台词，
+     * 若无台词则进入敌人弹幕回合。
+     */
     public void pressFightBar()
     {
         if (phase != UndertaleCombatPhase.FIGHT_BAR) return;
