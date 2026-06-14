@@ -70,8 +70,7 @@ public class CombatManager
         boolean isDefeated = defeatedNpcs.contains(npcId);
         boolean canTalk = !isDefeated;
         boolean canFight = !"merchant".equals(npcId) && !isDefeated;
-        boolean canUtFight = canFight && CombatLoader.exists(npcId);
-        return new EncounterMenu(npcId, canTalk, canFight, canUtFight, true);
+        return new EncounterMenu(npcId, canTalk, canFight, true);
     }
 
     public void leaveEncounter()

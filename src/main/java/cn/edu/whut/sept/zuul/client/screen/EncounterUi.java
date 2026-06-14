@@ -81,10 +81,11 @@ public class EncounterUi
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
             if (!encounterMenu.canFight) return "你不能战斗。";
-            activeCombatSnapshot = engine.startCombat(npcId);
+            activeCombatSnapshot = engine.startCombat(npcId, CombatMode.UNDERTALE);
             encounterMenuOpen = false;
             encounterMenu = null;
-            return formatCombatSnapshot(activeCombatSnapshot);
+            dialogueUi.clear();
+            return "[UT] " + formatCombatSnapshot(activeCombatSnapshot);
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
             String msg = encounterMenu.canLeave ? "你离开了。" : "你现在不能离开。";
@@ -92,14 +93,6 @@ public class EncounterUi
             encounterMenuOpen = false;
             encounterMenu = null;
             return msg;
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_4)) {
-            if (!encounterMenu.canUndertaleFight) return "UT 战斗不可用。";
-            activeCombatSnapshot = engine.startCombat(npcId, CombatMode.UNDERTALE);
-            encounterMenuOpen = false;
-            encounterMenu = null;
-            dialogueUi.clear();
-            return "[UT] " + formatCombatSnapshot(activeCombatSnapshot);
         }
         return null;
     }
@@ -175,8 +168,15 @@ public class EncounterUi
         if (ut.getOutcome() != CombatOutcome.ONGOING) {
             engine.applyCombatOutcome();
             activeCombatSnapshot = null;
+            if (ut.isMercyExited()) {
+                String mercyLine = ut.getCurrentBattleLine();
+                if (mercyLine != null && !mercyLine.isEmpty()) {
+                    engine.talkNpcWithPrefix(ut.getDef().npcId, mercyLine);
+                    dialogueUi.startDialogue(engine.talkNpc(ut.getDef().npcId));
+                }
+            }
         }
-        return null; // UT combat message handled by formatUtCombat in renderer
+        return null;
     }
 
     public String formatEncounterMenu(EncounterMenu menu)
@@ -184,8 +184,7 @@ public class EncounterUi
         StringBuilder sb = new StringBuilder();
         sb.append("遇到 ").append(menu.npcId).append("。\n");
         if (menu.canTalk) sb.append("按 1 交流。 ");
-        if (menu.canFight) sb.append("按 2 杀害。 ");
-        if (menu.canUndertaleFight) sb.append("按 4 UT战斗。 ");
+        if (menu.canFight) sb.append("按 2 战斗。 ");
         if (menu.canLeave) sb.append("按 3 离开。 ");
         return sb.toString();
     }

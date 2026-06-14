@@ -313,6 +313,13 @@ public class GameEngine
         return dialogueManager.talkNpc(npcId);
     }
 
+    /** MERCY 退出后自动对话——前缀拼接在正常对话前 */
+    public Dialogue talkNpcWithPrefix(String npcId, String prefix)
+    {
+        lastMessage = prefix;
+        return dialogueManager.talkNpc(npcId);
+    }
+
     public Dialogue chooseDialogueOption(int optionIndex)
     {
         return dialogueManager.chooseDialogueOption(optionIndex);
