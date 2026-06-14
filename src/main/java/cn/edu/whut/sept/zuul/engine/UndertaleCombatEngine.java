@@ -88,6 +88,13 @@ public class UndertaleCombatEngine implements CombatSystem
     private final List<String> log;
     private boolean spared;
 
+    /** ACT 效果：敌人攻击力下降 */
+    private boolean atkDebuff;
+    /** ACT 效果：敌人防御下降（受到伤害+6） */
+    private boolean defDebuff;
+    /** ACT 效果：下次敌人回合弹幕速度-30% */
+    private boolean bulletSlow;
+
     public UndertaleCombatEngine(Player player, NpcCombatDef def,
         CombatActionRegistry itemRegistry)
     {
@@ -209,15 +216,36 @@ public class UndertaleCombatEngine implements CombatSystem
         phaseMessage = "在中心区域按键攻击！";
     }
 
+    /**
+     * ACT 行动，根据 actId 产生实际战斗效果：
+     * <ul>
+     *   <li>check / listen / observe → 弹幕减速（下回合-30%）</li>
+     *   <li>talk / question / distract → 降攻击（敌人伤害-3）</li>
+     *   <li>intimidate / threaten → 降防御（玩家造成伤害+6）</li>
+     * </ul>
+     */
     public void selectAct(String actId)
     {
         if (phase != UndertaleCombatPhase.MENU || battleLineActive) return;
         String response = def.actOptions.getOrDefault(actId,
             "你对 " + def.displayName + " 使用了 " + actId + "。");
+
+        // 根据 actId 前缀施加效果
+        String key = actId.toLowerCase();
+        if (key.contains("check") || key.contains("listen") || key.contains("observe")) {
+            bulletSlow = true;
+            response += "\n（弹幕速度下降！）";
+        } else if (key.contains("talk") || key.contains("question") || key.contains("distract")) {
+            atkDebuff = true;
+            response += "\n（敌人攻击力下降！）";
+        } else if (key.contains("intimidate") || key.contains("threaten")) {
+            defDebuff = true;
+            response += "\n（敌人防御下降！）";
+        }
+
         showBattleLine(response, "white", UndertaleCombatPhase.ENEMY_TURN);
         phaseMessage = response;
         log.add(response);
-        // 如果台词太长需要 Enter，敌人回合延迟到 dismissBattleLine
         if (!battleLineActive) { phase = UndertaleCombatPhase.ENEMY_TURN; startEnemyTurn(); }
     }
 
@@ -274,6 +302,7 @@ public class UndertaleCombatEngine implements CombatSystem
         else if (dist < 0.2f) { damage = BASE_DAMAGE; quality = "不错。"; }
         else { damage = BASE_DAMAGE / 2; quality = "偏离了……"; }
         if (hasItem("sword-rusty")) damage += SWORD_BONUS;
+        if (defDebuff) damage += 6;
         npcHp = Math.max(0, npcHp - damage);
         log.add(quality + " 造成 " + damage + " 点伤害。");
         phaseMessage = quality + " 造成 " + damage + " 点伤害。";
@@ -358,12 +387,14 @@ public class UndertaleCombatEngine implements CombatSystem
         if (phase != UndertaleCombatPhase.ENEMY_TURN || battleLineActive) return;
 
         if (activePattern != null) activePattern.update(delta, bullets);
+        float bulletDelta = bulletSlow ? delta * 0.7f : delta;
         for (Bullet b : bullets) {
             if (b.alive) {
-                b.update(delta);
+                b.update(bulletDelta);
                 if (b.collidesWith(soulX, soulY, SOUL_RADIUS)) {
                     b.alive = false; hitsTaken++;
                     int dmg = b.damage;
+                    if (atkDebuff) dmg = Math.max(1, dmg - 3);
                     if (hasItem("shield-wooden")) dmg = Math.max(1, dmg - 2);
                     player.setHp(Math.max(0, player.getHp() - dmg));
                     log.add("被击中了！-" + dmg + " HP");
@@ -372,7 +403,10 @@ public class UndertaleCombatEngine implements CombatSystem
         }
         bullets.removeIf(b -> !b.alive);
         enemyTurnTimer += delta;
-        if (enemyTurnTimer >= enemyTurnDuration) endEnemyTurn();
+        if (enemyTurnTimer >= enemyTurnDuration) {
+            bulletSlow = false;
+            endEnemyTurn();
+        }
     }
 
     private void endEnemyTurn()

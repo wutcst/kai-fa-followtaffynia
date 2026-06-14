@@ -43,6 +43,9 @@ public final class DialogueActionExecutor
         if (trimmed.startsWith("open:")) {
             return "（" + trimmed.substring("open:".length()) + " 功能将由客户端实现）";
         }
+        if (trimmed.equals("barter")) {
+            return engine.barterJunkForHerbs();
+        }
         if (trimmed.startsWith("quest:")) {
             engine.getQuestManager().onDialogueAction(trimmed);
             return null;

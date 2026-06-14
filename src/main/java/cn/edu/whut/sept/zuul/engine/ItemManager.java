@@ -73,6 +73,9 @@ public class ItemManager
             String desc = effect.substring("passive:".length());
             return ItemUseCheck.allowed("被动: " + desc);
         }
+        if (effect.equals("barter")) {
+            return ItemUseCheck.blocked("商人可能会收这个——找他聊聊吧。");
+        }
         if (effect.startsWith("unlock:")) {
             String lockId = effect.substring("unlock:".length()).trim();
             if (lockId.isEmpty()) return ItemUseCheck.blocked("这把钥匙似乎坏了。");
