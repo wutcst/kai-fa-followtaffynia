@@ -8,6 +8,7 @@ import cn.edu.whut.sept.zuul.client.render.UtCombatRenderer;
 import cn.edu.whut.sept.zuul.client.ui.GameUiSkin;
 import cn.edu.whut.sept.zuul.client.ui.UiDrawUtils;
 import cn.edu.whut.sept.zuul.client.ui.WorldMapRenderer;
+import cn.edu.whut.sept.zuul.engine.EndingType;
 import cn.edu.whut.sept.zuul.domain.Dialogue;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
 import cn.edu.whut.sept.zuul.engine.UndertaleCombatEngine;
@@ -181,6 +182,12 @@ public class GameScreen implements Screen
     @Override
     public void render(float delta)
     {
+        EndingType ending = engine.getCurrentEnding();
+        if (ending != null && ending != EndingType.NONE) {
+            drawEndingScreen(ending, delta);
+            return;
+        }
+
         handleInput(delta);
         if (screenChanged) return;
         updateMusic();
@@ -853,6 +860,53 @@ public class GameScreen implements Screen
         shapes.rect(0f, 0f, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         shapes.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    // ========== 结局画面 ==========
+
+    private float endingAlpha = 0f;
+    private static final float ENDING_FADE_SPEED = 0.6f;
+
+    private void drawEndingScreen(EndingType ending, float delta)
+    {
+        endingAlpha = Math.min(1f, endingAlpha + ENDING_FADE_SPEED * delta);
+
+        Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        camera.applyFullViewport();
+        batch.setProjectionMatrix(camera.getUiCamera().combined);
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        batch.begin();
+
+        float w = Gdx.graphics.getWidth();
+        float h = Gdx.graphics.getHeight();
+        float cx = w / 2f;
+
+        // 结局标题
+        String title = ending.getTitle();
+        GlyphLayout gl = new GlyphLayout(font, title);
+        font.setColor(1f, 1f, 1f, endingAlpha);
+        font.draw(batch, title, cx - gl.width / 2f, h * 0.45f);
+
+        // 结局描述
+        String desc = ending.getDescription();
+        gl.setText(smallFont, desc);
+        smallFont.setColor(0.8f, 0.8f, 0.8f, endingAlpha);
+        smallFont.draw(batch, desc, cx - gl.width / 2f, h * 0.55f);
+
+        // 按 T 返回标题
+        String hint = "按 T 返回标题";
+        gl.setText(smallFont, hint);
+        smallFont.setColor(1f, 1f, 1f, 0.6f * endingAlpha);
+        smallFont.draw(batch, hint, cx - gl.width / 2f, h * 0.68f);
+
+        batch.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
+            switchToTitle();
+        }
     }
 
     private boolean isFailureMessage(String message)
