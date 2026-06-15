@@ -38,8 +38,8 @@ public class GameScreen implements Screen
     private static final float SPEED = 128f;
     private static final float DASH_SPEED_MULTIPLIER = 3.0f;
     private static final float DASH_DURATION = 0.3f;
-    private static final float DASH_COOLDOWN = 1.0f;
-    private static final float ATTACK_COOLDOWN = 0.5f;
+    private static final float DASH_COOLDOWN = 0.2f;
+    private static final float ATTACK_COOLDOWN = 0.2f;
     private static final float UI_GRID = 8f;
     private static final float TOP_BAR_HEIGHT = 56f;
     private static final float FOOTER_HEIGHT = 96f;
@@ -638,7 +638,7 @@ public class GameScreen implements Screen
             actionMessage = "攻击！";
             game.getAudio().play(Cue.ATTACK);
         }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F) && movement.canStartDash()) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && movement.canStartDash()) {
             movement.startDash();
             actionMessage = "冲刺！";
             game.getAudio().play(Cue.DASH);
@@ -704,7 +704,7 @@ public class GameScreen implements Screen
         boolean d = Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT);
 
         if ((w || s || a || d) && moveLogFrame % 30 == 0) {
-            int mr = room.getMap() == null ? 17 : (int)(room.mapPixelHeight() / TILE);
+            int mr = room.getMap() == null ? 15 : (int)(room.mapPixelHeight() / TILE);
             LOG.info("moveKey: pixel=(" + (int)playerX + "," + (int)playerY
                 + ") tile=(" + (int)(playerX/TILE) + "," + movement.gdxYToTiledRow(playerY, mr) + ")");
         }

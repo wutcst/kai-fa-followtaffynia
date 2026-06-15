@@ -30,7 +30,7 @@ public class PlayerRenderer implements Disposable
     private static final float IDLE_DURATION = 0.20f;
     private static final float WALK_DURATION = 0.12f;
     private static final float DASH_ANIM_DURATION = 0.06f;
-    private static final float ATTACK_ANIM_DURATION = 0.04f;
+    private static final float ATTACK_ANIM_DURATION = 0.025f;
     private static final int WALK_FRAMES = 4;
     private static final int IDLE_FRAMES = 5;
 
@@ -98,8 +98,8 @@ public class PlayerRenderer implements Disposable
             dashAnims.put(dir, new Animation<>(DASH_ANIM_DURATION, walkFrames));
             dashAnims.get(dir).setPlayMode(Animation.PlayMode.LOOP);
 
-            // attack: N/S=20帧, E/W=18帧, 原地攻击播一次
-            int attackFrames = (dir == FacingDirection.N || dir == FacingDirection.S) ? 20 : 18;
+            // attack: 四个方向均为4帧, 原地攻击播一次
+            int attackFrames = 4;
             TextureRegion[] attackFramesArr = loadFrames(SINGLE_DIR + "attack_" + dirName, attackFrames);
             attackAnims.put(dir, new Animation<>(ATTACK_ANIM_DURATION, attackFramesArr));
             attackAnims.get(dir).setPlayMode(Animation.PlayMode.NORMAL);
