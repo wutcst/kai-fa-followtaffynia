@@ -94,6 +94,7 @@ public class DialogueUi
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             if (dialoguePageIndex + 1 < dialoguePages.size()) {
                 dialoguePageIndex++;
+                playerLastChoice = null;
                 actionMessage.setLength(0);
                 actionMessage.append(formatDialogue(activeDialogue));
                 return;
