@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="17" tilewidth="32" tileheight="32" infinite="0" nextlayerid="10" nextobjectid="14">
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="15" tilewidth="32" tileheight="32" infinite="0" nextlayerid="11" nextobjectid="14">
  <tileset firstgid="1" source="../tilesets/tiny-dungeon.tsx"/>
  <tileset firstgid="133" source="../tilesets/realm-tiles.tsx"/>
- <layer id="8" name="ground" width="30" height="17">
+ <layer id="8" name="ground" width="30" height="15">
   <data encoding="csv">
 49,49,49,49,49,49,49,134,134,134,134,49,49,49,49,49,49,49,49,49,49,49,49,49,134,134,134,134,49,49,
 134,134,134,134,134,134,134,134,134,134,134,134,134,134,49,49,49,49,134,134,134,134,134,134,134,134,134,134,134,134,
@@ -18,12 +18,10 @@
 135,138,138,138,138,138,135,135,135,135,135,135,135,135,135,135,134,134,134,134,134,134,134,135,135,135,135,135,135,135,
 135,135,135,135,135,135,135,135,135,135,135,135,135,135,135,135,135,134,134,134,134,135,135,135,135,135,135,135,135,135,
 135,135,133,133,135,135,135,135,135,135,135,135,135,135,135,135,135,135,135,135,135,135,135,135,135,135,135,135,135,135,
-135,135,133,133,135,135,135,135,135,135,135,135,135,135,135,135,134,134,134,134,134,134,134,134,134,134,134,134,134,134,
-135,135,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,
-134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134,134
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <layer id="5" name="decor" width="30" height="17">
+ <layer id="5" name="decor" width="30" height="15">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -39,12 +37,10 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <layer id="4" name="wall" width="30" height="17">
+ <layer id="4" name="wall" width="30" height="15">
   <data encoding="csv">
 27,27,27,27,27,27,27,27,27,27,27,27,27,27,19,0,0,19,27,27,27,27,27,27,27,27,27,27,27,27,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,31,0,0,31,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -60,29 +56,30 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
+ <imagelayer id="10" name="view" offsetx="-20.6489" offsety="-7.14185">
+  <image source="../map_bg/forge.png" width="1036" height="523"/>
+ </imagelayer>
  <objectgroup id="3" name="objects">
-  <object id="2" name="spawn-south" type="spawn" x="460.83" y="465.274" width="60.3015" height="35.5462">
+  <object id="2" name="spawn-south" type="spawn" x="440.004" y="314.132" width="60.3015" height="35.5462">
    <properties>
     <property name="direction" value="south"/>
    </properties>
   </object>
-  <object id="7" name="spawn-default" type="spawn" x="359.27" y="253.266" width="57.7625" height="63.4753">
+  <object id="7" name="spawn-default" type="spawn" x="311.937" y="106.599" width="57.7625" height="63.4753">
    <properties>
     <property name="direction" value="default"/>
    </properties>
   </object>
-  <object id="13" x="472.256" y="224.702" width="43.7979" height="35.5462">
+  <object id="13" x="732.923" y="221.369" width="63.7979" height="63.5462">
    <properties>
     <property name="npcId" value="merchant"/>
     <property name="type" value="npc"/>
    </properties>
   </object>
-  <object id="12" name="exit-to-armory" type="exit" x="487.677" y="14.4504" width="50.7802" height="59.032">
+  <object id="12" name="exit-to-armory" type="exit" x="464.344" y="5.78373" width="60.1135" height="52.3653">
    <properties>
     <property name="direction" value="north"/>
     <property name="targetRoomId" value="armory"/>

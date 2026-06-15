@@ -704,7 +704,7 @@ public class GameScreen implements Screen
         boolean d = Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT);
 
         if ((w || s || a || d) && moveLogFrame % 30 == 0) {
-            int mr = room.getMap() == null ? 17 : (int)(room.mapPixelHeight() / TILE);
+            int mr = room.getMap() == null ? 15 : (int)(room.mapPixelHeight() / TILE);
             LOG.info("moveKey: pixel=(" + (int)playerX + "," + (int)playerY
                 + ") tile=(" + (int)(playerX/TILE) + "," + movement.gdxYToTiledRow(playerY, mr) + ")");
         }
