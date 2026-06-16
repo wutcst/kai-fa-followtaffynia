@@ -252,7 +252,8 @@ public class GameScreen implements Screen
         shapes.setProjectionMatrix(camera.getWorldCamera().combined);
         itemManager.drawItemPlaceholders(shapes);
         interaction.drawPlayer(playerX, playerY);
-        interaction.drawInteractionPrompt(playerX, playerY, paused || worldMapOpen, inventory.isOpen(),
+        boolean interactionPromptVisible = interaction.drawInteractionPrompt(
+            playerX, playerY, paused || worldMapOpen, inventory.isOpen(),
             encounterUi.isMenuOpen(), dialogueUi.isActive(),
             engine.isInDialogue(), engine.isInCombat());
 
@@ -302,7 +303,7 @@ public class GameScreen implements Screen
             if (!paused && !inventory.isOpen()) {
                 hud.drawQuestTracker(w, h, camera.getWorldViewportX(), camera.getWorldViewportWidth());
             }
-            drawRoomBanner();
+            drawRoomBanner(interactionPromptVisible);
             if (inventory.isOpen()) {
                 float pw = draw.grid(Math.min(520f, w - 96f));
                 float ph = draw.grid(inventory.inventoryPanelHeight());
@@ -432,6 +433,12 @@ public class GameScreen implements Screen
 
     private static final float DIALOG_PORTRAIT_W = 96f;
     private static final float DIALOG_PORTRAIT_H = 96f;
+    private static final Color DIALOG_BORDER = new Color(1f, 0.72f, 0.24f, 0.92f);
+    private static final Color DIALOG_DIM_BORDER = new Color(0.45f, 0.33f, 0.18f, 0.72f);
+    private static final Color DIALOG_NPC_ACTIVE_FILL = new Color(0.25f, 0.28f, 0.44f, 1f);
+    private static final Color DIALOG_NPC_DIM_FILL = new Color(0.10f, 0.10f, 0.16f, 0.78f);
+    private static final Color DIALOG_PLAYER_ACTIVE_FILL = new Color(0.32f, 0.46f, 0.25f, 1f);
+    private static final Color DIALOG_PLAYER_DIM_FILL = new Color(0.11f, 0.12f, 0.10f, 0.78f);
 
     private void renderDialogueOverlay()
     {
@@ -468,23 +475,11 @@ public class GameScreen implements Screen
         float playerPx = boxX + boxW - DIALOG_PORTRAIT_W - 16f;
         float playerPy = npcPy;
 
-        // NPC 立绘：玩家选择时灰，NPC 说话时亮
-        shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(showingChoice ? 0.12f : 0.3f,
-                        showingChoice ? 0.12f : 0.3f,
-                        showingChoice ? 0.12f : 0.5f,
-                        showingChoice ? 0.6f : 1f);
-        shapes.rect(npcPx, npcPy, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
-        shapes.end();
-
-        // 主角立绘：玩家选择时亮，NPC 说话时灰
-        shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(showingChoice ? 0.4f : 0.12f,
-                        showingChoice ? 0.6f : 0.12f,
-                        showingChoice ? 0.3f : 0.12f,
-                        showingChoice ? 1f : 0.6f);
-        shapes.rect(playerPx, playerPy, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
-        shapes.end();
+        // NPC / 玩家头像框。当前没有正式头像素材，先用带边框的占位框统一视觉层级。
+        drawDialoguePortraitFrame(npcPx, npcPy, !showingChoice,
+            showingChoice ? DIALOG_NPC_DIM_FILL : DIALOG_NPC_ACTIVE_FILL);
+        drawDialoguePortraitFrame(playerPx, playerPy, showingChoice,
+            showingChoice ? DIALOG_PLAYER_ACTIVE_FILL : DIALOG_PLAYER_DIM_FILL);
 
         // 文字
         batch.setProjectionMatrix(camera.getUiCamera().combined);
@@ -543,15 +538,48 @@ public class GameScreen implements Screen
                 for (int i = 0; i < opts.size(); i++) {
                     optLine.append(i + 1).append(". ").append(opts.get(i)).append("  ");
                 }
-                float optY = boxY + 26f;
+                float optY = boxY + 54f;
                 smallFont.setColor(1f, 0.85f, 0.3f, 1f);
                 smallFont.draw(batch, optLine.toString(), textX, optY, textW,
                     com.badlogic.gdx.utils.Align.left, true);
             }
         }
+        drawDialogueHint(boxX, boxY, boxW, dialogueUi.isAtChoicePoint()
+            ? "数字键 1-9 选择  /  Enter 继续"
+            : "Enter 继续 / 关闭对话");
         batch.end();
 
         Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    private void drawDialoguePortraitFrame(float x, float y, boolean active, Color fill)
+    {
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.03f, 0.025f, 0.035f, 0.98f);
+        shapes.rect(x - 6f, y - 6f, DIALOG_PORTRAIT_W + 12f, DIALOG_PORTRAIT_H + 12f);
+        shapes.setColor(fill);
+        shapes.rect(x, y, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
+        shapes.setColor(1f, 0.9f, 0.55f, active ? 0.18f : 0.08f);
+        shapes.rect(x + 8f, y + DIALOG_PORTRAIT_H - 20f, DIALOG_PORTRAIT_W - 16f, 8f);
+        shapes.end();
+
+        shapes.begin(ShapeRenderer.ShapeType.Line);
+        Color border = active ? DIALOG_BORDER : DIALOG_DIM_BORDER;
+        shapes.setColor(border);
+        shapes.rect(x - 6f, y - 6f, DIALOG_PORTRAIT_W + 12f, DIALOG_PORTRAIT_H + 12f);
+        shapes.rect(x, y, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
+        shapes.end();
+    }
+
+    private void drawDialogueHint(float boxX, float boxY, float boxW, String hint)
+    {
+        float hintW = 280f;
+        float hintH = 28f;
+        float hintX = boxX + boxW - hintW - 18f;
+        float hintY = boxY + 12f;
+        uiSkin.drawButton(batch, hintX, hintY, hintW, hintH);
+        smallFont.setColor(1f, 0.92f, 0.58f, 1f);
+        draw.drawCenteredInBoxWithSmallFont(batch, hint, hintX, hintY, hintW, hintH);
     }
 
     private void drawMapLoadError()
@@ -928,10 +956,11 @@ public class GameScreen implements Screen
         return null;
     }
 
-    private void drawRoomBanner()
+    private void drawRoomBanner(boolean interactionPromptVisible)
     {
         if (roomBannerTimer <= 0f || roomBannerRoomId == null || paused || inventory.isOpen()
-            || encounterUi.isMenuOpen() || dialogueUi.isActive() || engine.isInCombat()) {
+            || interactionPromptVisible || encounterUi.isMenuOpen() || dialogueUi.isActive()
+            || engine.isInCombat()) {
             return;
         }
 
