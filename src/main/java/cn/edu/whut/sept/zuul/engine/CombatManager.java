@@ -29,6 +29,7 @@ public class CombatManager
     private CombatSystem activeCombat;
     private CombatMode combatMode;
     private CombatOutcome lastCombatOutcome;
+    private NpcCombatDef lastDef;
 
     public CombatManager(Player player, Set<String> defeatedNpcs, Set<String> unlockedLocks,
                           CombatActionRegistry combatActionRegistry, QuestManager questManager,
@@ -117,15 +118,22 @@ public class CombatManager
         return snapshot;
     }
 
+    public NpcCombatDef getLastDef()
+    {
+        return lastDef;
+    }
+
     public void applyCombatOutcome()
     {
         if (activeCombat == null) return;
         CombatOutcome oc = activeCombat.getOutcome();
         if (oc == CombatOutcome.VICTORY) {
-            applyCombatVictory(activeCombat.getDef());
+            lastDef = activeCombat.getDef();
+            applyCombatVictory(lastDef);
             lastCombatOutcome = oc;
             clearCombat();
         } else if (oc == CombatOutcome.DEFEAT || oc == CombatOutcome.FLED) {
+            lastDef = null;
             lastCombatOutcome = oc;
             clearCombat();
         }

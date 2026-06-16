@@ -101,6 +101,16 @@ public class NpcPlaceholderManager
             drawHermitSprite(shapes, x, y);
         } else if ("merchant".equals(npc.npcId)) {
             drawMerchantSprite(shapes, x, y);
+        } else if ("priest".equals(npc.npcId)) {
+            drawPriestSprite(shapes, x, y);
+        } else if ("follower".equals(npc.npcId)) {
+            drawFollowerSprite(shapes, x, y);
+        } else if ("scholar".equals(npc.npcId)) {
+            drawScholarSprite(shapes, x, y);
+        } else if ("apprentice".equals(npc.npcId)) {
+            drawApprenticeSprite(shapes, x, y);
+        } else if ("golem".equals(npc.npcId)) {
+            drawGolemSprite(shapes, x, y);
         } else {
             drawGenericNpcSprite(shapes, x, y, npc.color);
         }
@@ -144,6 +154,60 @@ public class NpcPlaceholderManager
         pixelRect(shapes, x + 22f, y + 8f, 6f, 10f, 0.24f, 0.15f, 0.08f, 1f);
         pixelRect(shapes, x + 2f, y + 12f, 7f, 6f, 0.45f, 0.26f, 0.12f, 1f);
         pixelRect(shapes, x + 10f, y + 11f, 10f, 3f, 0.94f, 0.72f, 0.28f, 1f);
+    }
+
+    private void drawPriestSprite(ShapeRenderer shapes, float x, float y)
+    {
+        pixelRect(shapes, x + 9f, y + 0f, 5f, 5f, 0.10f, 0.10f, 0.12f, 1f);
+        pixelRect(shapes, x + 16f, y + 0f, 5f, 5f, 0.10f, 0.10f, 0.12f, 1f);
+        pixelRect(shapes, x + 7f, y + 5f, 16f, 15f, 0.82f, 0.90f, 1.0f, 1f);
+        pixelRect(shapes, x + 10f, y + 8f, 10f, 9f, 0.92f, 0.96f, 1.0f, 1f);
+        pixelRect(shapes, x + 8f, y + 17f, 14f, 9f, 0.72f, 0.84f, 0.94f, 1f);
+        pixelRect(shapes, x + 12f, y + 20f, 6f, 5f, 0.86f, 0.70f, 0.48f, 1f);
+        pixelRect(shapes, x + 11f, y + 23f, 8f, 4f, 1.0f, 0.85f, 0.3f, 1f);
+    }
+
+    private void drawFollowerSprite(ShapeRenderer shapes, float x, float y)
+    {
+        pixelRect(shapes, x + 9f, y + 0f, 4f, 5f, 0.08f, 0.06f, 0.10f, 1f);
+        pixelRect(shapes, x + 17f, y + 0f, 4f, 5f, 0.08f, 0.06f, 0.10f, 1f);
+        pixelRect(shapes, x + 7f, y + 5f, 16f, 16f, 0.18f, 0.08f, 0.32f, 1f);
+        pixelRect(shapes, x + 9f, y + 8f, 12f, 10f, 0.28f, 0.12f, 0.42f, 1f);
+        pixelRect(shapes, x + 10f, y + 19f, 10f, 7f, 0.15f, 0.06f, 0.28f, 1f);
+        pixelRect(shapes, x + 12f, y + 16f, 6f, 5f, 0.70f, 0.55f, 0.60f, 1f);
+        pixelRect(shapes, x + 21f, y + 10f, 7f, 8f, 0.35f, 0.10f, 0.50f, 1f);
+    }
+
+    private void drawScholarSprite(ShapeRenderer shapes, float x, float y)
+    {
+        pixelRect(shapes, x + 9f, y + 0f, 4f, 5f, 0.10f, 0.08f, 0.06f, 1f);
+        pixelRect(shapes, x + 17f, y + 0f, 4f, 5f, 0.10f, 0.08f, 0.06f, 1f);
+        pixelRect(shapes, x + 7f, y + 5f, 16f, 15f, 0.18f, 0.35f, 0.62f, 1f);
+        pixelRect(shapes, x + 10f, y + 8f, 10f, 9f, 0.24f, 0.48f, 0.76f, 1f);
+        pixelRect(shapes, x + 8f, y + 17f, 14f, 8f, 0.74f, 0.62f, 0.48f, 1f);
+        pixelRect(shapes, x + 20f, y + 7f, 6f, 10f, 0.36f, 0.18f, 0.08f, 1f);
+        pixelRect(shapes, x + 3f, y + 10f, 5f, 7f, 0.82f, 0.86f, 0.70f, 1f);
+    }
+
+    private void drawApprenticeSprite(ShapeRenderer shapes, float x, float y)
+    {
+        pixelRect(shapes, x + 9f, y + 0f, 4f, 5f, 0.12f, 0.08f, 0.06f, 1f);
+        pixelRect(shapes, x + 17f, y + 0f, 4f, 5f, 0.12f, 0.08f, 0.06f, 1f);
+        pixelRect(shapes, x + 7f, y + 5f, 16f, 14f, 0.48f, 0.32f, 0.18f, 1f);
+        pixelRect(shapes, x + 10f, y + 8f, 10f, 8f, 0.62f, 0.42f, 0.24f, 1f);
+        pixelRect(shapes, x + 8f, y + 16f, 14f, 8f, 0.74f, 0.58f, 0.42f, 1f);
+        pixelRect(shapes, x + 3f, y + 8f, 6f, 10f, 0.52f, 0.34f, 0.16f, 1f);
+        pixelRect(shapes, x + 10f, y + 12f, 8f, 2f, 0.82f, 0.62f, 0.36f, 1f);
+    }
+
+    private void drawGolemSprite(ShapeRenderer shapes, float x, float y)
+    {
+        pixelRect(shapes, x + 6f, y + 0f, 18f, 6f, 0.12f, 0.12f, 0.15f, 1f);
+        pixelRect(shapes, x + 4f, y + 6f, 22f, 20f, 0.42f, 0.44f, 0.50f, 1f);
+        pixelRect(shapes, x + 8f, y + 9f, 14f, 14f, 0.55f, 0.56f, 0.62f, 1f);
+        pixelRect(shapes, x + 11f, y + 22f, 8f, 8f, 0.48f, 0.50f, 0.56f, 1f);
+        pixelRect(shapes, x + 12f, y + 24f, 6f, 3f, 1.0f, 0.84f, 0.28f, 1f);
+        pixelRect(shapes, x + 13f, y + 25f, 4f, 2f, 1.0f, 0.95f, 0.5f, 0.9f);
     }
 
     private void drawGenericNpcSprite(ShapeRenderer shapes, float x, float y, Color color)
@@ -216,6 +280,11 @@ public class NpcPlaceholderManager
             if ("guard".equals(npcId)) return new NpcPlaceholder("guard", bounds, new Color(0.85f, 0.2f, 0.2f, 1f), true);
             if ("hermit".equals(npcId)) return new NpcPlaceholder("hermit", bounds, new Color(0.2f, 0.8f, 0.35f, 1f), true);
             if ("merchant".equals(npcId)) return new NpcPlaceholder("merchant", bounds, new Color(0.95f, 0.65f, 0.15f, 1f), true);
+            if ("priest".equals(npcId)) return new NpcPlaceholder("priest", bounds, new Color(0.85f, 0.92f, 1.0f, 1f), false);
+            if ("follower".equals(npcId)) return new NpcPlaceholder("follower", bounds, new Color(0.4f, 0.15f, 0.45f, 1f), false);
+            if ("scholar".equals(npcId)) return new NpcPlaceholder("scholar", bounds, new Color(0.2f, 0.5f, 0.8f, 1f), false);
+            if ("apprentice".equals(npcId)) return new NpcPlaceholder("apprentice", bounds, new Color(0.6f, 0.45f, 0.25f, 1f), false);
+            if ("golem".equals(npcId)) return new NpcPlaceholder("golem", bounds, new Color(0.55f, 0.55f, 0.6f, 1f), false);
             return new NpcPlaceholder(npcId, bounds, new Color(0.55f, 0.3f, 0.9f, 1f), true);
         }
     }

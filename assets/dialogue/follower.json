@@ -1,0 +1,75 @@
+{
+  "npcId": "follower",
+  "startNode": "greeting",
+  "nodes": {
+    "greeting": {
+      "text": "又一个迷途的旅人……不，等等。\n\n你身上有种不同的气息。地窖很暗，但暗不等于坏。\n\n告诉我——你追求什么？是被人告诉该做什么，还是自己决定路怎么走？",
+      "options": [
+        {
+          "text": "你说的暗影力量……是什么？",
+          "next": "explain"
+        },
+        {
+          "text": "我愿意接受暗影的洗礼。",
+          "next": "initiate"
+        },
+        {
+          "text": "我拒绝。光明才是正道。",
+          "next": "refuse"
+        },
+        {
+          "text": "你为什么要走这条路？",
+          "next": "backstory"
+        },
+        {
+          "text": "离开。",
+          "next": "leave"
+        }
+      ]
+    },
+    "explain": {
+      "text": "暗影是力量——纯粹的、不附加条件的力量。\n\n光明让你守规矩：找钥匙、得许可、讨好守卫。暗影不这样。你足够强，路就为你而开。\n\n守卫挡路？杀了他，门自然打开。这就是暗影的方式：直接用实力说话。",
+      "options": [
+        {
+          "text": "接受暗影的洗礼。",
+          "next": "initiate"
+        },
+        {
+          "text": "我还是拒绝。",
+          "next": "refuse"
+        },
+        {
+          "text": "回到主菜单",
+          "next": "greeting"
+        }
+      ]
+    },
+    "initiate": {
+      "text": "好！让暗影拥抱你。\n\n这不会轻松——暗影从不迁就弱者。但如果你活下来，带着暗影之契前往王座，那里会为你打开。",
+      "action": "flag:accepted-follower-trial",
+      "next": null
+    },
+    "refuse": {
+      "text": "哼。暗影终将吞噬一切——包括你的犹豫。\n\n但愿你的光明宝石能在黑暗中为你照亮前路。",
+      "action": "flag:refused-follower",
+      "next": null
+    },
+    "backstory": {
+      "text": "我曾经也信光明。每天祈祷，遵守每条规矩。\n\n但当暗影蔓延时，光明救不了我。是暗影给了我力量——让我不再需要谁的许可。\n\n你自己决定吧。",
+      "options": [
+        {
+          "text": "接受暗影的洗礼。",
+          "next": "initiate"
+        },
+        {
+          "text": "回到主菜单",
+          "next": "greeting"
+        }
+      ]
+    },
+    "leave": {
+      "text": "逃避也是选择。但记住——当你面对守卫的铁门时，暗影永远欢迎你回来。",
+      "next": null
+    }
+  }
+}

@@ -79,5 +79,11 @@
     <property name="targetRoomId" value="pub"/>
    </properties>
   </object>
+  <object id="10" x="470" y="270" width="32" height="32">
+   <properties>
+    <property name="npcId" value="follower"/>
+    <property name="type" value="npc"/>
+   </properties>
+  </object>
  </objectgroup>
 </map>

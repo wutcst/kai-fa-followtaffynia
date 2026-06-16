@@ -48,6 +48,15 @@ public class EncounterUi
     public boolean isMenuOpen() { return encounterMenuOpen; }
     public boolean isCombatSnapshotActive() { return activeCombatSnapshot != null; }
 
+    /** 强制进入 UT 战斗（不经过遭遇菜单），用于自动遭遇（如金库魔像）。 */
+    public void forceUtCombat(String npcId)
+    {
+        encounterMenuOpen = false;
+        encounterMenu = null;
+        dialogueUi.clear();
+        activeCombatSnapshot = engine.startCombat(npcId, CombatMode.UNDERTALE);
+    }
+
     public void openMenu(String npcId)
     {
         EncounterMenu menu = engine.startNpcEncounter(npcId);

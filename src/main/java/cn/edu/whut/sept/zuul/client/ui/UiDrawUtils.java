@@ -144,27 +144,23 @@ public class UiDrawUtils
                                       float x, float y, float maxWidth, float lineHeight,
                                       int maxLines)
     {
-        String source = text == null ? "" : text.replace('\n', ' ');
-        int start = 0;
+        if (text == null || text.isEmpty()) return;
+        String[] sourceLines = text.split("\\n", -1);
         int lineCount = 0;
-        while (start < source.length() && lineCount < maxLines) {
-            int end = source.length();
-            String line = source.substring(start, end);
-            layout.setText(activeFont, line);
-            while (line.length() > 1 && layout.width > maxWidth) {
+        for (String sourceLine : sourceLines) {
+            if (lineCount >= maxLines) break;
+            String trimmed = sourceLine.isEmpty() ? " " : sourceLine;
+            int end = trimmed.length();
+            layout.setText(activeFont, trimmed);
+            while (end > 0 && layout.width > maxWidth) {
                 end--;
-                line = source.substring(start, end);
-                layout.setText(activeFont, line + (lineCount == maxLines - 1 ? "..." : ""));
+                layout.setText(activeFont, trimmed.substring(0, end)
+                    + (lineCount == maxLines - 1 ? "..." : ""));
             }
-            if (lineCount == maxLines - 1 && end < source.length()) {
-                activeFont.draw(batch, line + "...", x, y - lineHeight * lineCount);
-                return;
-            }
-            activeFont.draw(batch, line, x, y - lineHeight * lineCount);
-            start = end;
-            while (start < source.length() && source.charAt(start) == ' ') {
-                start++;
-            }
+            String display = end < trimmed.length()
+                ? trimmed.substring(0, end) + (lineCount == maxLines - 1 ? "..." : "")
+                : trimmed;
+            activeFont.draw(batch, display, x, y - lineHeight * lineCount);
             lineCount++;
         }
     }

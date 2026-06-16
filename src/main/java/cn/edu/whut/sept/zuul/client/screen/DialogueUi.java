@@ -35,6 +35,7 @@ public class DialogueUi
     private final List<String> dialoguePages = new ArrayList<>();
     private int dialoguePageIndex;
     private String playerLastChoice;  // 玩家刚选的对话选项文本
+    private String pendingCombatNpcId; // 对话结束后自动触发战斗的 NPC ID
 
     public DialogueUi(GameEngine engine, SpriteBatch batch, BitmapFont smallFont,
                        ShapeRenderer shapes, UiDrawUtils draw, GlyphLayout layout,
@@ -64,10 +65,15 @@ public class DialogueUi
     public Dialogue getActiveDialogue() { return activeDialogue; }
     public String getPlayerLastChoice() { return playerLastChoice; }
 
+    /** 对话结束后是否有待触发的战斗 NPC ID。 */
+    public String getPendingCombatNpcId() { return pendingCombatNpcId; }
+    public void clearPendingCombat() { pendingCombatNpcId = null; }
+
     public void clear()
     {
         activeDialogue = null;
         playerLastChoice = null;
+        pendingCombatNpcId = null;
         dialoguePages.clear();
         dialoguePageIndex = 0;
     }
@@ -101,11 +107,14 @@ public class DialogueUi
             }
             List<String> opts = activeDialogue.getOptionTexts();
             if (opts == null || opts.isEmpty() || !activeDialogue.isActive()) {
+                String endedNpcId = activeDialogue != null ? activeDialogue.getNpcId() : null;
                 activeDialogue = null;
                 playerLastChoice = null;
                 engine.endDialogue();
+                // 检查是否需要自动触发战斗
+                pendingCombatNpcId = resolvePendingCombat(endedNpcId);
                 actionMessage.setLength(0);
-                actionMessage.append("对话结束。");
+                actionMessage.append(pendingCombatNpcId != null ? "准备战斗！" : "对话结束。");
                 return;
             }
             playerLastChoice = null;  // Enter 翻到选项页时清空上次选择
@@ -166,6 +175,19 @@ public class DialogueUi
             if (!page.isEmpty()) dialoguePages.add(page);
         }
         if (dialoguePages.isEmpty()) dialoguePages.add(d.getText());
+    }
+
+    /** 根据对话结束时的 flag 判断是否自动开战。 */
+    private String resolvePendingCombat(String npcId)
+    {
+        if (npcId == null) return null;
+        if ("priest".equals(npcId) && engine.hasFlag("accepted-priest-trial")
+            && !engine.getDefeatedNpcs().contains("priest")) return "priest";
+        if ("follower".equals(npcId) && engine.hasFlag("accepted-follower-trial")
+            && !engine.getDefeatedNpcs().contains("follower")) return "follower";
+        if ("apprentice".equals(npcId) && engine.hasFlag("accepted-apprentice-spar")
+            && !engine.getDefeatedNpcs().contains("apprentice")) return "apprentice";
+        return null;
     }
 
     /** 在 world 空间中渲染 NPC 对话气泡。 */

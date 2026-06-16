@@ -1,0 +1,61 @@
+{
+  "npcId": "golem",
+  "displayName": "金库魔像",
+  "maxHp": 70,
+  "defaultState": "guardian",
+  "states": {
+    "guardian": {
+      "whenHpBelow": 1.0,
+      "skills": [
+        "smash",
+        "quake"
+      ]
+    },
+    "enraged": {
+      "whenHpBelow": 0.3,
+      "skills": [
+        "smash",
+        "smash"
+      ]
+    }
+  },
+  "skills": {
+    "smash": {
+      "damage": 15,
+      "text": "魔像重拳砸下！"
+    },
+    "quake": {
+      "damage": 10,
+      "text": "魔像激起大地震波！"
+    }
+  },
+  "onDefeat": {
+    "reputation": 5,
+    "markDefeated": true
+  },
+  "actOptions": {
+    "check": "金库魔像 HP: 70  ATK: 15\n一尊巨大的石像，眼睛燃烧着古老的光。"
+  },
+  "battleLines": {
+    "start": {
+      "text": "只有通过试炼之人，方可触碰宝石。\n证明你的资格！",
+      "color": "red"
+    },
+    "hp50": {
+      "text": "你的力量……得到了远古契约的认可。\n但守护之责尚未解除！",
+      "color": "red"
+    },
+    "hp10": {
+      "text": "我……承认你。\n光明宝石……是你的了……",
+      "color": "green"
+    },
+    "mercy1": {
+      "text": "不可饶恕。守护者不会接受怜悯。",
+      "color": "red"
+    },
+    "mercy2": {
+      "text": "你……选择了不同的路？\n走吧。宝石不属于你。",
+      "color": "blue"
+    }
+  }
+}

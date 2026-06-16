@@ -257,8 +257,46 @@ public class HudRenderer
         boolean hasGem = hasItem("gem-light");
         int explored = engine.getExploredRoomIds().size();
 
+        boolean refusedPriest = engine.hasFlag("refused-priest");
+        boolean refusedFollower = engine.hasFlag("refused-follower");
+        boolean priestDone = engine.getDefeatedNpcs().contains("priest");
+        boolean followerDone = engine.getDefeatedNpcs().contains("follower");
+        boolean hasBalanceBook = hasItem("balance-book");
+        boolean hasMedal = hasItem("guard-medal");
+        boolean apprenticeDone = engine.getDefeatedNpcs().contains("apprentice");
+        boolean golemDone = engine.getDefeatedNpcs().contains("golem");
+
         String primary;
-        if (!vaultDone && !hasGem) {
+        if (!priestDone && !refusedPriest && !followerDone && !refusedFollower) {
+            // 玩家尚未接触任何路线 NPC
+            primary = "前往讲堂(theatre)找守光祭司，或地窖(cellar)找暗影信徒。";
+        } else if (refusedPriest && refusedFollower && !hasBalanceBook) {
+            // 中立路线：双方都拒绝后去找学者
+            primary = "前往图书馆(library)寻找流浪学者，他或许知道第三条路。";
+        } else if (hasBalanceBook && !hasMedal && !apprenticeDone) {
+            // 中立路线续：去军械库切磋
+            primary = "前往军械库(armory)与守卫学徒切磋，证明你的资格。";
+        } else if (hasBalanceBook && (hasMedal || apprenticeDone)) {
+            // 中立路线续：找守卫和平通行
+            primary = engine.isLockUnlocked("guard-gate")
+                ? "穿过守卫之门，抵达 throne-hall。"
+                : "与守卫室的守卫对话(友好选项)，和平通行。";
+        } else if (priestDone && !golemDone && !hasGem) {
+            // 光明路线：去金库打魔像拿宝石
+            primary = engine.isLockUnlocked("vault-door")
+                ? "进入 vault，击败魔像取得 Light Gem。"
+                : "前往机房(lab)寻找金库钥匙。";
+        } else if (priestDone && hasGem && !throneDone) {
+            // 光明路线续：打开守卫之门
+            primary = engine.isLockUnlocked("guard-gate")
+                ? "穿过守卫之门，抵达 throne-hall。"
+                : "前往办公室(office)取铁钥匙，或与守卫友善对话。";
+        } else if (followerDone && !throneDone) {
+            // 暗影路线：杀守卫
+            primary = engine.isLockUnlocked("guard-gate")
+                ? "穿过守卫之门，抵达 throne-hall。"
+                : "击败守卫室的守卫，强行打开大门。";
+        } else if (!vaultDone && !hasGem && !refusedPriest && !hasBalanceBook) {
             primary = engine.isLockUnlocked("vault-door")
                 ? "进入 vault，拾取 Light Gem。"
                 : "寻找金库钥匙，打开 vault。";
@@ -272,10 +310,23 @@ public class HudRenderer
             primary = "主线线索已齐，选择你的结局。";
         }
 
-        String vault = (vaultDone || hasGem) ? "Light Gem: 已取得" : "Light Gem: 未取得";
-        String gate = engine.isLockUnlocked("guard-gate") ? "守卫之门: 已开启" : "守卫之门: 未开启";
-        String explore = "探索进度: " + Math.min(explored, 8) + "/8";
-        return new String[] {primary, vault, gate, explore};
+        String vaultLine = (vaultDone || hasGem) ? "Light Gem: 已取得" : "Light Gem: 未取得";
+        String gateLine = engine.isLockUnlocked("guard-gate") ? "守卫之门: 已开启" : "守卫之门: 未开启";
+        String exploreLine = "探索进度: " + Math.min(explored, 8) + "/8";
+
+        // 附加路线标记
+        if (hasBalanceBook) {
+            vaultLine = "路线: 中立之路";
+            gateLine = "平衡之书: 已持有";
+        } else if (followerDone && hasItem("shadow-pact")) {
+            vaultLine = "路线: 暗影之路";
+            gateLine = "暗影之契: 已持有";
+        } else if (priestDone && hasItem("light-mark")) {
+            vaultLine = "路线: 光明之路";
+            gateLine = "光明印记: 已持有";
+        }
+
+        return new String[] {primary, vaultLine, gateLine, exploreLine};
     }
 
     private boolean hasItem(String itemId)

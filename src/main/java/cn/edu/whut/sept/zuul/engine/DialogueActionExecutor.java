@@ -50,6 +50,19 @@ public final class DialogueActionExecutor
             engine.getQuestManager().onDialogueAction(trimmed);
             return null;
         }
+        if (trimmed.startsWith("give:")) {
+            String itemId = trimmed.substring("give:".length()).trim();
+            if (itemId.isEmpty()) return "无效的物品ID。";
+            engine.giveItem(itemId);
+            return "获得了物品。";
+        }
+        if (trimmed.startsWith("flag:")) {
+            String flag = trimmed.substring("flag:".length()).trim();
+            if (!flag.isEmpty()) {
+                engine.setFlag(flag);
+            }
+            return null;
+        }
         return "未知的对话效果：" + trimmed;
     }
 }

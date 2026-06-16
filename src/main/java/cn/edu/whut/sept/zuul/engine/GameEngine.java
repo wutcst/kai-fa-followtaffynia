@@ -3,6 +3,7 @@ package cn.edu.whut.sept.zuul.engine;
 import cn.edu.whut.sept.zuul.domain.Dialogue;
 import cn.edu.whut.sept.zuul.domain.Direction;
 import cn.edu.whut.sept.zuul.domain.Item;
+import cn.edu.whut.sept.zuul.domain.NpcCombatDef;
 import cn.edu.whut.sept.zuul.domain.Player;
 import cn.edu.whut.sept.zuul.domain.Room;
 import cn.edu.whut.sept.zuul.domain.RoomScene;
@@ -38,6 +39,9 @@ public class GameEngine
     private final Set<String> exploredRoomIds;
     private final Set<String> unlockedLocks;
     private final Set<String> defeatedNpcs;
+    private final Set<String> playerFlags;
+    /** 非持久——进入vault时若golem未死则自动触发战斗 */
+    private String pendingAutoCombat;
     private final UseEffectRegistry useEffectRegistry;
     private final CombatActionRegistry combatActionRegistry;
     private final QuestManager questManager;
@@ -61,6 +65,7 @@ public class GameEngine
         this.exploredRoomIds = new HashSet<>();
         this.unlockedLocks = new HashSet<>();
         this.defeatedNpcs = new HashSet<>();
+        this.playerFlags = new HashSet<>();
         this.useEffectRegistry = new UseEffectRegistry();
         this.combatActionRegistry = new CombatActionRegistry();
         this.questManager = new QuestManager();
@@ -150,6 +155,45 @@ public class GameEngine
         return Collections.unmodifiableSet(defeatedNpcs);
     }
 
+    public Set<String> getPlayerFlags()
+    {
+        return Collections.unmodifiableSet(playerFlags);
+    }
+
+    public void setFlag(String flag)
+    {
+        if (flag != null && !flag.isEmpty()) {
+            playerFlags.add(flag);
+            LOG.info("playerFlags: set " + flag);
+        }
+    }
+
+    public boolean hasFlag(String flag)
+    {
+        return playerFlags.contains(flag);
+    }
+
+    public String getPendingAutoCombat()
+    {
+        return pendingAutoCombat;
+    }
+
+    public void clearPendingAutoCombat()
+    {
+        pendingAutoCombat = null;
+    }
+
+    /** 通过对话/战斗给玩家物品，直接加入背包。 */
+    public Item giveItem(String itemId)
+    {
+        Item item = createKnownItem(itemId);
+        if (item != null) {
+            player.addItem(cloneItem(item));
+            lastMessage = "获得了 " + item.getName() + "。";
+        }
+        return item;
+    }
+
     public Set<String> getExploredRoomIds()
     {
         return Collections.unmodifiableSet(exploredRoomIds);
@@ -203,6 +247,19 @@ public class GameEngine
     public void applyCombatOutcome()
     {
         combatManager.applyCombatOutcome();
+        // 战斗胜利后掉落物品到当前房间
+        NpcCombatDef def = combatManager.getLastDef();
+        if (def != null && def.onDefeatSpawnItem != null
+            && !def.onDefeatSpawnItem.isEmpty()
+            && getLastCombatOutcome() == CombatOutcome.VICTORY)
+        {
+            Item spawn = createKnownItem(def.onDefeatSpawnItem);
+            if (spawn != null) {
+                currentRoom.addItem(spawn);
+                LOG.info("Combat loot: " + spawn.getItemId()
+                    + " spawned in " + currentRoom.getRoomId());
+            }
+        }
     }
 
     public String getLastMessage()
@@ -255,11 +312,18 @@ public class GameEngine
         roomHistory.push(currentRoom.getRoomId());
         entryDirection = direction;
         spawnAtDoorSide = false;
+        this.pendingAutoCombat = null;
         currentRoom = next;
         String toIdBeforeTeleport = currentRoom.getRoomId();
         resolveTeleportIfNeeded();
         exploredRoomIds.add(currentRoom.getRoomId());
         questManager.onRoomEntered(currentRoom, exploredRoomIds);
+
+        // 金库魔像自动遭遇：进入vault且golem未死时触发
+        if ("vault".equals(currentRoom.getRoomId()) && !defeatedNpcs.contains("golem")) {
+            pendingAutoCombat = "golem";
+        }
+
         if ("throne-hall".equals(currentRoom.getRoomId())) {
             currentEnding = endingEvaluator.evaluate(player, defeatedNpcs);
             LOG.info("Ending triggered: " + currentEnding);
@@ -333,6 +397,13 @@ public class GameEngine
 
     public Dialogue talkNpc(String npcId)
     {
+        // 学者条件对话：同时拒绝祭司和信徒后揭示中立之路
+        if ("scholar".equals(npcId)
+            && hasFlag("refused-priest")
+            && hasFlag("refused-follower"))
+        {
+            return dialogueManager.talkNpc("scholar_neutral");
+        }
         return dialogueManager.talkNpc(npcId);
     }
 
@@ -442,6 +513,7 @@ public class GameEngine
         state.getQuestStates().clear();
         state.getQuestStates().putAll(questManager.getQuestStates());
         state.getDefeatedNpcs().addAll(defeatedNpcs);
+        state.getPlayerFlags().addAll(playerFlags);
         state.getRoomItems().clear();
         for (Room room : WorldFactory.getAllRooms().values()) {
             List<String> itemIds = room.getItems().stream()
@@ -490,6 +562,10 @@ public class GameEngine
         if (state.getDefeatedNpcs() != null) {
             defeatedNpcs.addAll(state.getDefeatedNpcs());
         }
+        playerFlags.clear();
+        if (state.getPlayerFlags() != null) {
+            playerFlags.addAll(state.getPlayerFlags());
+        }
         combatManager.leaveEncounter();
         endDialogue();
         entryDirection = Direction.fromExitKey(state.getEntryDirection());
@@ -517,7 +593,8 @@ public class GameEngine
             "welcome-note", "torch", "ale-mug", "key-vault", "key-guard",
             "ancient-tome", "old-barrel", "gem-light", "gold-coins",
             "crystal-shard", "healing-herb", "sword-rusty", "shield-wooden",
-            "warp-dust", "magic-cookie"
+            "warp-dust", "magic-cookie",
+            "light-mark", "shadow-pact", "balance-book", "guard-medal", "sage-salt"
         };
         for (String id : knownIds) {
             Item known = createKnownItem(id);
@@ -634,6 +711,21 @@ public class GameEngine
             case "magic-cookie":
                 return new Item("magic-cookie", "Magic Cookie",
                     "A glowing cookie. Eating it makes you feel stronger.", 0.5, "maxWeight:+20");
+            case "light-mark":
+                return new Item("light-mark", "光明印记",
+                    "守光祭司赐予的印记，蕴含秩序之力。", 0.5, "reputation:+3");
+            case "shadow-pact":
+                return new Item("shadow-pact", "暗影之契",
+                    "刻有暗影符文的契约，散发着不祥气息。", 0.5, "reputation:-5");
+            case "balance-book":
+                return new Item("balance-book", "平衡之书",
+                    "记载着Realm光暗平衡之秘的古籍。", 1.0, "lore");
+            case "guard-medal":
+                return new Item("guard-medal", "守卫勋章",
+                    "守卫学徒赠予的荣誉勋章。", 0.5, "reputation:+3");
+            case "sage-salt":
+                return new Item("sage-salt", "贤者之盐",
+                    "学者调配的疗愈之盐，可恢复大量生命。", 0.5, "heal:30");
             default:
                 return null;
         }

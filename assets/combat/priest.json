@@ -1,0 +1,64 @@
+{
+  "npcId": "priest",
+  "displayName": "守光祭司",
+  "maxHp": 50,
+  "defaultState": "normal",
+  "states": {
+    "normal": {
+      "whenHpBelow": 1.0,
+      "skills": [
+        "light_strike",
+        "bless"
+      ]
+    },
+    "focused": {
+      "whenHpBelow": 0.5,
+      "skills": [
+        "light_strike",
+        "light_strike"
+      ]
+    }
+  },
+  "skills": {
+    "light_strike": {
+      "damage": 8,
+      "text": "祭司释放光之打击！"
+    },
+    "bless": {
+      "damage": 0,
+      "selfBuff": "defense",
+      "text": "祭司施展祝福屏障。"
+    }
+  },
+  "onDefeat": {
+    "reputation": 3,
+    "spawnItem": "light-mark",
+    "markDefeated": true
+  },
+  "actOptions": {
+    "check": "守光祭司 HP: 50  ATK: 8\n他周身环绕着温和的光芒，眼中充满期待。",
+    "listen": "你静静聆听祭司的低语……\n他的话语中充满了对Realm的深爱。\n祭司的防御似乎下降了。"
+  },
+  "battleLines": {
+    "start": {
+      "text": "来吧，编年史者——\n让光明见证你的决心！",
+      "color": "white"
+    },
+    "hp50": {
+      "text": "不错……你的意志比我想象的更强。\n但试炼还没有结束！",
+      "color": "white"
+    },
+    "hp10": {
+      "text": "我看到了……你眼中的光芒。\n很好——你通过了！",
+      "color": "green"
+    },
+    "mercy1": {
+      "text": "你犹豫了吗？\n光明的道路确实不容易……",
+      "color": "blue"
+    },
+    "mercy2": {
+      "text": "你选择了仁慈而非力量。\n这也是光明的品质——光明印记为你而留。",
+      "color": "green"
+    }
+  }
+}

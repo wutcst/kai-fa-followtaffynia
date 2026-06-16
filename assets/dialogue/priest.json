@@ -1,0 +1,76 @@
+{
+  "npcId": "priest",
+  "startNode": "greeting",
+  "nodes": {
+    "greeting": {
+      "text": "欢迎，旅行者。我是守光祭司，Realm最后的守护者之一。\n\n光明宝石失落之后，这片土地被分裂为光与暗。而你——新的编年史者——绝非偶然来到此地。\n\n告诉我，你想了解什么？",
+      "options": [
+        {
+          "text": "光明宝石到底是什么？",
+          "next": "about_gem"
+        },
+        {
+          "text": "我准备好接受试炼了。",
+          "next": "trial"
+        },
+        {
+          "text": "Realm为什么会分裂？",
+          "next": "history"
+        },
+        {
+          "text": "暗影是什么？",
+          "next": "about_shadow"
+        },
+        {
+          "text": "我先告辞了。",
+          "next": "farewell"
+        }
+      ]
+    },
+    "about_gem": {
+      "text": "光明宝石是Realm的核心。它蕴藏着这片土地的秩序与记忆。\n\n宝石被锁在金库深处——机房( lab )里有一把钥匙。但金库有远古魔像守护，只有通过试炼的人才能接近。",
+      "options": [
+        {
+          "text": "回到主菜单",
+          "next": "greeting"
+        }
+      ]
+    },
+    "trial": {
+      "text": "很好。光明的道路需要仁心与力量兼备。\n\n击败我的幻影，证明你有资格踏上这条路。准备好了吗？",
+      "action": "flag:accepted-priest-trial",
+      "next": null
+    },
+    "history": {
+      "text": "很久以前，Realm由一位编年史者维系光与暗的平衡。\n\n但上一任编年史者消失了。光明宝石随之失落，暗影开始蔓延。如今你来到此地——也许你就是新的平衡者。",
+      "options": [
+        {
+          "text": "回到主菜单",
+          "next": "greeting"
+        }
+      ]
+    },
+    "about_shadow": {
+      "text": "暗影不是邪恶，而是欲望与恐惧的具现。\n\n光明的力量在于规矩与仁心；暗影的力量在于直面欲望、用实力说话。\n\n有人主动选择了暗影——你可能会在地窖( cellar )遇到他们。但记住：一旦拥抱暗影，Realm将永远沉入黑暗。",
+      "options": [
+        {
+          "text": "回到主菜单",
+          "next": "greeting"
+        },
+        {
+          "text": "我拒绝暗影之路。",
+          "next": "refuse_shadow"
+        }
+      ]
+    },
+    "refuse_shadow": {
+      "text": "你的选择明智。但真正的考验还在后面。\n\n去金库取回光明宝石，用你的行动而非言语来证明。",
+      "action": "flag:refused-priest",
+      "next": null
+    },
+    "farewell": {
+      "text": "记住：真正的力量不是光明本身，而是选择光明的勇气。\n\n当你准备好的时候，随时回来接受试炼。",
+      "next": null
+    }
+  }
+}

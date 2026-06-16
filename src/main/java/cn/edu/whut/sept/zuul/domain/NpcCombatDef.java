@@ -21,6 +21,8 @@ public final class NpcCombatDef
     public final int onDefeatReputation;
     public final String onDefeatUnlock;
     public final boolean onDefeatMarkDefeated;
+    /** 战斗胜利后掉落到当前房间的物品 ID（null=不掉落） */
+    public final String onDefeatSpawnItem;
     public final Map<String, String> actOptions;
 
     /** 战斗台词：key=start|hp50|hp10|mercy1|mercy2 → "color: text" */
@@ -35,7 +37,7 @@ public final class NpcCombatDef
         this(npcId, displayName, maxHp, defaultState,
             stateHpThresholds, stateSkills, skills,
             onDefeatReputation, onDefeatUnlock, onDefeatMarkDefeated,
-            Collections.emptyMap(), Collections.emptyMap());
+            null, Collections.emptyMap(), Collections.emptyMap());
     }
 
     public NpcCombatDef(String npcId, String displayName, int maxHp, String defaultState,
@@ -43,6 +45,7 @@ public final class NpcCombatDef
         Map<String, List<String>> stateSkills,
         Map<String, NpcSkill> skills,
         int onDefeatReputation, String onDefeatUnlock, boolean onDefeatMarkDefeated,
+        String onDefeatSpawnItem,
         Map<String, String> actOptions,
         Map<String, BattleLine> battleLines)
     {
@@ -56,6 +59,7 @@ public final class NpcCombatDef
         this.onDefeatReputation = onDefeatReputation;
         this.onDefeatUnlock = onDefeatUnlock;
         this.onDefeatMarkDefeated = onDefeatMarkDefeated;
+        this.onDefeatSpawnItem = onDefeatSpawnItem;
         this.actOptions = Collections.unmodifiableMap(new HashMap<>(actOptions));
         this.battleLines = Collections.unmodifiableMap(new HashMap<>(battleLines));
     }

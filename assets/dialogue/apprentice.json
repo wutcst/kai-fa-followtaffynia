@@ -1,0 +1,71 @@
+{
+  "npcId": "apprentice",
+  "startNode": "greeting",
+  "nodes": {
+    "greeting": {
+      "text": "嘿，新来的编年史者！我叫卡恩，王座守卫的学徒。\n\n师父最近很紧张——来的人有的带着善意，有的带着刀。\n\n你是哪一种？",
+      "options": [
+        {
+          "text": "能和我切磋一番吗？",
+          "next": "spar"
+        },
+        {
+          "text": "关于你师父……",
+          "next": "about_guard"
+        },
+        {
+          "text": "你怎么看光与暗的冲突？",
+          "next": "neutral_view"
+        },
+        {
+          "text": "图书馆那个学者你认识吗？",
+          "next": "scholar_mention"
+        },
+        {
+          "text": "我先去准备了。",
+          "next": "farewell"
+        }
+      ]
+    },
+    "spar": {
+      "text": "好！我也想看看你的本事。\n\n别担心，点到为止——我可不想真伤着一个潜在的编年史者。",
+      "action": "flag:accepted-apprentice-spar",
+      "next": null
+    },
+    "about_guard": {
+      "text": "师父曾是Realm最忠诚的骑士。他不是坏人——他只是忠于守卫王座的誓言。\n\n如果你好好和他说话，选友善的措辞，他会放行的。\n\n但如果来硬的……他也不会手软。",
+      "options": [
+        {
+          "text": "能和我切磋一番吗？",
+          "next": "spar"
+        },
+        {
+          "text": "回到主菜单",
+          "next": "greeting"
+        }
+      ]
+    },
+    "neutral_view": {
+      "text": "做自己的选择。中立不是没立场，是不被人替你做决定。\n\n图书馆那学者说得对——自己选的路才叫路。",
+      "options": [
+        {
+          "text": "回到主菜单",
+          "next": "greeting"
+        }
+      ]
+    },
+    "scholar_mention": {
+      "text": "那个流浪学者？他来过几次，每次都说些意味深长的话。\n\n有次他说：\"三条路都走得通，但自己选的路才叫路。\"\n\n我觉得他说的是对的。",
+      "options": [
+        {
+          "text": "回到主菜单",
+          "next": "greeting"
+        }
+      ]
+    },
+    "farewell": {
+      "text": "准备好了随时来找我。武器架上有把旧锈剑和木盾——是师父年轻时用过的。\n\n想用就拿去吧。",
+      "next": null
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "npcId": "apprentice",
+  "displayName": "守卫学徒卡恩",
+  "maxHp": 40,
+  "defaultState": "normal",
+  "states": {
+    "normal": {
+      "whenHpBelow": 1.0,
+      "skills": [
+        "slash",
+        "block"
+      ]
+    },
+    "trying": {
+      "whenHpBelow": 0.5,
+      "skills": [
+        "slash",
+        "slash"
+      ]
+    }
+  },
+  "skills": {
+    "slash": {
+      "damage": 6,
+      "text": "卡恩挥剑斩击！"
+    },
+    "block": {
+      "damage": 0,
+      "selfBuff": "defense",
+      "text": "卡恩举盾防御。"
+    }
+  },
+  "onDefeat": {
+    "reputation": 3,
+    "spawnItem": "guard-medal",
+    "markDefeated": true
+  },
+  "actOptions": {
+    "check": "守卫学徒 HP: 40  ATK: 6\n他摆出标准的战斗姿势，眼中透着友善的战意。",
+    "praise": "你称赞他的技巧……\n卡恩不好意思地笑了。\n他的攻击似乎犹豫了。"
+  },
+  "battleLines": {
+    "start": {
+      "text": "来吧！让我看看编年史者的本事！\n放心，我会手下留情的！",
+      "color": "white"
+    },
+    "hp50": {
+      "text": "厉害！你在讲堂一定没少练。\n不过这一招怎么样？",
+      "color": "white"
+    },
+    "hp10": {
+      "text": "我输了！你确实很强——\n这枚勋章，是你应得的。",
+      "color": "green"
+    },
+    "mercy1": {
+      "text": "不想打了？好吧，\n切磋本来就是自愿的。",
+      "color": "blue"
+    },
+    "mercy2": {
+      "text": "原来你不是来比武的。\n没关系，想切磋随时找我。",
+      "color": "green"
+    }
+  }
+}

@@ -90,5 +90,11 @@
     <property name="targetRoomId" value="outside"/>
    </properties>
   </object>
+  <object id="12" x="470" y="270" width="32" height="32">
+   <properties>
+    <property name="npcId" value="priest"/>
+    <property name="type" value="npc"/>
+   </properties>
+  </object>
  </objectgroup>
 </map>

@@ -202,7 +202,7 @@ public class GameScreen implements Screen
 
     private void loadNpcPortraits()
     {
-        String[] npcIds = {"guard", "hermit", "merchant"};
+        String[] npcIds = {"guard", "hermit", "merchant", "priest", "follower", "scholar", "apprentice"};
         for (String npcId : npcIds) {
             try {
                 Texture tex = new Texture(Gdx.files.internal("npc/" + npcId + "_head.png"));
@@ -246,6 +246,14 @@ public class GameScreen implements Screen
                 }
                 if (exit.hasSpawn) { playerX = exit.spawnX; playerY = exit.spawnY; }
                 if (exit.hasSpawn) markRoomBanner();
+                if (exit.hasSpawn) {
+                    String autoCombat = engine.getPendingAutoCombat();
+                    if (autoCombat != null) {
+                        engine.clearPendingAutoCombat();
+                        encounterUi.forceUtCombat(autoCombat);
+                        actionMessage = "金库魔像突然苏醒了！";
+                    }
+                }
             }
         }
         updateDamageFeedback();
@@ -683,6 +691,13 @@ public class GameScreen implements Screen
                 if (!actionMessage.equals(before)) {
                     game.getAudio().play(Cue.CLICK);
                 }
+                // 对话结束 → 自动触发战斗
+                String autoCombat = dialogueUi.getPendingCombatNpcId();
+                if (autoCombat != null) {
+                    dialogueUi.clearPendingCombat();
+                    encounterUi.forceUtCombat(autoCombat);
+                    actionMessage = "战斗开始！";
+                }
                 return;
             }
             if (engine.isInCombat()) {
@@ -778,7 +793,7 @@ public class GameScreen implements Screen
             String npcId = npcManager.findNearbyNpcId(playerX, playerY, PLAYER_W, PLAYER_H);
             if (npcId != null) {
                 encounterUi.openMenu(npcId);
-                actionMessage = "遇到 " + npcId + "。按 1 交流 / 2 杀害 / 3 离开 / 4 UT战斗";
+                actionMessage = "遇到 " + npcId + "。按 1 交流 / 2 战斗 / 3 离开";
                 game.getAudio().play(Cue.MENU_OPEN);
             } else {
                 String itemId = itemManager.findNearbyItemId(playerX, playerY, PLAYER_W, PLAYER_H);

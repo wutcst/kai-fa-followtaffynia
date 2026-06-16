@@ -1,0 +1,68 @@
+{
+  "npcId": "follower",
+  "displayName": "暗影信徒",
+  "maxHp": 45,
+  "defaultState": "normal",
+  "states": {
+    "normal": {
+      "whenHpBelow": 1.0,
+      "skills": [
+        "shadow_strike",
+        "dark_shield"
+      ]
+    },
+    "desperate": {
+      "whenHpBelow": 0.4,
+      "skills": [
+        "shadow_strike",
+        "shadow_blast"
+      ]
+    }
+  },
+  "skills": {
+    "shadow_strike": {
+      "damage": 10,
+      "text": "信徒释放暗影之击！"
+    },
+    "dark_shield": {
+      "damage": 0,
+      "selfBuff": "defense",
+      "text": "信徒展开黑暗屏障。"
+    },
+    "shadow_blast": {
+      "damage": 16,
+      "text": "信徒释放暗影爆发！"
+    }
+  },
+  "onDefeat": {
+    "reputation": -5,
+    "spawnItem": "shadow-pact",
+    "markDefeated": true
+  },
+  "actOptions": {
+    "check": "暗影信徒 HP: 45  ATK: 10\n他身披暗色斗篷，眼中燃烧着暗紫色的火焰。",
+    "question": "你问他为何追随暗影……\n他沉默了片刻，似乎动摇了。\n信徒的攻击下降了。"
+  },
+  "battleLines": {
+    "start": {
+      "text": "很好——让我看看你配不配得上暗影！",
+      "color": "red"
+    },
+    "hp50": {
+      "text": "还不够……暗影需要更强大的信徒！",
+      "color": "red"
+    },
+    "hp10": {
+      "text": "你的黑暗……比我预想的更纯粹……\n暗影之契——拿去吧！",
+      "color": "pink"
+    },
+    "mercy1": {
+      "text": "怎么？这就动摇了吗？\n暗影之路果然不适合懦夫。",
+      "color": "blue"
+    },
+    "mercy2": {
+      "text": "原来如此……你不是来拥抱暗影的。\n也罢，带着你的仁慈离开吧。",
+      "color": "green"
+    }
+  }
+}

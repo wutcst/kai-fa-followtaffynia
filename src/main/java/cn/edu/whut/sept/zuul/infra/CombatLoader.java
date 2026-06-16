@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
 public final class CombatLoader
 {
     private static final Pattern STRING_FIELD =
-        Pattern.compile("\"(npcId|displayName|defaultState|unlock|text|selfBuff)\"\\s*:\\s*\"([^\"]*)\"");
+        Pattern.compile("\"(npcId|displayName|defaultState|unlock|spawnItem|text|selfBuff)\"\\s*:\\s*\"([^\"]*)\"");
     private static final Pattern INT_FIELD =
         Pattern.compile("\"(maxHp|damage|reputation)\"\\s*:\\s*(-?\\d+)");
     private static final Pattern DOUBLE_FIELD =
@@ -74,6 +74,7 @@ public final class CombatLoader
         int onRep = 0;
         String unlock = null;
         boolean markDefeated = true;
+        String spawnItem = null;
         int onDefeatIdx = json.indexOf("\"onDefeat\"");
         if (onDefeatIdx >= 0) {
             String onBlock = extractBalancedBlock(json, json.indexOf('{', onDefeatIdx));
@@ -88,6 +89,9 @@ public final class CombatLoader
                 if ("unlock".equals(strM.group(1))) {
                     unlock = strM.group(2);
                 }
+                if ("spawnItem".equals(strM.group(1))) {
+                    spawnItem = strM.group(2);
+                }
             }
             Matcher boolM = BOOL_FIELD.matcher(onBlock);
             if (boolM.find()) {
@@ -97,7 +101,7 @@ public final class CombatLoader
 
         return new NpcCombatDef(npcId, displayName, maxHp, defaultState,
             stateThresholds, stateSkills, skills, onRep, unlock, markDefeated,
-            parseActOptions(json), parseBattleLines(json));
+            spawnItem, parseActOptions(json), parseBattleLines(json));
     }
 
     private static void parseStates(String json,
@@ -224,12 +228,18 @@ public final class CombatLoader
         return json.substring(startBrace);
     }
 
+    private static String unescape(String s)
+    {
+        if (s == null) return null;
+        return s.replace("\\\"", "\"").replace("\\\\", "\\").replace("\\n", "\n");
+    }
+
     private static String firstString(String json, String field)
     {
         Matcher m = STRING_FIELD.matcher(json);
         while (m.find()) {
             if (field.equals(m.group(1))) {
-                return m.group(2);
+                return unescape(m.group(2));
             }
         }
         return null;
@@ -270,7 +280,7 @@ public final class CombatLoader
         Matcher m = Pattern.compile("\"([^\"]+)\"\\s*:\\s*\"([^\"]*)\"").matcher(actBlock);
         while (m.find()) {
             String key = m.group(1);
-            String val = m.group(2);
+            String val = unescape(m.group(2));
             if (!"actOptions".equals(key)) {
                 act.put(key, val);
             }
@@ -290,7 +300,7 @@ public final class CombatLoader
             .matcher(block);
         while (m.find()) {
             lines.put(m.group(1),
-                new NpcCombatDef.BattleLine(m.group(2), m.group(3)));
+                new NpcCombatDef.BattleLine(unescape(m.group(2)), m.group(3)));
         }
         return lines;
     }

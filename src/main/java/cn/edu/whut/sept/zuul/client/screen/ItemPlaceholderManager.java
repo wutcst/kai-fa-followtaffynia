@@ -114,6 +114,16 @@ public class ItemPlaceholderManager
             drawMugIcon(shapes, x, y);
         } else if (id.contains("barrel")) {
             drawBarrelIcon(shapes, x, y);
+        } else if (id.contains("light-mark")) {
+            drawLightMarkIcon(shapes, x, y);
+        } else if (id.contains("shadow-pact")) {
+            drawShadowPactIcon(shapes, x, y);
+        } else if (id.contains("guard-medal")) {
+            drawGuardMedalIcon(shapes, x, y);
+        } else if (id.contains("sage-salt")) {
+            drawSageSaltIcon(shapes, x, y);
+        } else if (id.contains("balance")) {
+            drawBalanceBookIcon(shapes, x, y);
         } else {
             pixelRect(shapes, x + 3f, y + 3f, size - 6f, size - 6f,
                 item.color.r, item.color.g, item.color.b, 1f);
@@ -218,6 +228,47 @@ public class ItemPlaceholderManager
         pixelRect(shapes, x + 14f, y + 5f, 2f, 14f, 0.56f, 0.34f, 0.18f, 1f);
     }
 
+    private void drawLightMarkIcon(ShapeRenderer shapes, float x, float y)
+    {
+        pixelRect(shapes, x + 8f, y + 3f, 6f, 16f, 1f, 0.92f, 0.45f, 1f);
+        pixelRect(shapes, x + 4f, y + 6f, 14f, 10f, 0.96f, 0.84f, 0.28f, 1f);
+        pixelRect(shapes, x + 8f, y + 10f, 6f, 6f, 1f, 1f, 0.8f, 0.9f);
+        pixelRect(shapes, x + 10f, y + 2f, 2f, 5f, 0.88f, 0.72f, 0.18f, 1f);
+    }
+
+    private void drawShadowPactIcon(ShapeRenderer shapes, float x, float y)
+    {
+        pixelRect(shapes, x + 4f, y + 4f, 14f, 17f, 0.22f, 0.08f, 0.36f, 1f);
+        pixelRect(shapes, x + 7f, y + 7f, 8f, 11f, 0.35f, 0.12f, 0.48f, 1f);
+        pixelRect(shapes, x + 10f, y + 9f, 4f, 6f, 0.55f, 0.2f, 0.55f, 0.85f);
+        pixelRect(shapes, x + 6f, y + 14f, 10f, 3f, 0.25f, 0.1f, 0.4f, 1f);
+    }
+
+    private void drawBalanceBookIcon(ShapeRenderer shapes, float x, float y)
+    {
+        pixelRect(shapes, x + 4f, y + 4f, 15f, 17f, 0.08f, 0.25f, 0.28f, 1f);
+        pixelRect(shapes, x + 7f, y + 6f, 10f, 13f, 0.18f, 0.45f, 0.48f, 1f);
+        pixelRect(shapes, x + 9f, y + 10f, 6f, 2f, 0.82f, 0.90f, 0.6f, 1f);
+        pixelRect(shapes, x + 8f, y + 7f, 7f, 10f, 0.25f, 0.55f, 0.58f, 0.6f);
+    }
+
+    private void drawGuardMedalIcon(ShapeRenderer shapes, float x, float y)
+    {
+        pixelRect(shapes, x + 8f, y + 3f, 6f, 1f, 0.62f, 0.38f, 0.15f, 1f);
+        pixelRect(shapes, x + 6f, y + 4f, 10f, 10f, 0.82f, 0.58f, 0.22f, 1f);
+        pixelRect(shapes, x + 8f, y + 5f, 6f, 8f, 0.94f, 0.74f, 0.34f, 1f);
+        pixelRect(shapes, x + 10f, y + 8f, 3f, 4f, 0.72f, 0.48f, 0.14f, 1f);
+    }
+
+    private void drawSageSaltIcon(ShapeRenderer shapes, float x, float y)
+    {
+        pixelRect(shapes, x + 6f, y + 4f, 10f, 12f, 0.88f, 0.92f, 0.96f, 1f);
+        pixelRect(shapes, x + 8f, y + 6f, 6f, 8f, 0.96f, 0.98f, 1f, 1f);
+        pixelRect(shapes, x + 10f, y + 14f, 3f, 4f, 0.62f, 0.42f, 0.18f, 1f);
+        pixelRect(shapes, x + 9f, y + 8f, 2f, 2f, 0.8f, 0.9f, 1f, 0.7f);
+        pixelRect(shapes, x + 13f, y + 11f, 2f, 2f, 0.8f, 0.9f, 1f, 0.7f);
+    }
+
     private void pixelRect(ShapeRenderer shapes, float x, float y, float width, float height,
         float r, float g, float b, float a)
     {
@@ -304,6 +355,11 @@ public class ItemPlaceholderManager
         addItemSpawn("cellar", "magic-cookie", 24, 12, new Color(1f, 0.5f, 0.7f, 1f));
         addItemSpawn("library", "magic-cookie", 24, 12, new Color(1f, 0.5f, 0.7f, 1f));
         addItemSpawn("hidden-shrine", "magic-cookie", 22, 11, new Color(1f, 0.5f, 0.7f, 1f));
+        addItemSpawn("theatre", "light-mark", 22, 12, new Color(1f, 0.9f, 0.4f, 1f));
+        addItemSpawn("cellar", "shadow-pact", 22, 12, new Color(0.4f, 0.15f, 0.5f, 1f));
+        addItemSpawn("library", "balance-book", 12, 7, new Color(0.2f, 0.6f, 0.55f, 1f));
+        addItemSpawn("library", "sage-salt", 12, 10, new Color(0.9f, 0.95f, 0.98f, 1f));
+        addItemSpawn("armory", "guard-medal", 15, 12, new Color(0.75f, 0.55f, 0.2f, 1f));
     }
 
     private static void addItemSpawn(String roomId, String itemId, int tileX, int tileY, Color color)
