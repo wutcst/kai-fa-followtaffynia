@@ -10,6 +10,7 @@ import cn.edu.whut.sept.zuul.client.ui.UiDrawUtils;
 import cn.edu.whut.sept.zuul.client.ui.WorldMapRenderer;
 import cn.edu.whut.sept.zuul.engine.EndingType;
 import cn.edu.whut.sept.zuul.domain.Dialogue;
+import cn.edu.whut.sept.zuul.domain.Item;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
 import cn.edu.whut.sept.zuul.engine.UndertaleCombatEngine;
 import cn.edu.whut.sept.zuul.infra.GameLogger;
@@ -251,7 +252,7 @@ public class GameScreen implements Screen
         shapes.setProjectionMatrix(camera.getWorldCamera().combined);
         itemManager.drawItemPlaceholders(shapes);
         interaction.drawPlayer(playerX, playerY);
-        interaction.drawInteractionPrompt(playerX, playerY, paused, inventory.isOpen(),
+        interaction.drawInteractionPrompt(playerX, playerY, paused || worldMapOpen, inventory.isOpen(),
             encounterUi.isMenuOpen(), dialogueUi.isActive(),
             engine.isInDialogue(), engine.isInCombat());
 
@@ -724,9 +725,10 @@ public class GameScreen implements Screen
             } else {
                 String itemId = itemManager.findNearbyItemId(playerX, playerY, PLAYER_W, PLAYER_H);
                 if (itemId != null) {
+                    String itemName = currentRoomItemName(itemId);
                     if (engine.takeItem(itemId)) {
                         itemManager.rebuildItemPlaceholders();
-                        actionMessage = "拾取了 " + itemId;
+                        actionMessage = "拾取了 " + itemName;
                         game.getAudio().play(Cue.PICKUP);
                         flash(1f, 0.85f, 0.35f, 0.14f);
                     } else {
@@ -741,6 +743,19 @@ public class GameScreen implements Screen
             actionMessage = "按 I 打开背包，选择物品后按 U 使用";
             game.getAudio().play(Cue.ERROR);
         }
+    }
+
+    private String currentRoomItemName(String itemId)
+    {
+        if (itemId == null || engine.getCurrentRoom() == null) {
+            return itemId;
+        }
+        for (Item item : engine.getCurrentRoom().getItems()) {
+            if (itemId.equals(item.getItemId())) {
+                return item.getName();
+            }
+        }
+        return itemId;
     }
 
     private void handlePauseInput()

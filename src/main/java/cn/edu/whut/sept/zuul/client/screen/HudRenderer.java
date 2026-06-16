@@ -50,7 +50,7 @@ public class HudRenderer
         uiSkin.drawWindow(batch, 0, 0, width, FOOTER_HEIGHT);
 
         if (paused) {
-            float pw = draw.grid(Math.min(672f, width - 72f));
+            float pw = draw.grid(Math.min(760f, width - 72f));
             float ph = draw.grid(Math.min(384f, height - 88f));
             float px = draw.grid((width - pw) / 2f);
             float py = draw.grid((height - ph) / 2f);
@@ -215,7 +215,7 @@ public class HudRenderer
 
     private void drawPauseMenu(float width, float height)
     {
-        float pw = draw.grid(Math.min(672f, width - 72f));
+        float pw = draw.grid(Math.min(760f, width - 72f));
         float ph = draw.grid(Math.min(384f, height - 88f));
         float px = draw.grid((width - pw) / 2f);
         float py = draw.grid((height - ph) / 2f);
@@ -230,16 +230,16 @@ public class HudRenderer
         smallFont.setColor(draw.getUiLightText());
         draw.drawCenteredWithSmallFont(batch, "按键说明", cx, py + ph - 64);
 
-        draw.drawShortcutRow(batch, "ESC", "继续探索 / 打开菜单", UiDrawUtils.ICON_MENU, leftX, rowY);
+        draw.drawShortcutRow(batch, "ESC", "继续探索", UiDrawUtils.ICON_MENU, leftX, rowY);
         draw.drawShortcutRow(batch, "WASD", "移动角色 / 方向键", UiDrawUtils.ICON_MOVE, leftX, rowY - rowGap);
         draw.drawShortcutRow(batch, "出口", "走入出口切换房间", UiDrawUtils.ICON_ROOM, leftX, rowY - rowGap * 2f);
         draw.drawShortcutRow(batch, "Q", "调查当前房间", UiDrawUtils.ICON_LOOK, leftX, rowY - rowGap * 3f);
         draw.drawShortcutRow(batch, "B", "回退上一个房间", UiDrawUtils.ICON_BACK, leftX, rowY - rowGap * 4f);
         draw.drawShortcutRow(batch, "T", "返回标题画面", UiDrawUtils.ICON_TITLE, leftX, rowY - rowGap * 5f);
 
-        draw.drawShortcutRow(batch, "E", "拾取地面物品 / 与 NPC 互动", UiDrawUtils.ICON_TAKE, rightX, rowY);
+        draw.drawShortcutRow(batch, "E", "拾取 / NPC互动", UiDrawUtils.ICON_TAKE, rightX, rowY);
         draw.drawShortcutRow(batch, "I", "打开 / 关闭背包", UiDrawUtils.ICON_INVENTORY, rightX, rowY - rowGap);
-        draw.drawShortcutRow(batch, "U", "使用背包中选中的物品", UiDrawUtils.ICON_USE, rightX, rowY - rowGap * 2f);
+        draw.drawShortcutRow(batch, "U", "使用选中物品", UiDrawUtils.ICON_USE, rightX, rowY - rowGap * 2f);
         draw.drawShortcutRow(batch, "F5", "保存当前进度", UiDrawUtils.ICON_SAVE, rightX, rowY - rowGap * 3f);
         draw.drawShortcutRow(batch, "F9", "读取存档", UiDrawUtils.ICON_LOAD, rightX, rowY - rowGap * 4f);
         draw.drawShortcutRow(batch, "M", "查看世界地图", UiDrawUtils.ICON_ROOM, rightX, rowY - rowGap * 5f);
