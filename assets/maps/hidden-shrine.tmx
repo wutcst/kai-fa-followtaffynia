@@ -59,8 +59,8 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <imagelayer id="10" name="view">
-  <image source="../map_bg/hidden-shrine.png" width="1012" height="505"/>
+ <imagelayer id="10" name="view" offsetx="-12" offsety="-7.33333">
+  <image source="../map_bg/hiddenshrine.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
   <object id="1" name="spawn-north" type="spawn" x="502.724" y="59.032" width="63.4753" height="36.1809">
@@ -73,13 +73,13 @@
     <property name="direction" value="default"/>
    </properties>
   </object>
-  <object id="13" x="712.193" y="200.582" width="41.8937" height="38.0852">
+  <object id="13" x="694.86" y="187.915" width="41.8937" height="38.0852">
    <properties>
     <property name="npcId" value="hermit"/>
     <property name="type" value="npc"/>
    </properties>
   </object>
-  <object id="11" name="exit-to-library" type="exit" x="488.759" y="457.022" width="85.0568" height="43.798">
+  <object id="11" name="exit-to-library" type="exit" x="446.092" y="421.022" width="85.0568" height="43.798">
    <properties>
     <property name="direction" value="south"/>
     <property name="targetRoomId" value="library"/>

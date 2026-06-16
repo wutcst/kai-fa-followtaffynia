@@ -59,8 +59,8 @@
 1,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,1
 </data>
  </layer>
- <imagelayer id="10" name="view" offsetx="-30.0094" offsety="0.60045">
-  <image source="../map_bg/pub.png" width="1000" height="500"/>
+ <imagelayer id="10" name="view" offsetx="-14.0094" offsety="-7.39955">
+  <image source="../map_bg/pub.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
   <object id="1" name="spawn-north" type="spawn" x="488.186" y="61.8786" width="63.4753" height="36.1809">
@@ -83,19 +83,19 @@
     <property name="direction" value="default"/>
    </properties>
   </object>
-  <object id="10" name="exit-to-garden" type="exit" x="897.635" y="233.595" width="64.5462" height="74.9008">
+  <object id="10" name="exit-to-garden" type="exit" x="900.302" y="182.928" width="64.5462" height="74.9008">
    <properties>
     <property name="direction" value="east"/>
     <property name="targetRoomId" value="garden"/>
    </properties>
   </object>
-  <object id="11" name="exit-to-cellar" type="exit" x="439.91" y="396.832" width="77.3916" height="61.9601">
+  <object id="11" name="exit-to-cellar" type="exit" x="434.577" y="403.499" width="77.3916" height="61.9601">
    <properties>
     <property name="direction" value="south"/>
     <property name="targetRoomId" value="cellar"/>
    </properties>
   </object>
-  <object id="12" name="exit-to-outside&#9;" type="exit" x="20.617" y="244.483" width="50.7802" height="59.032">
+  <object id="12" name="exit-to-outside&#9;" type="exit" x="22.617" y="195.15" width="50.7802" height="59.032">
    <properties>
     <property name="direction" value="west"/>
     <property name="targetRoomId" value="outside"/>

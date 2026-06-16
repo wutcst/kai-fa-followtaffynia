@@ -59,11 +59,11 @@
 1,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,1
 </data>
  </layer>
- <imagelayer id="11" name="view">
-  <image source="../map_bg/garden.png" width="1000" height="500"/>
+ <imagelayer id="11" name="view" offsetx="-10.6667" offsety="-8">
+  <image source="../map_bg/garden.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
-  <object id="1" name="spawn-north" type="spawn" x="470.584" y="118.685" width="63.4753" height="36.1809">
+  <object id="1" name="spawn-north" type="spawn" x="453.251" y="86.685" width="63.4753" height="36.1809">
    <properties>
     <property name="direction" value="north"/>
    </properties>
@@ -74,17 +74,17 @@
     <property name="type" value="npc"/>
    </properties>
   </object>
-  <object id="2" name="spawn-south" type="spawn" x="482.433" y="380.663" width="60.3015" height="35.5462">
+  <object id="2" name="spawn-south" type="spawn" x="464.433" y="292.663" width="60.3015" height="35.5462">
    <properties>
     <property name="direction" value="south"/>
    </properties>
   </object>
-  <object id="3" name="spawn-west" type="spawn" x="126.531" y="235.912" width="53.954" height="67.2838">
+  <object id="3" name="spawn-west" type="spawn" x="101.864" y="205.912" width="53.954" height="67.2838">
    <properties>
     <property name="direction" value="west"/>
    </properties>
   </object>
-  <object id="4" name="spawn-east" type="spawn" x="869.621" y="224.588" width="34.9114" height="79.9788">
+  <object id="4" name="spawn-east" type="spawn" x="834.954" y="200.588" width="34.9114" height="79.9788">
    <properties>
     <property name="direction" value="east"/>
    </properties>
@@ -94,19 +94,19 @@
     <property name="direction" value="default"/>
    </properties>
   </object>
-  <object id="10" name="exit-to-armory" type="exit" x="925.237" y="226.597" width="35.5462" height="74.9008">
+  <object id="10" name="exit-to-armory" type="exit" x="920.57" y="191.264" width="35.5462" height="74.9008">
    <properties>
     <property name="direction" value="east"/>
     <property name="targetRoomId" value="armory"/>
    </properties>
   </object>
-  <object id="11" name="exit-to-guard-room" type="exit" x="470.709" y="426.434" width="81.5921" height="42.1576">
+  <object id="11" name="exit-to-guard-room" type="exit" x="448.042" y="419.767" width="81.5921" height="42.1576">
    <properties>
     <property name="direction" value="south"/>
     <property name="targetRoomId" value="guard-room"/>
    </properties>
   </object>
-  <object id="12" name="exit-to-pub" type="exit" x="50.8224" y="236.478" width="50.7802" height="59.032">
+  <object id="12" name="exit-to-pub" type="exit" x="20.1557" y="209.145" width="50.7802" height="59.032">
    <properties>
     <property name="direction" value="west"/>
     <property name="targetRoomId" value="pub"/>

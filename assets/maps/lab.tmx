@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="30" height="15" tilewidth="32" tileheight="32" infinite="0" nextlayerid="11" nextobjectid="13">
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="15" tilewidth="32" tileheight="32" infinite="0" nextlayerid="11" nextobjectid="13">
  <tileset firstgid="1" source="../tilesets/tiny-dungeon.tsx"/>
  <tileset firstgid="133" source="../tilesets/realm-tiles.tsx"/>
  <layer id="8" name="ground" width="30" height="15">
@@ -59,8 +59,8 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <imagelayer id="10" name="view" offsetx="-6.98228" offsety="-19.0426">
-  <image source="../map_bg/lab.png" width="1026" height="513"/>
+ <imagelayer id="10" name="view" offsetx="-7.64895" offsety="-11.0426">
+  <image source="../map_bg/lab.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
   <object id="2" name="spawn-south" type="spawn" x="470.717" y="274.238" width="60.3015" height="35.5462">
@@ -78,13 +78,13 @@
     <property name="direction" value="default"/>
    </properties>
   </object>
-  <object id="9" name="exit-to-outside" type="exit" x="473.525" y="10.7908" width="66.0143" height="61.571">
+  <object id="9" name="exit-to-outside" type="exit" x="422.858" y="22.7908" width="100.681" height="61.571">
    <properties>
     <property name="direction" value="north"/>
     <property name="targetRoomId" value="outside"/>
    </properties>
   </object>
-  <object id="10" name="exit-to-vault" type="exit" x="464.405" y="340.618" width="76.561" height="42.8653">
+  <object id="10" name="exit-to-vault" type="exit" x="430.405" y="382.618" width="105.228" height="58.1986">
    <properties>
     <property name="direction" value="east"/>
     <property name="targetRoomId" value="vault"/>

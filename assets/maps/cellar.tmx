@@ -59,8 +59,8 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <imagelayer id="10" name="view" offsetx="-64.7129" offsety="-8.88654">
-  <image source="../map_bg/cellar.png" width="1117" height="501"/>
+ <imagelayer id="10" name="view" offsetx="-10.7129" offsety="-6.21987">
+  <image source="../map_bg/cellar.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
   <object id="2" name="spawn-south" type="spawn" x="466.83" y="420.607" width="60.3015" height="35.5462">
@@ -73,13 +73,13 @@
     <property name="direction" value="default"/>
    </properties>
   </object>
-  <object id="9" name="exit-to-pub" type="exit" x="469.618" y="7.48933" width="67.8902" height="69.2909">
+  <object id="9" name="exit-to-pub" type="exit" x="436.951" y="11.4893" width="100.557" height="45.2909">
    <properties>
     <property name="direction" value="north"/>
     <property name="targetRoomId" value="pub"/>
    </properties>
   </object>
-  <object id="10" x="470" y="270" width="32" height="32">
+  <object id="10" x="220" y="201.333" width="32" height="32">
    <properties>
     <property name="npcId" value="follower"/>
     <property name="type" value="npc"/>

@@ -59,8 +59,8 @@
 14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16
 </data>
  </layer>
- <imagelayer id="10" name="view" offsetx="-34.9114" offsety="-4.44327">
-  <image source="../map_bg/armory.png" width="1042" height="541"/>
+ <imagelayer id="10" name="view" offsetx="-16.2447" offsety="-12.4433">
+  <image source="../map_bg/armory.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
   <object id="1" name="spawn-north" type="spawn" x="457.022" y="93.9434" width="63.4753" height="36.1809">
@@ -68,12 +68,12 @@
     <property name="direction" value="north"/>
    </properties>
   </object>
-  <object id="3" name="spawn-west" type="spawn" x="98.3867" y="220.894" width="53.954" height="67.2838">
+  <object id="3" name="spawn-west" type="spawn" x="102.387" y="196.227" width="53.954" height="67.2838">
    <properties>
     <property name="direction" value="west"/>
    </properties>
   </object>
-  <object id="4" name="spawn-east" type="spawn" x="872.785" y="205.025" width="60.3015" height="60.9362">
+  <object id="4" name="spawn-east" type="spawn" x="874.785" y="192.358" width="60.3015" height="60.9362">
    <properties>
     <property name="direction" value="east"/>
    </properties>
@@ -83,19 +83,19 @@
     <property name="direction" value="default"/>
    </properties>
   </object>
-  <object id="11" name="exit-to-forge" type="exit" x="458.926" y="448.135" width="83.1526" height="58.3973">
+  <object id="11" name="exit-to-forge" type="exit" x="424.259" y="408.802" width="83.1526" height="58.3973">
    <properties>
     <property name="direction" value="south"/>
     <property name="targetRoomId" value="forge"/>
    </properties>
   </object>
-  <object id="12" name="exit-to-garden" type="exit" x="-21.5816" y="215.816" width="72.9965" height="59.032">
+  <object id="12" name="exit-to-garden" type="exit" x="-3.5816" y="185.816" width="72.9965" height="59.032">
    <properties>
     <property name="direction" value="west"/>
     <property name="targetRoomId" value="garden"/>
    </properties>
   </object>
-  <object id="13" x="470" y="270" width="32" height="32">
+  <object id="13" x="731.333" y="165.333" width="32" height="32">
    <properties>
     <property name="npcId" value="apprentice"/>
     <property name="type" value="npc"/>

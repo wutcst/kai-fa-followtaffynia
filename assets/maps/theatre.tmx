@@ -59,8 +59,8 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,1,1,1,1,1,1,1,1,1,1,1
 </data>
  </layer>
- <imagelayer id="11" name="view" offsetx="-48.6764" offsety="-8.53273">
-  <image source="../map_bg/theatre.png" width="1028" height="514"/>
+ <imagelayer id="11" name="view" offsetx="-17.3431" offsety="-4.53273">
+  <image source="../map_bg/theatre.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
   <object id="1" name="spawn-north" type="spawn" x="485.586" y="96.4824" width="63.4753" height="36.1809">
@@ -78,19 +78,19 @@
     <property name="direction" value="default"/>
    </properties>
   </object>
-  <object id="10" name="exit-to-library" type="exit" x="884.631" y="242.397" width="62.5462" height="74.9008">
+  <object id="10" name="exit-to-library" type="exit" x="903.298" y="197.73" width="62.5462" height="74.9008">
    <properties>
     <property name="direction" value="east"/>
     <property name="targetRoomId" value="library"/>
    </properties>
   </object>
-  <object id="11" name="exit-to-outside" type="exit" x="374.902" y="408.435" width="86.3916" height="60.1587">
+  <object id="11" name="exit-to-outside" type="exit" x="436.902" y="419.102" width="86.3916" height="60.1587">
    <properties>
     <property name="direction" value="south"/>
     <property name="targetRoomId" value="outside"/>
    </properties>
   </object>
-  <object id="12" x="470" y="270" width="32" height="32">
+  <object id="12" x="342.667" y="116" width="32" height="32">
    <properties>
     <property name="npcId" value="priest"/>
     <property name="type" value="npc"/>

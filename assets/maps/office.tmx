@@ -59,8 +59,8 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,1
 </data>
  </layer>
- <imagelayer id="10" name="view">
-  <image source="../map_bg/office.png" width="1032" height="516"/>
+ <imagelayer id="10" name="view" offsetx="-21.3333" offsety="-9.33333">
+  <image source="../map_bg/office.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
   <object id="3" name="spawn-west" type="spawn" x="81.2484" y="243.745" width="53.954" height="67.2838">
@@ -73,7 +73,7 @@
     <property name="direction" value="default"/>
    </properties>
   </object>
-  <object id="10" name="exit-to-outside" type="exit" x="911.505" y="228.511" width="52.0498" height="81.8831">
+  <object id="10" name="exit-to-outside" type="exit" x="844.838" y="205.178" width="52.0498" height="81.8831">
    <properties>
     <property name="direction" value="east"/>
     <property name="targetRoomId" value="outside"/>

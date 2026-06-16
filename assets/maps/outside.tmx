@@ -59,8 +59,8 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <imagelayer id="11" name="view" offsetx="-8" offsety="-17">
-  <image source="../map_bg/outside.png" width="1007" height="511"/>
+ <imagelayer id="11" name="view" offsetx="-12" offsety="-19">
+  <image source="../map_bg/outside.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
   <object id="1" name="spawn-north" type="spawn" x="469.586" y="82.4824" width="63.4753" height="36.1809">
@@ -78,7 +78,7 @@
     <property name="direction" value="west"/>
    </properties>
   </object>
-  <object id="4" name="spawn-east" type="spawn" x="898.07" y="213.839" width="31.4114" height="66.7288">
+  <object id="4" name="spawn-east" type="spawn" x="864.737" y="199.172" width="31.4114" height="66.7288">
    <properties>
     <property name="direction" value="east"/>
    </properties>
@@ -88,25 +88,25 @@
     <property name="direction" value="default"/>
    </properties>
   </object>
-  <object id="9" name="exit-to-theatre" type="exit" x="471.951" y="11.156" width="55.2235" height="40.6242">
+  <object id="9" name="exit-to-theatre" type="exit" x="443.951" y="16.4893" width="87.8902" height="50.6242">
    <properties>
     <property name="direction" value="north"/>
     <property name="targetRoomId" value="theatre"/>
    </properties>
   </object>
-  <object id="10" name="exit-to-pub" type="exit" x="936.985" y="218.148" width="32.7962" height="71.1508">
+  <object id="10" name="exit-to-pub" type="exit" x="930.318" y="197.481" width="32.7962" height="71.1508">
    <properties>
     <property name="direction" value="east"/>
     <property name="targetRoomId" value="pub"/>
    </properties>
   </object>
-  <object id="11" name="exit-to-lab" type="exit" x="463.408" y="417.245" width="59.5887" height="37.7554">
+  <object id="11" name="exit-to-lab" type="exit" x="446.075" y="421.245" width="78.2554" height="48.4221">
    <properties>
     <property name="direction" value="south"/>
     <property name="targetRoomId" value="lab"/>
    </properties>
   </object>
-  <object id="12" name="exit-to-office" type="exit" x="5.45036" y="219.15" width="50.2802" height="62.532">
+  <object id="12" name="exit-to-office" type="exit" x="-5.88297" y="199.817" width="50.2802" height="62.532">
    <properties>
     <property name="direction" value="west"/>
     <property name="targetRoomId" value="office"/>

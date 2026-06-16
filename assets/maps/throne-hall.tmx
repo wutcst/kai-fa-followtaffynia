@@ -59,8 +59,8 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <imagelayer id="10" name="view">
-  <image source="../map_bg/throne-hall.png" width="994" height="501"/>
+ <imagelayer id="10" name="view" offsetx="-13.3333" offsety="-3.33333">
+  <image source="../map_bg/thronehall.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
   <object id="2" name="spawn-south" type="spawn" x="459.63" y="429.87" width="60.3015" height="35.5462">
@@ -73,7 +73,7 @@
     <property name="direction" value="default"/>
    </properties>
   </object>
-  <object id="9" name="exit-to-guard-room" type="exit" x="467.549" y="47.9607" width="62.4244" height="41.8244">
+  <object id="9" name="exit-to-guard-room" type="exit" x="448.216" y="31.294" width="81.0911" height="51.8244">
    <properties>
     <property name="direction" value="north"/>
     <property name="targetRoomId" value="guard-room"/>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="15" tilewidth="32" tileheight="32" infinite="0" nextlayerid="11" nextobjectid="13">
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="15" tilewidth="32" tileheight="32" infinite="0" nextlayerid="12" nextobjectid="13">
  <tileset firstgid="1" source="../tilesets/tiny-dungeon.tsx"/>
  <tileset firstgid="133" source="../tilesets/realm-tiles.tsx"/>
  <layer id="8" name="ground" width="30" height="15">
@@ -59,6 +59,9 @@
 1,14,0,137,137,137,137,137,137,137,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
+ <imagelayer id="11" name="view" offsetx="-10.6667" offsety="-4.66667">
+  <image source="../map_bg/teleport.jpg" width="1000" height="500"/>
+ </imagelayer>
  <objectgroup id="3" name="objects">
   <object id="4" name="spawn-east" type="spawn" x="858.82" y="233.589" width="34.9114" height="79.9788">
    <properties>
@@ -70,7 +73,7 @@
     <property name="direction" value="default"/>
    </properties>
   </object>
-  <object id="12" name="exit-to-library" type="exit" x="7.61703" y="275.483" width="50.7802" height="59.032">
+  <object id="12" name="exit-to-library" type="exit" x="14.2837" y="220.15" width="50.7802" height="59.032">
    <properties>
     <property name="direction" value="west"/>
     <property name="targetRoomId" value="library"/>
