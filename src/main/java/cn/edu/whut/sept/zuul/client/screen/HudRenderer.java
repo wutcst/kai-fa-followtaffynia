@@ -9,12 +9,15 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
 /**
- * HUD 渲染器 —— 顶栏、底栏、暂停菜单。
+ * HUD 渲染器 —— 顶栏（5 区布局）、底栏、暂停菜单。
+ * 坐标基于设计分辨率 1280×720，通过 CameraController 等比缩放。
  */
 public class HudRenderer
 {
-    private static final float TOP_BAR_HEIGHT = 56f;
-    private static final float FOOTER_HEIGHT = 96f;
+    /** 顶栏高度（设计分辨率下，10% 屏高） */
+    public static final float TOP_BAR_HEIGHT = 72f;
+    /** 底栏高度（10% 屏高） */
+    static final float FOOTER_HEIGHT = 72f;
     private static final float UI_EDGE = 8f;
     private static final float UI_CHIP_GAP = 8f;
     private static final float UI_CHIP_HEIGHT = 40f;
@@ -37,14 +40,14 @@ public class HudRenderer
         this.draw = draw;
     }
 
+    /** 画 UI 背景面板 */
     public void drawUiPanels(float width, float height, boolean paused, boolean inventoryOpen,
                               float inventoryPanelHeight)
     {
-        uiSkin.drawWindow(batch, UI_EDGE, height - TOP_BAR_HEIGHT - UI_EDGE,
-            width - UI_EDGE * 2f, TOP_BAR_HEIGHT);
-        uiSkin.drawWindow(batch, UI_EDGE, UI_EDGE, width - UI_EDGE * 2f, FOOTER_HEIGHT);
-        uiSkin.drawInset(batch, UI_EDGE + 20f, UI_EDGE + 56f,
-            width - (UI_EDGE + 20f) * 2f, 28f);
+        // 顶栏面板 — 全宽
+        uiSkin.drawWindow(batch, 0, height - TOP_BAR_HEIGHT, width, TOP_BAR_HEIGHT);
+        // 底栏面板 — 全宽
+        uiSkin.drawWindow(batch, 0, 0, width, FOOTER_HEIGHT);
 
         if (paused) {
             float pw = draw.grid(Math.min(672f, width - 72f));
@@ -65,47 +68,112 @@ public class HudRenderer
         }
     }
 
+    /** 画顶栏 HUD —— 5 区单行布局 */
     public void drawHud(float width, float height, boolean paused, String actionMessage)
     {
-        float contentX = UI_EDGE + 20f;
-        float contentRight = width - UI_EDGE - 20f;
-        float topY = height - 24f;
-        float barY = height - 58f;
-        float barWidth = draw.grid(Math.max(72f, Math.min(176f, (width - 256f) / 2f)));
-        float hpX = contentX;
-        float weightX = draw.grid(Math.max(width / 2f + 16f, hpX + barWidth + 120f));
+        float padX = 20f;
+        float availW = width - padX * 2f;
+        float barCenterY = height - TOP_BAR_HEIGHT / 2f;     // 72px 条垂直中心
+        float barH = 16f;
+        float barY = barCenterY - barH / 2f;
+        float lineY = barCenterY + 9f;                        // 统一文字基线
 
+        // ---- 5 区均分 ----
+        float zoneW = draw.grid(availW / 5f);
+
+        float x1 = padX;
+        float x2 = x1 + zoneW;
+        float x3 = x2 + zoneW;
+        float x4 = x3 + zoneW;
+        float x5 = x4 + zoneW;
+        float divH = 32f;
+
+        // ---- 区 1：玩家名 ----
         smallFont.setColor(draw.getUiLightText());
-        draw.drawClampedLine(batch, smallFont, "玩家 " + engine.getPlayer().getName(), contentX, topY, 180f);
-        draw.drawClampedLine(batch, smallFont, "房间 " + engine.getCurrentRoom().getRoomId(),
-            contentX + 210f, topY, Math.max(160f, contentRight - contentX - 370f));
-        draw.drawRightAligned(batch, "声望 " + engine.getPlayer().getReputation(), contentRight, topY);
+        draw.drawClampedLine(batch, smallFont, "玩家 " + engine.getPlayer().getName(),
+            x1 + 8f, lineY, zoneW - 16f);
+        drawHudDivider(x2, barCenterY - divH / 2f, divH);
 
-        draw.drawStatusBar(batch, "生命", engine.getPlayer().getHp(), engine.getPlayer().getMaxHp(),
-            hpX, barY, barWidth, true);
-        draw.drawStatusBar(batch, "负重", engine.getPlayer().totalWeight(), engine.getPlayer().getMaxWeight(),
-            weightX, barY, barWidth, false);
+        // ---- 区 2：生命条（标签 + 条 + 数值，同行） ----
+        smallFont.setColor(draw.getUiLightText());
+        float hpPad = 6f;
+        smallFont.draw(batch, "生命", x2 + hpPad, lineY);
+        float hpBarX = x2 + hpPad + 50f;
+        float hpBarW = zoneW - 50f - hpPad - 12f - 58f;
+        draw.drawStatusBarCompact(batch, engine.getPlayer().getHp(), engine.getPlayer().getMaxHp(),
+            hpBarX, barY, hpBarW, barH, true);
+        smallFont.draw(batch,
+            engine.getPlayer().getHp() + "/" + engine.getPlayer().getMaxHp(),
+            hpBarX + hpBarW + 8f, lineY);
+        drawHudDivider(x3, barCenterY - divH / 2f, divH);
+
+        // ---- 区 3：房间名（单行） ----
+        smallFont.setColor(draw.getUiLightText());
+        String roomText = "房间 " + engine.getCurrentRoom().getRoomId();
+        draw.drawClampedLine(batch, smallFont, roomText, x3 + 8f, lineY, zoneW - 16f);
+        drawHudDivider(x4, barCenterY - divH / 2f, divH);
+
+        // ---- 区 4：负重条（标签 + 条 + 数值，同行） ----
+        smallFont.setColor(draw.getUiLightText());
+        float wtPad = 6f;
+        smallFont.draw(batch, "负重", x4 + wtPad, lineY);
+        float wtBarX = x4 + wtPad + 50f;
+        float wtBarW = zoneW - 50f - wtPad - 12f - 70f;
+        draw.drawStatusBarCompact(batch, engine.getPlayer().totalWeight(),
+            (double) engine.getPlayer().getMaxWeight(),
+            wtBarX, barY, wtBarW, barH, false);
+        smallFont.draw(batch,
+            String.format("%.1f/%.0f", engine.getPlayer().totalWeight(),
+                (double) engine.getPlayer().getMaxWeight()),
+            wtBarX + wtBarW + 8f, lineY);
+        drawHudDivider(x5, barCenterY - divH / 2f, divH);
+
+        // ---- 区 5：声望值（单行） ----
+        smallFont.setColor(draw.getUiLightText());
+        draw.drawClampedLine(batch, smallFont,
+            "声望 " + engine.getPlayer().getReputation(),
+            x5 + 8f, lineY, zoneW - 16f);
 
         if (paused) drawPauseMenu(width, height);
     }
 
+    /** 画各分区间隔线 */
+    private void drawHudDivider(float x, float y, float height)
+    {
+        smallFont.setColor(draw.getUiDarkText().r, draw.getUiDarkText().g,
+            draw.getUiDarkText().b, 0.3f);
+        smallFont.draw(batch, "|", x - 4f, y + height - 8f);
+    }
+
     public void drawFooter(float width, String actionMessage)
     {
-        smallFont.setColor(draw.getUiDarkText());
-        draw.drawClampedLine(batch, smallFont, "日志", UI_EDGE + 36f, 84f, 40f);
-        draw.drawMultilineClamped(batch, smallFont, actionMessage, UI_EDGE + 80f, 84f,
-            width - 128f, 16f, 2);
+        float ftCenter = FOOTER_HEIGHT / 2f;                 // 底栏垂直中心
+        float logW = width * 0.60f;                          // 左区：日志
 
-        float gap = UI_CHIP_GAP;
-        float totalWidth = 80f + 56f * 4f + 72f + gap * 5f;
-        float x = draw.grid(Math.max(20f, (width - totalWidth) / 2f));
-        float y = 16f;
-        x = draw.drawHintChip(batch, "WASD", x, y, 80f, UI_CHIP_HEIGHT, UiDrawUtils.ICON_MOVE, 40f) + gap;
-        x = draw.drawHintChip(batch, "E", x, y, 56f, UI_CHIP_HEIGHT, UiDrawUtils.ICON_TAKE, 28f) + gap;
-        x = draw.drawHintChip(batch, "Q", x, y, 56f, UI_CHIP_HEIGHT, UiDrawUtils.ICON_LOOK, 28f) + gap;
-        x = draw.drawHintChip(batch, "I", x, y, 56f, UI_CHIP_HEIGHT, UiDrawUtils.ICON_INVENTORY, 28f) + gap;
-        x = draw.drawHintChip(batch, "M", x, y, 56f, UI_CHIP_HEIGHT, UiDrawUtils.ICON_ROOM, 28f) + gap;
-        draw.drawHintChip(batch, "ESC", x, y, 72f, UI_CHIP_HEIGHT, UiDrawUtils.ICON_MENU, 40f);
+        // ---- 左区：日志嵌入面板 ----
+        float insetX = 12f, insetY = 10f;
+        float insetW = logW - insetX - 8f, insetH = FOOTER_HEIGHT - insetY * 2f;
+        uiSkin.drawInset(batch, insetX, insetY, insetW, insetH);
+        smallFont.setColor(draw.getUiDarkText());
+        draw.drawClampedLine(batch, smallFont, "日志", insetX + 16f, insetY + insetH - 10f, 40f);
+        smallFont.setColor(draw.getUiLightText());
+        draw.drawClampedLine(batch, smallFont, actionMessage,
+            insetX + 60f, insetY + insetH - 10f, insetW - 72f);
+
+        // ---- 右区：按键 + 功能提示（双行） ----
+        String[] keys  = { "WASD", "SPACE", "E",  "Q",  "I",  "M",  "ESC" };
+        String[] hints = { "移动", "冲刺", "互动", "调查", "背包", "地图", "菜单" };
+        int n = keys.length;
+        float segW = (width - logW - 12f) / n;
+        float keyY = ftCenter + 12f;   // 键名靠上
+        float hintY = ftCenter - 10f;  // 功能提示靠下
+
+        smallFont.setColor(draw.getUiLightText());
+        for (int i = 0; i < n; i++) {
+            float cx = logW + 12f + segW * i + segW / 2f;
+            draw.drawCenteredWithSmallFont(batch, keys[i], cx, keyY);
+            draw.drawCenteredWithSmallFont(batch, hints[i], cx, hintY);
+        }
     }
 
     public void drawQuestTracker(float width, float height, int worldViewportX, int worldViewportWidth)

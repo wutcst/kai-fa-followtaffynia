@@ -13,7 +13,7 @@ import com.badlogic.gdx.utils.Disposable;
  */
 public class GameFonts implements Disposable
 {
-    private static final int FONT_SIZE = 18;
+    private static final int FONT_SIZE = 22;
     private static final String CJK_PUNCTUATION =
         "，。！？；：“”‘’（）【】《》、·—…「」『』￥→←↑↓≥≤×☆";
 

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="17" tilewidth="32" tileheight="32" infinite="0" nextlayerid="10" nextobjectid="13">
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="30" height="15" tilewidth="32" tileheight="32" infinite="0" nextlayerid="12" nextobjectid="13">
  <tileset firstgid="1" source="../tilesets/tiny-dungeon.tsx"/>
  <tileset firstgid="133" source="../tilesets/realm-tiles.tsx"/>
- <layer id="8" name="ground" width="30" height="17">
+ <layer id="8" name="ground" width="30" height="15">
   <data encoding="csv">
 49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,1,1,49,49,49,49,49,49,49,49,49,49,49,49,49,
 49,49,49,49,49,49,49,49,49,49,49,49,49,49,133,133,133,133,49,49,49,49,49,49,49,49,49,49,49,49,
@@ -18,15 +18,11 @@
 49,49,133,133,133,133,133,133,136,136,133,133,133,133,133,133,133,133,133,133,136,136,133,133,49,49,49,49,49,49,
 49,49,49,49,133,133,133,133,136,136,133,133,133,133,133,133,133,133,133,133,136,136,133,133,49,49,49,49,49,49,
 49,49,49,49,133,133,133,133,133,133,133,133,133,133,133,133,133,133,133,133,133,133,133,133,49,49,49,49,49,49,
-49,49,49,49,49,49,49,49,49,49,133,133,49,133,133,133,133,133,133,49,49,49,49,49,49,49,49,49,49,49,
-49,49,49,49,49,49,49,49,49,49,49,49,1,1,1,1,1,1,1,49,49,49,49,49,49,49,49,49,49,49,
-49,49,49,49,49,49,49,49,49,49,49,49,49,49,1,1,1,49,49,49,49,49,49,49,49,49,49,49,49,49
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <layer id="5" name="decor" width="30" height="17">
+ <layer id="5" name="decor" width="30" height="15">
   <data encoding="csv">
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -44,7 +40,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <layer id="4" name="wall" width="30" height="17">
+ <layer id="4" name="wall" width="30" height="15">
   <data encoding="csv">
 1,1,1,1,1,1,1,1,1,1,1,1,1,14,19,0,0,19,16,1,1,1,1,1,1,1,1,1,1,1,
 1,1,1,1,1,1,1,1,1,1,13,1,1,14,31,0,0,31,16,1,1,1,1,1,1,1,1,1,1,1,
@@ -60,28 +56,29 @@
 27,27,27,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,1,1,1,1,1,
 1,1,1,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,1,1,1,1,1,
 1,1,1,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,1,1,1,1,1,
-1,1,1,26,27,27,27,27,27,27,27,27,6,0,0,0,0,0,5,27,27,27,27,27,28,1,1,1,1,1,
-1,1,1,1,1,1,1,1,1,1,1,1,14,7,0,0,0,7,16,1,1,1,1,1,1,1,1,1,1,1,
-1,1,1,1,1,1,1,1,1,1,1,1,14,19,0,0,0,19,16,1,1,1,1,1,1,1,1,1,1,1
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
+ <imagelayer id="11" name="view" offsetx="-8" offsety="-17">
+  <image source="../map_bg/outside.png" width="1007" height="511"/>
+ </imagelayer>
  <objectgroup id="3" name="objects">
-  <object id="1" name="spawn-north" type="spawn" x="485.586" y="96.4824" width="63.4753" height="36.1809">
+  <object id="1" name="spawn-north" type="spawn" x="469.586" y="82.4824" width="63.4753" height="36.1809">
    <properties>
     <property name="direction" value="north"/>
    </properties>
   </object>
-  <object id="2" name="spawn-south" type="spawn" x="460.83" y="465.274" width="60.3015" height="35.5462">
+  <object id="2" name="spawn-south" type="spawn" x="466.33" y="358.274" width="60.3015" height="35.5462">
    <properties>
     <property name="direction" value="south"/>
    </properties>
   </object>
-  <object id="3" name="spawn-west" type="spawn" x="86.3264" y="276.117" width="53.954" height="67.2838">
+  <object id="3" name="spawn-west" type="spawn" x="76.8264" y="221.617" width="53.954" height="67.2838">
    <properties>
     <property name="direction" value="west"/>
    </properties>
   </object>
-  <object id="4" name="spawn-east" type="spawn" x="858.82" y="233.589" width="34.9114" height="79.9788">
+  <object id="4" name="spawn-east" type="spawn" x="898.07" y="213.839" width="31.4114" height="66.7288">
    <properties>
     <property name="direction" value="east"/>
    </properties>
@@ -91,25 +88,25 @@
     <property name="direction" value="default"/>
    </properties>
   </object>
-  <object id="9" name="exit-to-theatre" type="exit" x="484.951" y="10.156" width="55.2235" height="40.6242">
+  <object id="9" name="exit-to-theatre" type="exit" x="471.951" y="11.156" width="55.2235" height="40.6242">
    <properties>
     <property name="direction" value="north"/>
     <property name="targetRoomId" value="theatre"/>
    </properties>
   </object>
-  <object id="10" name="exit-to-pub" type="exit" x="910.235" y="237.398" width="35.5462" height="74.9008">
+  <object id="10" name="exit-to-pub" type="exit" x="936.985" y="218.148" width="32.7962" height="71.1508">
    <properties>
     <property name="direction" value="east"/>
     <property name="targetRoomId" value="pub"/>
    </properties>
   </object>
-  <object id="11" name="exit-to-lab" type="exit" x="465.908" y="512.245" width="54.5887" height="24.7554">
+  <object id="11" name="exit-to-lab" type="exit" x="463.408" y="417.245" width="59.5887" height="37.7554">
    <properties>
     <property name="direction" value="south"/>
     <property name="targetRoomId" value="lab"/>
    </properties>
   </object>
-  <object id="12" name="exit-to-office" type="exit" x="8.95036" y="274.15" width="50.7802" height="59.032">
+  <object id="12" name="exit-to-office" type="exit" x="5.45036" y="219.15" width="50.2802" height="62.532">
    <properties>
     <property name="direction" value="west"/>
     <property name="targetRoomId" value="office"/>

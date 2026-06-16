@@ -8,6 +8,7 @@ import cn.edu.whut.sept.zuul.client.render.UtCombatRenderer;
 import cn.edu.whut.sept.zuul.client.ui.GameUiSkin;
 import cn.edu.whut.sept.zuul.client.ui.UiDrawUtils;
 import cn.edu.whut.sept.zuul.client.ui.WorldMapRenderer;
+import cn.edu.whut.sept.zuul.engine.EndingType;
 import cn.edu.whut.sept.zuul.domain.Dialogue;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
 import cn.edu.whut.sept.zuul.engine.UndertaleCombatEngine;
@@ -22,9 +23,11 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.HdpiUtils;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 /**
@@ -41,8 +44,8 @@ public class GameScreen implements Screen
     private static final float DASH_COOLDOWN = 0.2f;
     private static final float ATTACK_COOLDOWN = 0.2f;
     private static final float UI_GRID = 8f;
-    private static final float TOP_BAR_HEIGHT = 56f;
-    private static final float FOOTER_HEIGHT = 96f;
+    private static final float TOP_BAR_HEIGHT = HudRenderer.TOP_BAR_HEIGHT; // 72
+    private static final float FOOTER_HEIGHT = HudRenderer.FOOTER_HEIGHT;   // 72
     private static final Color UI_LIGHT_TEXT = new Color(1f, 0.96f, 0.82f, 1f);
     private static final Color UI_DARK_TEXT = new Color(0.26f, 0.18f, 0.1f, 1f);
     private static final Color ACCENT_GOLD = new Color(1f, 0.74f, 0.22f, 1f);
@@ -60,6 +63,7 @@ public class GameScreen implements Screen
     private final BitmapFont font;
     private final BitmapFont smallFont;
     private final ShapeRenderer shapes;
+    private final OrthographicCamera fullScreenCam;
     private final GameUiSkin uiSkin;
 
     // sub-components
@@ -116,6 +120,7 @@ public class GameScreen implements Screen
         this.smallFont = game.getFonts().copyDefault(0.85f);
         this.shapes = new ShapeRenderer();
         shapes.setAutoShapeType(true);
+        this.fullScreenCam = new OrthographicCamera();
         this.uiSkin = new GameUiSkin();
         GlyphLayout layout = new GlyphLayout();
         this.draw = new UiDrawUtils(font, smallFont, uiSkin, layout, UI_LIGHT_TEXT, UI_DARK_TEXT, UI_GRID);
@@ -191,6 +196,12 @@ public class GameScreen implements Screen
     public void render(float delta)
     {
         visualTimer += delta;
+        EndingType ending = engine.getCurrentEnding();
+        if (ending != null && ending != EndingType.NONE) {
+            drawEndingScreen(ending, delta);
+            return;
+        }
+
         handleInput(delta);
         if (screenChanged) return;
         updateMusic();
@@ -246,6 +257,24 @@ public class GameScreen implements Screen
 
         // UI rendering
         camera.applyFullViewport();
+
+        // ---- 画状态栏背景（全物理屏宽，覆盖 letterbox 黑边） ----
+        int physW = Gdx.graphics.getWidth();
+        int physH = Gdx.graphics.getHeight();
+        float s = camera.getScale();
+        float topH = TOP_BAR_HEIGHT * s;
+        float botH = FOOTER_HEIGHT * s;
+        HdpiUtils.glViewport(0, 0, physW, physH);
+        fullScreenCam.setToOrtho(false, physW, physH);
+        fullScreenCam.update();
+        shapes.setProjectionMatrix(fullScreenCam.combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.22f, 0.12f, 0.05f, 1f);  // 木纹底色
+        shapes.rect(0, physH - topH, physW, topH);   // 顶栏
+        shapes.rect(0, 0, physW, botH);               // 底栏
+        shapes.end();
+        // ----
+
         batch.setProjectionMatrix(camera.getUiCamera().combined);
 
         if (engine.isInCombat() && engine.isUndertaleCombat()) {
@@ -263,8 +292,8 @@ public class GameScreen implements Screen
         boolean utCombatActive = engine.isInCombat() && engine.isUndertaleCombat()
             && !utRenderer.utEngine(engine).isShowingBattleLine();
         if (!utCombatActive) {
-            float w = Gdx.graphics.getWidth();
-            float h = Gdx.graphics.getHeight();
+            float w = CameraController.DESIGN_W;
+            float h = CameraController.DESIGN_H;
             inventory.setWorldViewportHeight(camera.getWorldViewportHeight());
             hud.drawUiPanels(w, h, paused, inventory.isOpen(),
                 inventory.inventoryPanelHeight());
@@ -294,7 +323,7 @@ public class GameScreen implements Screen
     {
         UndertaleCombatEngine ut = utRenderer.utEngine(engine);
         if (ut == null) return;
-        int sw = Gdx.graphics.getWidth(), sh = Gdx.graphics.getHeight();
+        int sw = (int) CameraController.DESIGN_W, sh = (int) CameraController.DESIGN_H;
         Gdx.gl.glEnable(GL20.GL_BLEND);
         shapes.setProjectionMatrix(camera.getUiCamera().combined);
 
@@ -331,8 +360,8 @@ public class GameScreen implements Screen
         if (text == null || text.isEmpty()) return;
         String colorTag = ut.getBattleLineColor();
 
-        int sw = Gdx.graphics.getWidth();
-        int sh = Gdx.graphics.getHeight();
+        int sw = (int) CameraController.DESIGN_W;
+        int sh = (int) CameraController.DESIGN_H;
         float boxH = sh * 0.28f;
         float boxY = FOOTER_HEIGHT;
         float boxX = 16f;
@@ -408,8 +437,8 @@ public class GameScreen implements Screen
         Dialogue d = dialogueUi.getActiveDialogue();
         if (d == null) return;
 
-        int sw = Gdx.graphics.getWidth();
-        int sh = Gdx.graphics.getHeight();
+        int sw = (int) CameraController.DESIGN_W;
+        int sh = (int) CameraController.DESIGN_H;
         float boxH = sh * 0.28f;
         float boxY = FOOTER_HEIGHT;
         float boxX = 16f;
@@ -465,34 +494,44 @@ public class GameScreen implements Screen
         String npcName = d.getNpcId();
 
         if (showingChoice) {
-            // 玩家刚说的话 — 绿色高亮
-            float playerTextY = boxY + boxH - 20f;
-            smallFont.setColor(0.6f, 1f, 0.5f, 1f);
-            smallFont.draw(batch, "你", textX, playerTextY + 14f);
-            smallFont.draw(batch, "\"" + playerChoice + "\"", textX, playerTextY, textW,
-                com.badlogic.gdx.utils.Align.left, true);
+            // "你" 放在玩家头像上方
+            float youNameY = playerPy + DIALOG_PORTRAIT_H + 28f;
+            font.setColor(0.6f, 1f, 0.5f, 1f);
+            draw.drawCentered(batch, "你", playerPx + DIALOG_PORTRAIT_W / 2f, youNameY);
 
-            // NPC 回应（如果有的话）
+            // NPC 回应（左对齐）
             String npcText = dialogueUi.formatDialogue(d);
             int ln = npcText.lastIndexOf('\n');
             String npcBody = ln > 0 ? npcText.substring(0, ln) : npcText;
+            float npcTextY = 0;
             if (npcBody != null && !npcBody.trim().isEmpty()) {
-                float npcTextY = boxY + boxH - 52f;
-                font.setColor(0.6f, 0.6f, 0.6f, 1f);
-                font.draw(batch, npcName, textX, npcTextY + 14f);
-                smallFont.setColor(Color.WHITE);
+                float respNameY = npcPy + DIALOG_PORTRAIT_H + 28f;
+                font.setColor(1f, 0.82f, 0.4f, 1f);
+                draw.drawCentered(batch, npcName, npcPx + DIALOG_PORTRAIT_W / 2f, respNameY);
+                npcTextY = boxY + boxH - 40f;
+                smallFont.setColor(0.9f, 0.9f, 0.92f, 1f);
                 smallFont.draw(batch, npcBody, textX, npcTextY, textW,
                     com.badlogic.gdx.utils.Align.left, true);
             }
+
+            // 玩家选择紧接在 NPC 回应下方，靠右对齐
+            float playerTextY = npcTextY > 0 ? npcTextY - 26f : boxY + boxH - 40f;
+            smallFont.setColor(0.6f, 1f, 0.5f, 1f);
+            smallFont.draw(batch, "\"" + playerChoice + "\"",
+                textX, playerTextY, textW,
+                com.badlogic.gdx.utils.Align.right, true);
         } else {
             // NPC 说话
-            float textY = boxY + boxH - 24f;
-            font.setColor(Color.WHITE);
-            font.draw(batch, npcName, textX, textY + 16f);
+            // 名称放在 NPC 头像上方
+            float nameY = npcPy + DIALOG_PORTRAIT_H + 28f;
+            font.setColor(1f, 0.82f, 0.4f, 1f);
+            draw.drawCentered(batch, npcName, npcPx + DIALOG_PORTRAIT_W / 2f, nameY);
 
+            float textY = boxY + boxH - 40f;
             String text = dialogueUi.formatDialogue(d);
             int ln = text.lastIndexOf('\n');
             String body = ln > 0 ? text.substring(0, ln) : text;
+            smallFont.setColor(0.9f, 0.9f, 0.92f, 1f);
             smallFont.draw(batch, body, textX, textY, textW,
                 com.badlogic.gdx.utils.Align.left, true);
 
@@ -521,8 +560,8 @@ public class GameScreen implements Screen
         batch.begin();
         font.setColor(Color.RED);
         font.draw(batch, "地图加载失败，请检查 assets/maps 与 tilesets 路径",
-            40, Gdx.graphics.getHeight() / 2f);
-        hud.drawFooter(Gdx.graphics.getWidth(), actionMessage);
+            40, CameraController.DESIGN_H / 2f);
+        hud.drawFooter(CameraController.DESIGN_W, actionMessage);
         batch.end();
     }
 
@@ -722,7 +761,7 @@ public class GameScreen implements Screen
         boolean d = Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT);
 
         if ((w || s || a || d) && moveLogFrame % 30 == 0) {
-            int mr = room.getMap() == null ? 17 : (int)(room.mapPixelHeight() / TILE);
+            int mr = room.getMap() == null ? 15 : (int)(room.mapPixelHeight() / TILE);
             LOG.info("moveKey: pixel=(" + (int)playerX + "," + (int)playerY
                 + ") tile=(" + (int)(playerX/TILE) + "," + movement.gdxYToTiledRow(playerY, mr) + ")");
         }
@@ -881,11 +920,12 @@ public class GameScreen implements Screen
             return;
         }
 
-        float width = Gdx.graphics.getWidth();
+        float width = CameraController.DESIGN_W;
+        float height = CameraController.DESIGN_H;
         float panelWidth = draw.grid(Math.min(440f, width - 96f));
         float panelHeight = 54f;
         float panelX = draw.grid((width - panelWidth) / 2f);
-        float panelY = draw.grid(Gdx.graphics.getHeight() - TOP_BAR_HEIGHT - panelHeight - 18f);
+        float panelY = draw.grid(height - TOP_BAR_HEIGHT - panelHeight - 18f);
         float alpha = Math.min(1f, Math.min(roomBannerTimer * 1.8f,
             (2.15f - roomBannerTimer) * 5f));
         if (alpha <= 0.03f) {
@@ -955,7 +995,7 @@ public class GameScreen implements Screen
 
     private void drawWorldMap(float delta)
     {
-        float w = Gdx.graphics.getWidth(), h = Gdx.graphics.getHeight();
+        float w = CameraController.DESIGN_W, h = CameraController.DESIGN_H;
         float pw = Math.min(520f, w - 48f), ph = Math.min(420f, h - 88f);
         float px = (w - pw) / 2f, py = (h - ph) / 2f;
         camera.applyFullViewport();
@@ -1028,9 +1068,56 @@ public class GameScreen implements Screen
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         shapes.setColor(feedbackFlashColor.r, feedbackFlashColor.g,
             feedbackFlashColor.b, feedbackFlashColor.a * ratio);
-        shapes.rect(0f, 0f, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        shapes.rect(0f, 0f, CameraController.DESIGN_W, CameraController.DESIGN_H);
         shapes.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    // ========== 结局画面 ==========
+
+    private float endingAlpha = 0f;
+    private static final float ENDING_FADE_SPEED = 0.6f;
+
+    private void drawEndingScreen(EndingType ending, float delta)
+    {
+        endingAlpha = Math.min(1f, endingAlpha + ENDING_FADE_SPEED * delta);
+
+        Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        camera.applyFullViewport();
+        batch.setProjectionMatrix(camera.getUiCamera().combined);
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        batch.begin();
+
+        float w = CameraController.DESIGN_W;
+        float h = CameraController.DESIGN_H;
+        float cx = w / 2f;
+
+        // 结局标题
+        String title = ending.getTitle();
+        GlyphLayout gl = new GlyphLayout(font, title);
+        font.setColor(1f, 1f, 1f, endingAlpha);
+        font.draw(batch, title, cx - gl.width / 2f, h * 0.45f);
+
+        // 结局描述
+        String desc = ending.getDescription();
+        gl.setText(smallFont, desc);
+        smallFont.setColor(0.8f, 0.8f, 0.8f, endingAlpha);
+        smallFont.draw(batch, desc, cx - gl.width / 2f, h * 0.55f);
+
+        // 按 T 返回标题
+        String hint = "按 T 返回标题";
+        gl.setText(smallFont, hint);
+        smallFont.setColor(1f, 1f, 1f, 0.6f * endingAlpha);
+        smallFont.draw(batch, hint, cx - gl.width / 2f, h * 0.68f);
+
+        batch.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
+            switchToTitle();
+        }
     }
 
     private boolean isFailureMessage(String message)

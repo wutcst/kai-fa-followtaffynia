@@ -87,7 +87,7 @@ public class RoomController
         MapProperties props = map.getProperties();
         Integer h = props.get("height", Integer.class);
         Integer th = props.get("tileheight", Integer.class);
-        return (h == null || th == null) ? 544f : h * th;
+        return (h == null || th == null) ? 480f : h * th;
     }
 
     /** Tiled 格子行号（0=地图顶部）→ LibGDX 玩家左下角 y */

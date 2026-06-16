@@ -255,4 +255,16 @@ public class UiDrawUtils
         String maxStr = maxValue == (long) maxValue ? String.valueOf((long) maxValue) : String.format("%.1f", maxValue);
         smallFont.draw(batch, valStr + "/" + maxStr, barX + width + 10, y + 16);
     }
+
+    /** 仅绘制进度条（无标签），用于 HUD 顶栏分区布局 */
+    public void drawStatusBarCompact(SpriteBatch batch, double value, double maxValue,
+                                      float x, float y, float width, float height, boolean hpBar)
+    {
+        float ratio = maxValue <= 0 ? 0f : (float) (value / maxValue);
+        if (hpBar) {
+            uiSkin.drawRedBar(batch, x, y, width, height, ratio);
+        } else {
+            uiSkin.drawYellowBar(batch, x, y, width, height, ratio);
+        }
+    }
 }

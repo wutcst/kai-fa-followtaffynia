@@ -13,7 +13,6 @@ import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -39,7 +38,7 @@ public class TitleScreen implements Screen
     private final ShapeRenderer shapes;
     private final GameUiSkin uiSkin;
     private final GlyphLayout layout;
-    private final OrthographicCamera uiCamera;
+    private final CameraController camera;
     private final InputAdapter inputAdapter;
     private String playerName;
     private String statusMessage;
@@ -55,7 +54,7 @@ public class TitleScreen implements Screen
         this.shapes = new ShapeRenderer();
         this.uiSkin = new GameUiSkin();
         this.layout = new GlyphLayout();
-        this.uiCamera = new OrthographicCamera();
+        this.camera = new CameraController();
         this.playerName = DEFAULT_NAME;
         this.statusMessage = SaveGameService.hasSave() ? "按 L 读取存档" : "暂无存档";
         this.inputAdapter = new InputAdapter()
@@ -91,7 +90,7 @@ public class TitleScreen implements Screen
                 return false;
             }
         };
-        updateCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        updateCamera();
     }
 
     @Override
@@ -108,11 +107,12 @@ public class TitleScreen implements Screen
             return;
         }
 
+        camera.applyFullViewport();
         Gdx.gl.glClearColor(0.08f, 0.08f, 0.14f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        float width = Gdx.graphics.getWidth();
-        float height = Gdx.graphics.getHeight();
+        float width = CameraController.DESIGN_W;
+        float height = CameraController.DESIGN_H;
         visualTimer += delta;
         drawTitleBackdrop(width, height);
 
@@ -122,7 +122,7 @@ public class TitleScreen implements Screen
         float panelY = grid((height - panelHeight) / 2f);
         float centerX = panelX + panelWidth / 2f;
 
-        batch.setProjectionMatrix(uiCamera.combined);
+        batch.setProjectionMatrix(camera.getUiCamera().combined);
         batch.begin();
         uiSkin.drawWindow(batch, panelX, panelY, panelWidth, panelHeight);
         uiSkin.drawInset(batch, panelX + UI_PAD * 2f, panelY + 152f,
@@ -146,7 +146,7 @@ public class TitleScreen implements Screen
 
     private void drawTitleBackdrop(float width, float height)
     {
-        shapes.setProjectionMatrix(uiCamera.combined);
+        shapes.setProjectionMatrix(camera.getUiCamera().combined);
         Gdx.gl.glEnable(GL20.GL_BLEND);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
 
@@ -283,7 +283,7 @@ public class TitleScreen implements Screen
     @Override
     public void resize(int width, int height)
     {
-        updateCamera(width, height);
+        updateCamera();
     }
 
     @Override
@@ -311,9 +311,8 @@ public class TitleScreen implements Screen
         uiSkin.dispose();
     }
 
-    private void updateCamera(int width, int height)
+    private void updateCamera()
     {
-        uiCamera.setToOrtho(false, width, height);
-        uiCamera.update();
+        camera.update(1f, 1f);
     }
 }
