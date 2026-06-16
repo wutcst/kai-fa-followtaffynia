@@ -10,6 +10,7 @@ import cn.edu.whut.sept.zuul.client.ui.UiDrawUtils;
 import cn.edu.whut.sept.zuul.client.ui.WorldMapRenderer;
 import cn.edu.whut.sept.zuul.engine.EndingType;
 import cn.edu.whut.sept.zuul.domain.Dialogue;
+import cn.edu.whut.sept.zuul.domain.Item;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
 import cn.edu.whut.sept.zuul.engine.UndertaleCombatEngine;
 import cn.edu.whut.sept.zuul.infra.GameLogger;
@@ -51,6 +52,11 @@ public class GameScreen implements Screen
     private static final float FOOTER_HEIGHT = HudRenderer.FOOTER_HEIGHT;   // 72
     private static final Color UI_LIGHT_TEXT = new Color(1f, 0.96f, 0.82f, 1f);
     private static final Color UI_DARK_TEXT = new Color(0.26f, 0.18f, 0.1f, 1f);
+    private static final Color ACCENT_GOLD = new Color(1f, 0.74f, 0.22f, 1f);
+    private static final Color ACCENT_ARCANE = new Color(0.46f, 0.72f, 1f, 1f);
+    private static final Color ACCENT_FIRE = new Color(1f, 0.42f, 0.12f, 1f);
+    private static final Color ACCENT_GREEN = new Color(0.42f, 0.88f, 0.36f, 1f);
+    private static final Color ACCENT_WARM = new Color(0.82f, 0.58f, 0.28f, 1f);
     private static final String LOG_TAG = "GameScreen";
     private static final Logger LOG = GameLogger.get();
 
@@ -92,6 +98,9 @@ public class GameScreen implements Screen
     private int lastObservedHp;
     private float stepAccumulator;
     private float feedbackFlashTimer;
+    private float visualTimer;
+    private float roomBannerTimer;
+    private String roomBannerRoomId;
     private final Color feedbackFlashColor;
     private final Map<String, Texture> npcPortraits;
 
@@ -152,6 +161,7 @@ public class GameScreen implements Screen
 
         camera.update(room.mapPixelWidth(), room.mapPixelHeight());
         room.loadCurrentRoom(false);
+        markRoomBanner();
         if (Float.isNaN(savedPlayerX) || Float.isNaN(savedPlayerY)) {
             float[] sp = room.resolveSpawn();
             playerX = sp[0];
@@ -208,6 +218,7 @@ public class GameScreen implements Screen
     @Override
     public void render(float delta)
     {
+        visualTimer += delta;
         EndingType ending = engine.getCurrentEnding();
         if (ending != null && ending != EndingType.NONE) {
             drawEndingScreen(ending, delta);
@@ -220,6 +231,7 @@ public class GameScreen implements Screen
 
         if (!paused) {
             if (room.getExitCooldown() > 0f) room.setExitCooldown(room.getExitCooldown() - delta);
+            if (roomBannerTimer > 0f) roomBannerTimer -= delta;
             movement.update(delta);
             movement.checkAttackFinished(playerRenderer.isAttackFinished());
             RoomController.ExitResult exit = room.checkExitOverlap(playerX, playerY);
@@ -233,6 +245,7 @@ public class GameScreen implements Screen
                     flash(1f, 0.24f, 0.18f, 0.16f);
                 }
                 if (exit.hasSpawn) { playerX = exit.spawnX; playerY = exit.spawnY; }
+                if (exit.hasSpawn) markRoomBanner();
             }
         }
         updateDamageFeedback();
@@ -255,12 +268,14 @@ public class GameScreen implements Screen
         camera.getWorldCamera().update();
         room.getMapRenderer().setView(camera.getWorldCamera());
         room.getMapRenderer().render();
+        drawRoomAtmosphere();
         shapes.setProjectionMatrix(camera.getWorldCamera().combined);
         npcManager.drawNpcPlaceholders(shapes);
         shapes.setProjectionMatrix(camera.getWorldCamera().combined);
         itemManager.drawItemPlaceholders(shapes);
         interaction.drawPlayer(playerX, playerY);
-        interaction.drawInteractionPrompt(playerX, playerY, paused, inventory.isOpen(),
+        boolean interactionPromptVisible = interaction.drawInteractionPrompt(
+            playerX, playerY, paused || worldMapOpen, inventory.isOpen(),
             encounterUi.isMenuOpen(), dialogueUi.isActive(),
             engine.isInDialogue(), engine.isInCombat());
 
@@ -310,6 +325,7 @@ public class GameScreen implements Screen
             if (!paused && !inventory.isOpen()) {
                 hud.drawQuestTracker(w, h, camera.getWorldViewportX(), camera.getWorldViewportWidth());
             }
+            drawRoomBanner(interactionPromptVisible);
             if (inventory.isOpen()) {
                 float pw = draw.grid(Math.min(520f, w - 96f));
                 float ph = draw.grid(inventory.inventoryPanelHeight());
@@ -439,6 +455,12 @@ public class GameScreen implements Screen
 
     private static final float DIALOG_PORTRAIT_W = 120f;
     private static final float DIALOG_PORTRAIT_H = 120f;
+    private static final Color DIALOG_BORDER = new Color(1f, 0.72f, 0.24f, 0.92f);
+    private static final Color DIALOG_DIM_BORDER = new Color(0.45f, 0.33f, 0.18f, 0.72f);
+    private static final Color DIALOG_NPC_ACTIVE_FILL = new Color(0.25f, 0.28f, 0.44f, 1f);
+    private static final Color DIALOG_NPC_DIM_FILL = new Color(0.10f, 0.10f, 0.16f, 0.78f);
+    private static final Color DIALOG_PLAYER_ACTIVE_FILL = new Color(0.32f, 0.46f, 0.25f, 1f);
+    private static final Color DIALOG_PLAYER_DIM_FILL = new Color(0.11f, 0.12f, 0.10f, 0.78f);
 
     private void renderDialogueOverlay()
     {
@@ -475,14 +497,9 @@ public class GameScreen implements Screen
         float playerPx = boxX + boxW - DIALOG_PORTRAIT_W - 16f;
         float playerPy = npcPy;
 
-        // 主角立绘：玩家选择时亮，NPC 说话时灰
-        shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(showingChoice ? 0.4f : 0.12f,
-                        showingChoice ? 0.6f : 0.12f,
-                        showingChoice ? 0.3f : 0.12f,
-                        showingChoice ? 1f : 0.6f);
-        shapes.rect(playerPx, playerPy, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
-        shapes.end();
+        // 玩家头像占位框
+        drawDialoguePortraitFrame(playerPx, playerPy, showingChoice,
+            showingChoice ? DIALOG_PLAYER_ACTIVE_FILL : DIALOG_PLAYER_DIM_FILL);
 
         // 文字和 NPC 头像
         batch.setProjectionMatrix(camera.getUiCamera().combined);
@@ -551,15 +568,48 @@ public class GameScreen implements Screen
                 for (int i = 0; i < opts.size(); i++) {
                     optLine.append(i + 1).append(". ").append(opts.get(i)).append("  ");
                 }
-                float optY = boxY + 26f;
+                float optY = boxY + 54f;
                 smallFont.setColor(1f, 0.85f, 0.3f, 1f);
                 smallFont.draw(batch, optLine.toString(), textX, optY, textW,
                     com.badlogic.gdx.utils.Align.left, true);
             }
         }
+        drawDialogueHint(boxX, boxY, boxW, dialogueUi.isAtChoicePoint()
+            ? "数字键 1-9 选择  /  Enter 继续"
+            : "Enter 继续 / 关闭对话");
         batch.end();
 
         Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    private void drawDialoguePortraitFrame(float x, float y, boolean active, Color fill)
+    {
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.03f, 0.025f, 0.035f, 0.98f);
+        shapes.rect(x - 6f, y - 6f, DIALOG_PORTRAIT_W + 12f, DIALOG_PORTRAIT_H + 12f);
+        shapes.setColor(fill);
+        shapes.rect(x, y, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
+        shapes.setColor(1f, 0.9f, 0.55f, active ? 0.18f : 0.08f);
+        shapes.rect(x + 8f, y + DIALOG_PORTRAIT_H - 20f, DIALOG_PORTRAIT_W - 16f, 8f);
+        shapes.end();
+
+        shapes.begin(ShapeRenderer.ShapeType.Line);
+        Color border = active ? DIALOG_BORDER : DIALOG_DIM_BORDER;
+        shapes.setColor(border);
+        shapes.rect(x - 6f, y - 6f, DIALOG_PORTRAIT_W + 12f, DIALOG_PORTRAIT_H + 12f);
+        shapes.rect(x, y, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
+        shapes.end();
+    }
+
+    private void drawDialogueHint(float boxX, float boxY, float boxW, String hint)
+    {
+        float hintW = 280f;
+        float hintH = 28f;
+        float hintX = boxX + boxW - hintW - 18f;
+        float hintY = boxY + 12f;
+        uiSkin.drawButton(batch, hintX, hintY, hintW, hintH);
+        smallFont.setColor(1f, 0.92f, 0.58f, 1f);
+        draw.drawCenteredInBoxWithSmallFont(batch, hint, hintX, hintY, hintW, hintH);
     }
 
     private void drawMapLoadError()
@@ -712,7 +762,11 @@ public class GameScreen implements Screen
         if (Gdx.input.isKeyJustPressed(Input.Keys.B)) {
             if (engine.moveBack()) {
                 float[] sp = room.loadCurrentRoom(true);
-                if (sp != null) { playerX = sp[0]; playerY = sp[1]; }
+                if (sp != null) {
+                    playerX = sp[0];
+                    playerY = sp[1];
+                    markRoomBanner();
+                }
                 actionMessage = "已回退至 " + engine.getCurrentRoom().getRoomId();
                 game.getAudio().play(Cue.DOOR);
             } else {
@@ -729,9 +783,10 @@ public class GameScreen implements Screen
             } else {
                 String itemId = itemManager.findNearbyItemId(playerX, playerY, PLAYER_W, PLAYER_H);
                 if (itemId != null) {
+                    String itemName = currentRoomItemName(itemId);
                     if (engine.takeItem(itemId)) {
                         itemManager.rebuildItemPlaceholders();
-                        actionMessage = "拾取了 " + itemId;
+                        actionMessage = "拾取了 " + itemName;
                         game.getAudio().play(Cue.PICKUP);
                         flash(1f, 0.85f, 0.35f, 0.14f);
                     } else {
@@ -746,6 +801,19 @@ public class GameScreen implements Screen
             actionMessage = "按 I 打开背包，选择物品后按 U 使用";
             game.getAudio().play(Cue.ERROR);
         }
+    }
+
+    private String currentRoomItemName(String itemId)
+    {
+        if (itemId == null || engine.getCurrentRoom() == null) {
+            return itemId;
+        }
+        for (Item item : engine.getCurrentRoom().getItems()) {
+            if (itemId.equals(item.getItemId())) {
+                return item.getName();
+            }
+        }
+        return itemId;
     }
 
     private void handlePauseInput()
@@ -835,6 +903,168 @@ public class GameScreen implements Screen
     {
         final GameScreen self = this;
         Gdx.app.postRunnable(self::dispose);
+    }
+
+    private void markRoomBanner()
+    {
+        if (engine.getCurrentRoom() == null) {
+            return;
+        }
+        roomBannerRoomId = engine.getCurrentRoom().getRoomId();
+        roomBannerTimer = 2.15f;
+    }
+
+    private void drawRoomAtmosphere()
+    {
+        if (room.getMap() == null || engine.getCurrentRoom() == null) {
+            return;
+        }
+
+        String roomId = engine.getCurrentRoom().getRoomId();
+        Color accent = roomAccent(roomId);
+        if (accent == null) {
+            return;
+        }
+
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        shapes.setProjectionMatrix(camera.getWorldCamera().combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+
+        for (int i = 0; i < 22; i++) {
+            float drift = (visualTimer * (7f + i % 5) + i * 13f) % 32f;
+            float x = ((i * 97f + roomId.length() * 29f)
+                % Math.max(1f, room.mapPixelWidth() - 24f)) + 8f;
+            float y = ((i * 53f + roomId.length() * 17f + drift)
+                % Math.max(1f, room.mapPixelHeight() - 48f)) + 24f;
+            float pulse = 0.42f + 0.28f * (float) Math.sin(visualTimer * 2.4f + i);
+            float size = (i % 3 == 0) ? 4f : 2f;
+            pixelRect(x, y, size, size, accent.r, accent.g, accent.b, pulse);
+        }
+
+        if ("teleport-alcove".equals(roomId)) {
+            float cx = room.mapPixelWidth() * 0.5f;
+            float cy = room.mapPixelHeight() * 0.52f;
+            for (int i = 0; i < 12; i++) {
+                float angle = visualTimer * 1.4f + i * 0.52f;
+                float radius = 28f + (i % 4) * 8f;
+                pixelRect(cx + (float)Math.cos(angle) * radius,
+                    cy + (float)Math.sin(angle) * radius, 5f, 5f,
+                    0.42f, 0.90f, 1f, 0.52f);
+            }
+        }
+
+        if ("forge".equals(roomId)) {
+            for (int i = 0; i < 10; i++) {
+                float x = room.mapPixelWidth() * 0.62f + i * 9f;
+                float y = room.mapPixelHeight() * 0.36f
+                    + ((visualTimer * 44f + i * 7f) % 58f);
+                pixelRect(x, y, 3f, 5f, 1f, 0.42f, 0.10f, 0.72f);
+            }
+        }
+
+        shapes.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    private Color roomAccent(String roomId)
+    {
+        if ("vault".equals(roomId) || "throne-hall".equals(roomId)) {
+            return ACCENT_GOLD;
+        }
+        if ("teleport-alcove".equals(roomId) || "hidden-shrine".equals(roomId)) {
+            return ACCENT_ARCANE;
+        }
+        if ("forge".equals(roomId) || "pub".equals(roomId)) {
+            return ACCENT_FIRE;
+        }
+        if ("garden".equals(roomId) || "outside".equals(roomId)) {
+            return ACCENT_GREEN;
+        }
+        if ("library".equals(roomId) || "theatre".equals(roomId)) {
+            return ACCENT_WARM;
+        }
+        return null;
+    }
+
+    private void drawRoomBanner(boolean interactionPromptVisible)
+    {
+        if (roomBannerTimer <= 0f || roomBannerRoomId == null || paused || inventory.isOpen()
+            || interactionPromptVisible || encounterUi.isMenuOpen() || dialogueUi.isActive()
+            || engine.isInCombat()) {
+            return;
+        }
+
+        float width = CameraController.DESIGN_W;
+        float height = CameraController.DESIGN_H;
+        float panelWidth = draw.grid(Math.min(440f, width - 96f));
+        float panelHeight = 54f;
+        float panelX = draw.grid((width - panelWidth) / 2f);
+        float panelY = draw.grid(height - TOP_BAR_HEIGHT - panelHeight - 18f);
+        float alpha = Math.min(1f, Math.min(roomBannerTimer * 1.8f,
+            (2.15f - roomBannerTimer) * 5f));
+        if (alpha <= 0.03f) {
+            return;
+        }
+
+        batch.setColor(1f, 1f, 1f, alpha);
+        uiSkin.drawButton(batch, panelX, panelY, panelWidth, panelHeight);
+        uiSkin.drawOrnamentLine(batch, panelX + 24f, panelY + 12f,
+            panelWidth - 48f, 8f);
+        batch.setColor(Color.WHITE);
+
+        font.setColor(1f, 0.96f, 0.82f, alpha);
+        draw.drawCentered(batch, roomLabel(roomBannerRoomId),
+            panelX + panelWidth / 2f, panelY + 40f);
+        smallFont.setColor(0.95f, 0.82f, 0.55f, alpha);
+        draw.drawCenteredWithSmallFont(batch, roomSubtitle(roomBannerRoomId),
+            panelX + panelWidth / 2f, panelY + 21f);
+        font.setColor(UI_LIGHT_TEXT);
+        smallFont.setColor(UI_DARK_TEXT);
+    }
+
+    private String roomLabel(String roomId)
+    {
+        switch (roomId) {
+            case "outside": return "黄昏广场";
+            case "theatre": return "旧讲堂";
+            case "pub": return "暖灯酒馆";
+            case "lab": return "冷光机房";
+            case "office": return "档案办公室";
+            case "library": return "尘封图书馆";
+            case "cellar": return "潮湿地窖";
+            case "vault": return "失落金库";
+            case "hidden-shrine": return "隐秘神龛";
+            case "garden": return "月下庭院";
+            case "guard-room": return "王座哨站";
+            case "armory": return "旧军械库";
+            case "forge": return "铁匠铺";
+            case "teleport-alcove": return "传送壁龛";
+            case "throne-hall": return "王座大厅";
+            default: return roomId;
+        }
+    }
+
+    private String roomSubtitle(String roomId)
+    {
+        switch (roomId) {
+            case "vault": return "宝石的微光照亮石砖";
+            case "hidden-shrine": return "空气里漂着低声回响";
+            case "teleport-alcove": return "空间边缘正在轻微颤动";
+            case "forge": return "火星从铁砧旁溅落";
+            case "guard-room": return "有人在前方守住道路";
+            case "throne-hall": return "Realm 的命运在这里收束";
+            case "garden": return "草叶在夜风里发亮";
+            case "library": return "书页味混着尘埃";
+            default: return "继续探索 Chronicle of the Lost Realms";
+        }
+    }
+
+    private void pixelRect(float x, float y, float width, float height,
+        float r, float g, float b, float a)
+    {
+        shapes.setColor(r, g, b, a);
+        shapes.rect(Math.round(x), Math.round(y),
+            Math.max(1f, Math.round(width)), Math.max(1f, Math.round(height)));
     }
 
     private void drawWorldMap(float delta)

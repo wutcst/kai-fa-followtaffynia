@@ -82,7 +82,7 @@ public final class WorldFactory
         // -- outside: 主门外广场 --
         Room outside = createRoom("outside", "outside the main entrance of the university");
         setSpawns(outside, 15,8, 15,3, 15,13, 27,8, 3,8);
-        outside.addItem(createItem("welcome-note", "note",
+        outside.addItem(createItem("welcome-note", "Welcome Note",
             "A crumpled welcome note.", 1, null));
 
         // -- theatre: 讲堂 --

@@ -153,12 +153,16 @@ public class UtCombatRenderer
     {
         float sx = boxX + ut.getSoulX() * boxW;
         float sy = boxY + ut.getSoulY() * boxH;
-        float sr = 7f;
+        float sr = 8f;
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         shapes.setColor(1f, 0.15f, 0.15f, 1f);
-        shapes.circle(sx, sy, sr, 14);
-        shapes.setColor(1f, 0.35f, 0.35f, 0.4f);
-        shapes.circle(sx, sy, sr + 2f, 14);
+        shapes.circle(sx - sr * 0.38f, sy + sr * 0.20f, sr * 0.52f, 12);
+        shapes.circle(sx + sr * 0.38f, sy + sr * 0.20f, sr * 0.52f, 12);
+        shapes.triangle(sx - sr * 0.92f, sy + sr * 0.1f,
+            sx + sr * 0.92f, sy + sr * 0.1f,
+            sx, sy - sr * 1.05f);
+        shapes.setColor(1f, 0.38f, 0.38f, 0.35f);
+        shapes.circle(sx, sy, sr + 4f, 14);
         shapes.end();
     }
 

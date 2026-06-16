@@ -614,7 +614,7 @@ public class GameEngine
                     "A half-empty mug of ale. The merchant collects these.",
                     0.1, "barter");
             case "welcome-note":
-                return new Item("welcome-note", "note",
+                return new Item("welcome-note", "Welcome Note",
                     "A crumpled welcome note. Worth something to the right person.",
                     0.1, "barter");
             case "crystal-shard":

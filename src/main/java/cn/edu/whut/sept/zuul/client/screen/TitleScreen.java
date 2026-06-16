@@ -16,6 +16,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 /**
  * 标题画面：输入玩家姓名并开始新游戏。
@@ -34,12 +35,14 @@ public class TitleScreen implements Screen
     private final SpriteBatch batch;
     private final BitmapFont font;
     private final BitmapFont smallFont;
+    private final ShapeRenderer shapes;
     private final GameUiSkin uiSkin;
     private final GlyphLayout layout;
     private final CameraController camera;
     private final InputAdapter inputAdapter;
     private String playerName;
     private String statusMessage;
+    private float visualTimer;
     private boolean screenChanged;
 
     public TitleScreen(RpgMain game, SpriteBatch batch)
@@ -48,6 +51,7 @@ public class TitleScreen implements Screen
         this.batch = batch;
         this.font = game.getFonts().copyDefault(1.2f);
         this.smallFont = game.getFonts().copyDefault(0.86f);
+        this.shapes = new ShapeRenderer();
         this.uiSkin = new GameUiSkin();
         this.layout = new GlyphLayout();
         this.camera = new CameraController();
@@ -109,6 +113,9 @@ public class TitleScreen implements Screen
 
         float width = CameraController.DESIGN_W;
         float height = CameraController.DESIGN_H;
+        visualTimer += delta;
+        drawTitleBackdrop(width, height);
+
         float panelWidth = grid(Math.min(544f, width - 96f));
         float panelHeight = grid(Math.min(368f, height - 88f));
         float panelX = grid((width - panelWidth) / 2f);
@@ -135,6 +142,72 @@ public class TitleScreen implements Screen
         drawCenteredSmall("直接输入文字修改姓名", centerX, panelY + 136f);
         drawCenteredSmall(statusMessage, centerX, panelY + 42f);
         batch.end();
+    }
+
+    private void drawTitleBackdrop(float width, float height)
+    {
+        shapes.setProjectionMatrix(camera.getUiCamera().combined);
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+
+        fill(0, 0, width, height, 0.05f, 0.06f, 0.11f, 1f);
+        fill(0, 0, width, height * 0.45f, 0.08f, 0.11f, 0.12f, 1f);
+        fill(0, 0, width, 88f, 0.11f, 0.12f, 0.1f, 1f);
+
+        float moonX = grid(width - 152f);
+        float moonY = grid(height - 118f);
+        fill(moonX, moonY, 48f, 48f, 0.91f, 0.78f, 0.43f, 1f);
+        fill(moonX + 8f, moonY + 8f, 32f, 32f, 1f, 0.9f, 0.55f, 1f);
+        fill(moonX + 32f, moonY + 6f, 12f, 12f, 0.05f, 0.06f, 0.11f, 1f);
+
+        for (int i = 0; i < 34; i++) {
+            float x = grid((i * 83f + 29f) % Math.max(1f, width));
+            float y = grid(height * 0.54f + (i * 37f) % Math.max(1f, height * 0.38f));
+            float sparkle = ((int)(visualTimer * 2f) + i) % 4 == 0 ? 4f : 2f;
+            fill(x, y, sparkle, sparkle, 0.86f, 0.78f, 0.53f, 0.85f);
+        }
+
+        float horizon = grid(height * 0.38f);
+        fill(0, horizon, width, 18f, 0.13f, 0.13f, 0.18f, 1f);
+        for (int i = 0; i < 14; i++) {
+            float towerW = 42f + (i % 3) * 14f;
+            float towerH = 64f + (i % 4) * 18f;
+            float x = grid(i * 84f - 24f);
+            fill(x, horizon, towerW, towerH, 0.10f, 0.11f, 0.16f, 1f);
+            fill(x + 8f, horizon + towerH, towerW - 16f, 14f, 0.08f, 0.09f, 0.13f, 1f);
+            fill(x + towerW / 2f - 4f, horizon + 18f, 8f, 12f, 0.9f, 0.54f, 0.18f, 0.7f);
+        }
+
+        float roadCenter = width / 2f;
+        fill(roadCenter - 150f, 0, 300f, 104f, 0.24f, 0.19f, 0.13f, 1f);
+        for (int row = 0; row < 7; row++) {
+            float y = row * 16f;
+            float offset = row % 2 == 0 ? 0f : 20f;
+            for (float x = roadCenter - 148f - offset; x < roadCenter + 150f; x += 40f) {
+                fill(x, y, 36f, 2f, 0.13f, 0.1f, 0.08f, 0.7f);
+                fill(x, y + 14f, 36f, 2f, 0.33f, 0.27f, 0.18f, 0.65f);
+            }
+        }
+
+        for (int side = -1; side <= 1; side += 2) {
+            float x = roadCenter + side * 204f;
+            float flame = 10f + (((int)(visualTimer * 8f) + side) & 1) * 4f;
+            fill(x, 76f, 8f, 76f, 0.18f, 0.11f, 0.06f, 1f);
+            fill(x - 12f, 144f, 32f, 12f, 0.28f, 0.15f, 0.07f, 1f);
+            fill(x - flame / 2f + 4f, 156f, flame, 24f, 0.95f, 0.52f, 0.12f, 0.9f);
+            fill(x - 4f, 162f, 12f, 16f, 1f, 0.86f, 0.34f, 1f);
+        }
+
+        shapes.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    private void fill(float x, float y, float width, float height,
+        float r, float g, float b, float a)
+    {
+        shapes.setColor(r, g, b, a);
+        shapes.rect(grid(x), grid(y),
+            Math.max(1f, Math.round(width)), Math.max(1f, Math.round(height)));
     }
 
     private void startGame()
@@ -234,6 +307,7 @@ public class TitleScreen implements Screen
     {
         font.dispose();
         smallFont.dispose();
+        shapes.dispose();
         uiSkin.dispose();
     }
 

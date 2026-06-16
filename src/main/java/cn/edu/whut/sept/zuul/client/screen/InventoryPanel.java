@@ -138,11 +138,11 @@ public class InventoryPanel
             if (!items.isEmpty()) {
                 Item picked = items.get(inventoryInspectIndex);
                 ItemUseCheck check = engine.checkItemUse(picked.getItemId());
-                smallFont.setColor(draw.getUiDarkText());
+                smallFont.setColor(draw.getUiLightText());
                 draw.drawClampedLine(batch, smallFont, "效果提示: " + check.hint, innerX,
                     panelY + 30f, rowW - 72f);
             } else {
-                smallFont.setColor(draw.getUiDarkText());
+                smallFont.setColor(draw.getUiLightText());
                 smallFont.draw(batch, "背包为空", innerX, panelY + 40f);
             }
             if (items.size() > visibleRows) {
@@ -155,7 +155,7 @@ public class InventoryPanel
         }
 
         if (items.isEmpty()) {
-            smallFont.setColor(draw.getUiDarkText());
+            smallFont.setColor(draw.getUiLightText());
             smallFont.draw(batch, "背包为空", innerX, panelY + panelHeight - 70f);
             return;
         }
@@ -174,10 +174,10 @@ public class InventoryPanel
         draw.drawMultilineClamped(batch, smallFont, "描述: " + item.getDescription(), innerX,
             topY - 58f, panelWidth - 56f, 18f, 4);
 
-        smallFont.setColor(draw.getUiDarkText());
+        smallFont.setColor(draw.getUiLightText());
         draw.drawClampedLine(batch, smallFont, "使用条件: " + check.hint, innerX, panelY + 44f,
             panelWidth - 64f);
-        smallFont.setColor(draw.getUiDarkText());
+        smallFont.setColor(draw.getUiLightText());
         smallFont.draw(batch, "Enter返回  Esc关闭", innerX, panelY + 24f);
     }
 

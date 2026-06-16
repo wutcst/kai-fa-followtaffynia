@@ -44,11 +44,12 @@ public class UndertaleCombatEngine implements CombatSystem
 {
     private static final int BASE_DAMAGE = 15;
     private static final int SWORD_BONUS = 8;
-    private static final float FIGHT_BAR_SPEED = 3.0f;
+    private static final float FIGHT_BAR_SPEED = 1.55f;
     private static final float FIGHT_BAR_MAX = 1.0f;
-    private static final float SOUL_SPEED = 2.5f;
+    private static final float SOUL_SPEED = 1.45f;
     private static final float SOUL_RADIUS = 0.04f;
-    private static final float ENEMY_TURN_DURATION = 4.0f;
+    private static final float ENEMY_TURN_DURATION = 5.2f;
+    private static final float BULLET_SPEED_MULTIPLIER = 0.72f;
 
     private final Player player;
     private final NpcCombatDef def;
@@ -374,10 +375,10 @@ public class UndertaleCombatEngine implements CombatSystem
         bullets.clear();
         int idx = rng.nextInt(4);
         switch (idx) {
-            case 0: activePattern = BulletPattern.wave(enemyTurnDuration, 16, 5, rng); break;
-            case 1: activePattern = BulletPattern.burst(enemyTurnDuration, 20, 5, rng); break;
-            case 2: activePattern = BulletPattern.randomScatter(enemyTurnDuration, 15, 5, rng); break;
-            default: activePattern = BulletPattern.spiral(enemyTurnDuration, 30, 5, rng); break;
+            case 0: activePattern = BulletPattern.wave(enemyTurnDuration, 10, 4, rng); break;
+            case 1: activePattern = BulletPattern.burst(enemyTurnDuration, 14, 4, rng); break;
+            case 2: activePattern = BulletPattern.randomScatter(enemyTurnDuration, 11, 4, rng); break;
+            default: activePattern = BulletPattern.spiral(enemyTurnDuration, 18, 4, rng); break;
         }
         phaseMessage = "躲避 " + def.displayName + " 的攻击！";
     }
@@ -387,7 +388,7 @@ public class UndertaleCombatEngine implements CombatSystem
         if (phase != UndertaleCombatPhase.ENEMY_TURN || battleLineActive) return;
 
         if (activePattern != null) activePattern.update(delta, bullets);
-        float bulletDelta = bulletSlow ? delta * 0.7f : delta;
+        float bulletDelta = delta * (bulletSlow ? 0.5f : BULLET_SPEED_MULTIPLIER);
         for (Bullet b : bullets) {
             if (b.alive) {
                 b.update(bulletDelta);
