@@ -238,4 +238,42 @@ class CombatEngineTest
         CombatSnapshot snap = c.processPlayerAction(CombatAction.USE_ITEM, "healing-herb");
         assertEquals(50, snap.playerHp, "使用治愈草药应回复20HP");
     }
+
+    @Test
+    void undertaleMenuSelectionWrapsAndConfirms()
+    {
+        UndertaleCombatEngine ut = new UndertaleCombatEngine(player, guardDef,
+            new CombatActionRegistry());
+        ut.dismissBattleLine();
+
+        assertEquals(0, ut.getMenuIndex());
+        ut.moveMenuSelection(-1);
+        assertEquals(3, ut.getMenuIndex());
+        ut.moveMenuSelection(1);
+        assertEquals(0, ut.getMenuIndex());
+
+        ut.confirmMenuSelection();
+        assertEquals(UndertaleCombatPhase.FIGHT_BAR, ut.getPhase());
+    }
+
+    @Test
+    void undertaleEnemyTurnEmitsWarnings()
+    {
+        UndertaleCombatEngine ut = new UndertaleCombatEngine(player, guardDef,
+            new CombatActionRegistry());
+        ut.dismissBattleLine();
+        ut.selectFight();
+        ut.pressFightBar();
+
+        boolean sawWarning = false;
+        for (int i = 0; i < 30; i++) {
+            ut.updateEnemyTurn(0.1f);
+            if (!ut.getWarnings().isEmpty()) {
+                sawWarning = true;
+                break;
+            }
+        }
+
+        assertTrue(sawWarning, "UT 敌人回合应显示弹幕预警线或预警框");
+    }
 }

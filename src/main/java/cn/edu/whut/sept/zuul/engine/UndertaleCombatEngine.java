@@ -46,10 +46,11 @@ public class UndertaleCombatEngine implements CombatSystem
     private static final int SWORD_BONUS = 8;
     private static final float FIGHT_BAR_SPEED = 1.55f;
     private static final float FIGHT_BAR_MAX = 1.0f;
-    private static final float SOUL_SPEED = 1.45f;
+    private static final float SOUL_SPEED = 0.78f;
     private static final float SOUL_RADIUS = 0.04f;
-    private static final float ENEMY_TURN_DURATION = 5.2f;
-    private static final float BULLET_SPEED_MULTIPLIER = 0.72f;
+    private static final float ENEMY_TURN_DURATION = 5.8f;
+    private static final float BULLET_SPEED_MULTIPLIER = 0.58f;
+    private static final int MENU_COUNT = 4;
 
     private final Player player;
     private final NpcCombatDef def;
@@ -80,10 +81,12 @@ public class UndertaleCombatEngine implements CombatSystem
     private boolean fightBarForward;
 
     private final List<Bullet> bullets;
+    private final List<WarningZone> warnings;
     private BulletPattern activePattern;
     private float enemyTurnTimer;
     private float enemyTurnDuration;
     private int hitsTaken;
+    private int menuIndex;
 
     private float soulX, soulY;
     private final List<String> log;
@@ -105,6 +108,7 @@ public class UndertaleCombatEngine implements CombatSystem
         this.rng = new Random();
         this.log = new ArrayList<>();
         this.bullets = new ArrayList<>();
+        this.warnings = new ArrayList<>();
         this.npcHp = def.maxHp;
         this.npcMaxHp = def.maxHp;
         this.phase = UndertaleCombatPhase.MENU;
@@ -158,8 +162,10 @@ public class UndertaleCombatEngine implements CombatSystem
     public float getSoulX() { return soulX; }
     public float getSoulY() { return soulY; }
     public float getFightBarPos() { return fightBarPos; }
+    public int getMenuIndex() { return menuIndex; }
     public float getEnemyTurnProgress() { return enemyTurnDuration > 0 ? enemyTurnTimer / enemyTurnDuration : 0f; }
     public List<Bullet> getBullets() { return Collections.unmodifiableList(bullets); }
+    public List<WarningZone> getWarnings() { return Collections.unmodifiableList(warnings); }
 
     /**
      * 关闭战斗台词画中画，根据触发来源决定下一阶段。
@@ -207,6 +213,36 @@ public class UndertaleCombatEngine implements CombatSystem
     }
 
     // ========== 菜单 ==========
+
+    public void moveMenuSelection(int dir)
+    {
+        if (phase != UndertaleCombatPhase.MENU || battleLineActive || dir == 0) return;
+        menuIndex = Math.floorMod(menuIndex + dir, MENU_COUNT);
+    }
+
+    public void confirmMenuSelection()
+    {
+        if (phase != UndertaleCombatPhase.MENU || battleLineActive) return;
+        switch (menuIndex) {
+            case 0:
+                selectFight();
+                break;
+            case 1:
+                String actId = def.actOptions.isEmpty()
+                    ? null : def.actOptions.keySet().iterator().next();
+                if (actId != null) selectAct(actId);
+                break;
+            case 2:
+                if (!player.getInventory().isEmpty())
+                    selectItem(player.getInventory().get(0).getItemId());
+                else
+                    showBattleLine("背包里没有可用物品。", "white", UndertaleCombatPhase.MENU);
+                break;
+            default:
+                selectMercy();
+                break;
+        }
+    }
 
     public void selectFight()
     {
@@ -373,6 +409,7 @@ public class UndertaleCombatEngine implements CombatSystem
         enemyTurnDuration = ENEMY_TURN_DURATION;
         hitsTaken = 0;
         bullets.clear();
+        warnings.clear();
         int idx = rng.nextInt(4);
         switch (idx) {
             case 0: activePattern = BulletPattern.wave(enemyTurnDuration, 10, 4, rng); break;
@@ -387,7 +424,12 @@ public class UndertaleCombatEngine implements CombatSystem
     {
         if (phase != UndertaleCombatPhase.ENEMY_TURN || battleLineActive) return;
 
-        if (activePattern != null) activePattern.update(delta, bullets);
+        if (activePattern != null) activePattern.update(delta, bullets, warnings);
+        for (WarningZone warning : warnings) {
+            warning.update(delta);
+        }
+        warnings.removeIf(w -> !w.isAlive());
+
         float bulletDelta = delta * (bulletSlow ? 0.5f : BULLET_SPEED_MULTIPLIER);
         for (Bullet b : bullets) {
             if (b.alive) {
@@ -412,7 +454,7 @@ public class UndertaleCombatEngine implements CombatSystem
 
     private void endEnemyTurn()
     {
-        bullets.clear(); activePattern = null;
+        bullets.clear(); warnings.clear(); activePattern = null;
         if (hitsTaken == 0) log.add("完美躲避！");
         if (player.isDead()) { phase = UndertaleCombatPhase.RESULT; phaseMessage = "你倒下了……"; }
         else { phase = UndertaleCombatPhase.MENU; phaseMessage = "你的回合。"; }

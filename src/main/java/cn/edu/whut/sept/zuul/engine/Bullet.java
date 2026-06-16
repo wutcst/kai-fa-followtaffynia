@@ -8,7 +8,10 @@ public class Bullet
 {
     public enum Shape { CIRCLE, RECT }
 
+    private static int nextVisualVariant;
+
     public final Shape shape;
+    public final int visualVariant;
     public float x, y;          // 归一化坐标
     public float radius;        // 圆形半径（归一化）
     public float width, height; // 矩形宽高（归一化）
@@ -46,6 +49,7 @@ public class Bullet
     private Bullet(Shape shape)
     {
         this.shape = shape;
+        this.visualVariant = nextVisualVariant++;
     }
 
     /** 每帧更新位置。超出战斗框即标记死亡。 */
