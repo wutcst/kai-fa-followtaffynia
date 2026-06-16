@@ -3,6 +3,7 @@ package cn.edu.whut.sept.zuul.client.screen;
 import cn.edu.whut.sept.zuul.client.RpgMain;
 import cn.edu.whut.sept.zuul.client.audio.GameAudio.Cue;
 import cn.edu.whut.sept.zuul.client.audio.GameAudio.Track;
+import cn.edu.whut.sept.zuul.client.render.NpcRenderer;
 import cn.edu.whut.sept.zuul.client.render.PlayerRenderer;
 import cn.edu.whut.sept.zuul.client.render.UtCombatRenderer;
 import cn.edu.whut.sept.zuul.client.ui.GameUiSkin;
@@ -80,6 +81,7 @@ public class GameScreen implements Screen
     private final UtCombatRenderer utRenderer;
     private final WorldMapRenderer worldMapRenderer;
     private boolean lastFrameInDialogueOrCombat;
+    private final NpcRenderer npcRenderer;
     private final PlayerRenderer playerRenderer;
     private final DialogueUi dialogueUi;
     private final EncounterUi encounterUi;
@@ -134,6 +136,9 @@ public class GameScreen implements Screen
         this.room = new RoomController(engine, batch, TILE, PLAYER_W, PLAYER_H,
             null, null, r -> Gdx.app.postRunnable(r));
         this.npcManager = new NpcPlaceholderManager((tx, ty) -> room.tileToWorldRect(tx, ty, 1, 1));
+        this.npcRenderer = new NpcRenderer("guard", "hermit", "merchant", "priest",
+            "follower", "scholar", "apprentice", "golem");
+        npcManager.setNpcRenderer(npcRenderer);
         this.itemManager = new ItemPlaceholderManager(engine, (tx, ty) -> room.tileToWorldRect(tx, ty, 1, 1));
         room.setManagers(npcManager, itemManager);
         this.movement = new PlayerMovementController(npcManager, TILE, PLAYER_W, PLAYER_H,
@@ -196,6 +201,7 @@ public class GameScreen implements Screen
         smallFont.dispose();
         if (playerRenderer != null) playerRenderer.dispose();
         if (utRenderer != null) utRenderer.dispose();
+        if (npcRenderer != null) npcRenderer.dispose();
         for (Texture tex : npcPortraits.values()) {
             if (tex != null) tex.dispose();
         }
@@ -271,6 +277,7 @@ public class GameScreen implements Screen
         playerRenderer.update(delta, movement.isMovingLastFrame(), movement.isDashing(),
             movement.isAttacking(),
             PlayerRenderer.FacingDirection.fromString(movement.getFacing()));
+        npcRenderer.update(delta);
 
         // world rendering
         camera.applyWorldViewport();
@@ -278,8 +285,10 @@ public class GameScreen implements Screen
         room.getMapRenderer().setView(camera.getWorldCamera());
         room.getMapRenderer().render();
         drawRoomAtmosphere();
-        shapes.setProjectionMatrix(camera.getWorldCamera().combined);
-        npcManager.drawNpcPlaceholders(shapes);
+        batch.setProjectionMatrix(camera.getWorldCamera().combined);
+        batch.begin();
+        npcManager.drawNpcPlaceholders(batch);
+        batch.end();
         shapes.setProjectionMatrix(camera.getWorldCamera().combined);
         itemManager.drawItemPlaceholders(shapes);
         interaction.drawPlayer(playerX, playerY);
