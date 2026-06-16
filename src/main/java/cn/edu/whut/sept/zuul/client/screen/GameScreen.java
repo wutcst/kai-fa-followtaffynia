@@ -18,12 +18,15 @@ import cn.edu.whut.sept.zuul.infra.SaveGameService;
 
 import java.util.logging.Logger;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -90,6 +93,7 @@ public class GameScreen implements Screen
     private float stepAccumulator;
     private float feedbackFlashTimer;
     private final Color feedbackFlashColor;
+    private final Map<String, Texture> npcPortraits;
 
     public GameScreen(RpgMain game, SpriteBatch batch, GameEngine engine)
     {
@@ -141,6 +145,8 @@ public class GameScreen implements Screen
         this.actionMessage = initialStatus;
         this.lastObservedHp = engine.getPlayer().getHp();
         this.feedbackFlashColor = new Color(1f, 1f, 1f, 0f);
+        this.npcPortraits = new HashMap<>();
+        loadNpcPortraits();
 
         movement.setFacing((savedFacing != null && !savedFacing.isEmpty()) ? savedFacing : "south");
 
@@ -179,6 +185,22 @@ public class GameScreen implements Screen
         uiSkin.dispose();
         smallFont.dispose();
         if (playerRenderer != null) playerRenderer.dispose();
+        for (Texture tex : npcPortraits.values()) {
+            if (tex != null) tex.dispose();
+        }
+    }
+
+    private void loadNpcPortraits()
+    {
+        String[] npcIds = {"guard", "hermit", "merchant"};
+        for (String npcId : npcIds) {
+            try {
+                Texture tex = new Texture(Gdx.files.internal("npc/" + npcId + "_head.png"));
+                npcPortraits.put(npcId, tex);
+            } catch (Exception e) {
+                LOG.warning("Failed to load portrait for " + npcId + ": " + e.getMessage());
+            }
+        }
     }
 
     // ==================== render ====================
@@ -415,8 +437,8 @@ public class GameScreen implements Screen
 
     // ========== 传统 RPG 对话窗口（底部 1/4 屏幕） ==========
 
-    private static final float DIALOG_PORTRAIT_W = 96f;
-    private static final float DIALOG_PORTRAIT_H = 96f;
+    private static final float DIALOG_PORTRAIT_W = 120f;
+    private static final float DIALOG_PORTRAIT_H = 120f;
 
     private void renderDialogueOverlay()
     {
@@ -453,15 +475,6 @@ public class GameScreen implements Screen
         float playerPx = boxX + boxW - DIALOG_PORTRAIT_W - 16f;
         float playerPy = npcPy;
 
-        // NPC 立绘：玩家选择时灰，NPC 说话时亮
-        shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(showingChoice ? 0.12f : 0.3f,
-                        showingChoice ? 0.12f : 0.3f,
-                        showingChoice ? 0.12f : 0.5f,
-                        showingChoice ? 0.6f : 1f);
-        shapes.rect(npcPx, npcPy, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
-        shapes.end();
-
         // 主角立绘：玩家选择时亮，NPC 说话时灰
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         shapes.setColor(showingChoice ? 0.4f : 0.12f,
@@ -471,9 +484,19 @@ public class GameScreen implements Screen
         shapes.rect(playerPx, playerPy, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
         shapes.end();
 
-        // 文字
+        // 文字和 NPC 头像
         batch.setProjectionMatrix(camera.getUiCamera().combined);
         batch.begin();
+
+        // NPC 头像
+        Texture npcTex = npcPortraits.get(d.getNpcId());
+        if (npcTex != null) {
+            Color c = batch.getColor();
+            float alpha = showingChoice ? 0.6f : 1f;
+            batch.setColor(1f, 1f, 1f, alpha);
+            batch.draw(npcTex, npcPx, npcPy, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
+            batch.setColor(c);
+        }
         float textX = npcPx + DIALOG_PORTRAIT_W + 16f;
         float textW = playerPx - textX - 16f;
 
