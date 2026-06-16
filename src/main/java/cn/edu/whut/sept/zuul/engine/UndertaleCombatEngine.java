@@ -420,8 +420,18 @@ public class UndertaleCombatEngine implements CombatSystem
 
     public void moveSoul(float dx, float dy)
     {
-        soulX = clamp(soulX + dx * SOUL_SPEED * 0.016f, SOUL_RADIUS, 1f - SOUL_RADIUS);
-        soulY = clamp(soulY + dy * SOUL_SPEED * 0.016f, SOUL_RADIUS, 1f - SOUL_RADIUS);
+        moveSoul(dx, dy, 0.016f);
+    }
+
+    public void moveSoul(float dx, float dy, float delta)
+    {
+        if (dx != 0f && dy != 0f) {
+            float inv = 0.70710677f;
+            dx *= inv;
+            dy *= inv;
+        }
+        soulX = clamp(soulX + dx * SOUL_SPEED * delta, SOUL_RADIUS, 1f - SOUL_RADIUS);
+        soulY = clamp(soulY + dy * SOUL_SPEED * delta, SOUL_RADIUS, 1f - SOUL_RADIUS);
     }
 
     private boolean hasItem(String itemId) { return player.getInventory().stream().anyMatch(i -> itemId.equals(i.getItemId())); }

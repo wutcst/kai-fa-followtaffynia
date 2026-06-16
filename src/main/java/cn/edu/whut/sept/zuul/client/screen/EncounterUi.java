@@ -193,7 +193,7 @@ public class EncounterUi
             if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) my = -1f;
             if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) mx = -1f;
             if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) mx = 1f;
-            ut.moveSoul(mx, my);
+            ut.moveSoul(mx, my, delta);
         }
 
         activeCombatSnapshot = ut.snapshot();

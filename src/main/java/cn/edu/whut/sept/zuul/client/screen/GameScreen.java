@@ -195,6 +195,7 @@ public class GameScreen implements Screen
         uiSkin.dispose();
         smallFont.dispose();
         if (playerRenderer != null) playerRenderer.dispose();
+        if (utRenderer != null) utRenderer.dispose();
         for (Texture tex : npcPortraits.values()) {
             if (tex != null) tex.dispose();
         }

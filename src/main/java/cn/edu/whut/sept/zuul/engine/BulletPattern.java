@@ -13,6 +13,7 @@ public abstract class BulletPattern
     protected final Random rng;
     protected float timer;
     protected final float duration;
+    protected float lastDelta;
 
     protected BulletPattern(float duration, Random rng)
     {
@@ -35,6 +36,7 @@ public abstract class BulletPattern
     /** 每帧调用，向列表追加新子弹。 */
     public void update(float delta, List<Bullet> bullets)
     {
+        lastDelta = delta;
         timer += delta;
         emit(bullets);
     }
@@ -56,7 +58,7 @@ public abstract class BulletPattern
             @Override
             protected void emit(List<Bullet> bullets)
             {
-                spawnTimer += 0.016f; // ~60fps step from update
+                spawnTimer += lastDelta;
                 while (spawnTimer >= interval && spawned < totalBullets) {
                     spawnTimer -= interval;
                     float y = (float) spawned / totalBullets;
@@ -80,7 +82,7 @@ public abstract class BulletPattern
             @Override
             protected void emit(List<Bullet> bullets)
             {
-                spawnTimer += 0.016f;
+                spawnTimer += lastDelta;
                 while (spawnTimer >= interval && spawned < totalBullets) {
                     spawnTimer -= interval;
                     double angle = (double) spawned / totalBullets * Math.PI * 2;
@@ -105,7 +107,7 @@ public abstract class BulletPattern
             @Override
             protected void emit(List<Bullet> bullets)
             {
-                spawnTimer += 0.016f;
+                spawnTimer += lastDelta;
                 while (spawnTimer >= interval && spawned < totalBullets) {
                     spawnTimer -= interval;
                     // 四个边随机选一个
@@ -136,7 +138,7 @@ public abstract class BulletPattern
             @Override
             protected void emit(List<Bullet> bullets)
             {
-                spawnTimer += 0.016f;
+                spawnTimer += lastDelta;
                 while (spawnTimer >= interval && spawned < totalBullets) {
                     spawnTimer -= interval;
                     double angle = (double) spawned / totalBullets * Math.PI * 4;
