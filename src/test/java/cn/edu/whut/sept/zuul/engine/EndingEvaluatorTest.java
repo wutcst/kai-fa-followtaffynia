@@ -8,22 +8,24 @@ import org.junit.jupiter.api.Test;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 三结局全路径测试。
+ * 四结局全路径测试。
  *
- * 结局公式：
- *   LIGHT:   光明印记 + 光之宝石 + 守卫勋章 + rep>=0 + !guardDead + !hermitDead
- *   SHADOW:  暗影之契 + (guardDead OR rep<0)
- *   NEUTRAL: 平衡之书 + 守卫勋章（不满足光明/暗影时）
- *   回退（无新物品）：旧版规则
+ * <pre>
+ * LIGHT:   光明印记 + 光之宝石 + 守卫勋章 + rep>=0 + !guardDead + !hermitDead
+ * SHADOW:  暗影之契 + (guardDead OR rep<0)
+ * NEUTRAL: 拒绝光暗 + 平衡之书 + 守卫勋章 + rep>=0 + 无人死亡
+ * FAKE:    其他所有情况 —— 王座无回应
+ * </pre>
  */
 class EndingEvaluatorTest
 {
     private EndingEvaluator evaluator;
     private Player player;
     private Set<String> defeatedNpcs;
+    private Set<String> playerFlags;
 
     @BeforeEach
     void setUp()
@@ -31,6 +33,7 @@ class EndingEvaluatorTest
         evaluator = new EndingEvaluator();
         player = new Player("测试者");
         defeatedNpcs = new HashSet<>();
+        playerFlags = new HashSet<>();
     }
 
     // ========== LIGHT ==========
@@ -40,25 +43,23 @@ class EndingEvaluatorTest
     {
         giveLightItems();
         player.setReputation(10);
-        assertEquals(EndingType.LIGHT, evaluator.evaluate(player, defeatedNpcs));
-    }
-
-    @Test
-    void lightEnding_reputationZeroIsOk()
-    {
-        giveLightItems();
-        player.setReputation(0);
-        assertEquals(EndingType.LIGHT, evaluator.evaluate(player, defeatedNpcs));
+        assertEquals(EndingType.LIGHT, eval());
     }
 
     @Test
     void lightEnding_missingLightMark()
     {
-        giveGem();
-        giveItem("guard-medal", "Guard Medal", 1, null);
+        giveGem(); giveMedal();
         player.setReputation(10);
-        // 有宝石+勋章但没有光明印记 → 旧版回退规则 → LIGHT
-        assertEquals(EndingType.LIGHT, evaluator.evaluate(player, defeatedNpcs));
+        assertEquals(EndingType.FAKE, eval(), "缺光明印记 → FAKE");
+    }
+
+    @Test
+    void lightEnding_missingGem()
+    {
+        giveItem("light-mark", 1); giveMedal();
+        player.setReputation(10);
+        assertEquals(EndingType.FAKE, eval(), "缺光之宝石 → FAKE");
     }
 
     // ========== SHADOW ==========
@@ -66,97 +67,115 @@ class EndingEvaluatorTest
     @Test
     void shadowEnding_guardKilled()
     {
-        giveItem("shadow-pact", "Shadow Pact", 1, null);
+        giveItem("shadow-pact", 1);
         defeatedNpcs.add("guard");
-        assertEquals(EndingType.SHADOW, evaluator.evaluate(player, defeatedNpcs));
+        assertEquals(EndingType.SHADOW, eval());
     }
 
     @Test
     void shadowEnding_negativeRep()
     {
-        giveItem("shadow-pact", "Shadow Pact", 1, null);
+        giveItem("shadow-pact", 1);
         player.setReputation(-5);
-        assertEquals(EndingType.SHADOW, evaluator.evaluate(player, defeatedNpcs));
+        assertEquals(EndingType.SHADOW, eval());
     }
 
     @Test
     void shadowEnding_noShadowPact()
     {
-        player.setReputation(-5);
         defeatedNpcs.add("guard");
-        // 无暗影之契 → 回退到旧版规则 → rep<0 → SHADOW
-        assertEquals(EndingType.SHADOW, evaluator.evaluate(player, defeatedNpcs));
+        player.setReputation(-5);
+        assertEquals(EndingType.FAKE, eval(), "无暗影之契 → FAKE");
     }
 
     // ========== NEUTRAL ==========
 
     @Test
-    void neutralEnding_balanceBook()
+    void neutralEnding_allConditionsMet()
     {
-        giveItem("balance-book", "Balance Book", 1, null);
-        giveItem("guard-medal", "Guard Medal", 1, null);
+        giveItem("balance-book", 1); giveMedal();
+        playerFlags.add("refused-priest");
+        playerFlags.add("refused-follower");
         player.setReputation(10);
-        assertEquals(EndingType.NEUTRAL, evaluator.evaluate(player, defeatedNpcs));
+        assertEquals(EndingType.NEUTRAL, eval());
     }
 
     @Test
-    void neutralEnding_missingMedal()
+    void neutralEnding_missingFlag()
     {
-        giveItem("balance-book", "Balance Book", 1, null);
+        giveItem("balance-book", 1); giveMedal();
         player.setReputation(10);
-        // 有平衡书但缺守卫勋章 → 回退到旧版 → !guardDead && !hermitDead → NEUTRAL
-        assertEquals(EndingType.NEUTRAL, evaluator.evaluate(player, defeatedNpcs));
+        // 有物品但没拒绝光暗 → FAKE
+        assertEquals(EndingType.FAKE, eval());
     }
 
-    // ========== 回退兼容（无新物品，旧版规则）==========
+    @Test
+    void neutralEnding_killedGuard()
+    {
+        giveItem("balance-book", 1); giveMedal();
+        playerFlags.add("refused-priest");
+        playerFlags.add("refused-follower");
+        player.setReputation(10);
+        defeatedNpcs.add("guard");
+        assertEquals(EndingType.FAKE, eval(), "杀守卫 → FAKE");
+    }
+
+    // ========== FAKE ==========
 
     @Test
-    void legacy_lightWithGemOnly()
+    void fakeEnding_emptyInventory()
+    {
+        player.setReputation(0);
+        assertEquals(EndingType.FAKE, eval());
+    }
+
+    @Test
+    void fakeEnding_justGem()
     {
         giveGem();
         player.setReputation(10);
-        assertEquals(EndingType.LIGHT, evaluator.evaluate(player, defeatedNpcs));
+        assertEquals(EndingType.FAKE, eval(), "仅宝石 → FAKE");
     }
 
     @Test
-    void legacy_shadowHermitKilled()
+    void fakeEnding_guardKilledNoShadowPact()
     {
-        defeatedNpcs.add("hermit");
-        assertEquals(EndingType.SHADOW, evaluator.evaluate(player, defeatedNpcs));
+        defeatedNpcs.add("guard");
+        assertEquals(EndingType.FAKE, eval());
     }
 
     @Test
-    void legacy_neutralNoGemNobodyDead()
-    {
-        player.setReputation(10);
-        assertEquals(EndingType.NEUTRAL, evaluator.evaluate(player, defeatedNpcs));
-    }
-
-    @Test
-    void nullDefeatedNpcs_doesNotCrash()
+    void nullFlagsAndDefeatedNpcs_doesNotCrash()
     {
         giveLightItems();
         player.setReputation(0);
-        assertEquals(EndingType.LIGHT, evaluator.evaluate(player, null));
+        assertEquals(EndingType.LIGHT, evaluator.evaluate(player, null, null));
+    }
+
+    // ========== canon / isCanon ==========
+
+    @Test
+    void canonEndings()
+    {
+        assertTrue(EndingType.LIGHT.isCanon());
+        assertTrue(EndingType.SHADOW.isCanon());
+        assertTrue(EndingType.NEUTRAL.isCanon());
+        assertFalse(EndingType.FAKE.isCanon());
+        assertFalse(EndingType.NONE.isCanon());
     }
 
     // ========== helpers ==========
 
-    private void giveLightItems()
+    private EndingType eval()
     {
-        giveGem();
-        giveItem("light-mark", "Light Mark", 1, null);
-        giveItem("guard-medal", "Guard Medal", 1, null);
+        return evaluator.evaluate(player, defeatedNpcs, playerFlags);
     }
 
-    private void giveGem()
+    private void giveLightItems() { giveGem(); giveItem("light-mark", 1); giveMedal(); }
+    private void giveMedal() { giveItem("guard-medal", 1); }
+    private void giveGem() { giveItem("gem-light", 5); }
+    private void giveItem(String id, double weight)
     {
-        player.getInventory().clear();
-        giveItem("gem-light", "Light Gem", 5, "light:full");
-    }
-
-    private void giveItem(String id, String name, double weight, String effect)
-    {
-        player.addItem(new Item(id, name, "test", weight, effect));
+        player.addItem(new Item(id, id, "test", weight, null));
     }
 }

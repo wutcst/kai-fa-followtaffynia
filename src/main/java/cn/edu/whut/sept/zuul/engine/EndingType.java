@@ -1,30 +1,33 @@
 package cn.edu.whut.sept.zuul.engine;
 
 /**
- * 进入王座大厅后触发的结局类型。
+ * 进入王座大厅后触碰王座触发的结局类型。
+ *
+ * <h3>四条结局</h3>
+ * <pre>
+ * LIGHT:  光明印记 + 光之宝石 + 守卫勋章 + 声望>=0 + 无人死亡
+ * SHADOW: 暗影之契 + (杀守卫 OR 声望<0)
+ * NEUTRAL: 拒绝光暗 + 平衡之书 + 守卫勋章
+ * FAKE:   未满足任何条件 —— 王座无回应，主角如蜉蝣消失
+ * </pre>
  */
 public enum EndingType
 {
-    /** 持有光明宝石，Realm 重归光明 */
-    LIGHT,
-    /** 声望低迷，暗影笼罩 */
-    SHADOW,
-    /** 拒绝光暗、清醒旁观的中立之路 */
-    NEUTRAL,
-    /** 尚未触发结局 */
+    /** 三条既定的真结局 */
+    LIGHT, SHADOW, NEUTRAL,
+    /** 假结局：未满足任何真结局条件 */
+    FAKE,
+    /** 尚未触发 */
     NONE;
 
     public String getTitle()
     {
         switch (this) {
-            case LIGHT:
-                return "光明结局";
-            case SHADOW:
-                return "暗影结局";
-            case NEUTRAL:
-                return "中立结局";
-            default:
-                return "";
+            case LIGHT:   return "光明结局";
+            case SHADOW:  return "暗影结局";
+            case NEUTRAL: return "中立结局";
+            case FAKE:    return "……";
+            default:      return "";
         }
     }
 
@@ -40,8 +43,18 @@ public enum EndingType
                     + "你已走过光明与暗影的两端，了解 Realm 的一切。\n"
                     + "你选择等待——等待那最终之人成为永恒的王，\n"
                     + "而你，将以编年史者之名，辅佐左右。";
+            case FAKE:
+                return "似蜉蝣于天地，如沧海之一粟。\n"
+                    + "王座没有任何回应。\n"
+                    + "你没有留下任何痕迹，没有人记得你来过。";
             default:
                 return "";
         }
+    }
+
+    /** 是否为三条真结局之一 */
+    public boolean isCanon()
+    {
+        return this == LIGHT || this == SHADOW || this == NEUTRAL;
     }
 }
