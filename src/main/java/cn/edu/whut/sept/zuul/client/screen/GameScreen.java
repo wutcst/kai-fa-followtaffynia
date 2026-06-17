@@ -1531,8 +1531,13 @@ public class GameScreen implements Screen
                 shapes.setColor(0f, 0f, 0f, 0.46f * alpha);
                 shapes.triangle(x, 0f, x + 92f, 0f, x + 42f, h * (0.35f + (i % 3) * 0.08f));
             }
+        } else if (ending == EndingType.FAKE) {
+            // 假结局：灰白褪色，王座如幻影
+            shapes.setColor(0.12f, 0.12f, 0.14f, 1f);
+            shapes.rect(0f, 0f, w, h);
+            shapes.setColor(0.68f, 0.66f, 0.62f, 0.08f * alpha);
+            shapes.rect(0f, 0f, w, h);
         } else {
-            shapes.setColor(0.045f, 0.048f, 0.055f, 1f);
             shapes.rect(0f, 0f, w, h);
             shapes.setColor(0.34f, 0.34f, 0.32f, 0.20f * alpha);
             shapes.rect(0f, h * 0.48f, w, h * 0.52f);
@@ -1559,6 +1564,11 @@ public class GameScreen implements Screen
             } else if (ending == EndingType.SHADOW) {
                 shapes.setColor(0.90f, 0.05f, 0.06f, (0.18f + (i % 3) * 0.07f) * alpha);
                 shapes.rect(x, y, size + 1f, size + 5f);
+            } else if (ending == EndingType.FAKE) {
+                // 假结局：灰烬粒子缓慢向上飘散
+                float ay = h - ((yBase + visualTimer * 6f) % h);
+                shapes.setColor(0.45f, 0.44f, 0.46f, (0.10f + (i % 5) * 0.04f) * alpha);
+                shapes.rect(x, ay, 3f, 3f);
             } else {
                 shapes.setColor(0.78f, 0.74f, 0.62f, (0.22f + (i % 4) * 0.05f) * alpha);
                 shapes.rect(x, y, 16f + (i % 3) * 4f, 10f);
@@ -1623,7 +1633,10 @@ public class GameScreen implements Screen
         if (ending == EndingType.SHADOW) {
             return new Color(1f, 0.18f, 0.12f, 1f);
         }
-        return new Color(0.82f, 0.82f, 0.76f, 1f);
+        if (ending == EndingType.NEUTRAL) {
+            return new Color(0.88f, 0.78f, 0.52f, 1f);
+        }
+        return new Color(0.52f, 0.52f, 0.54f, 1f);  // FAKE: 灰白色
     }
 
     private boolean isFailureMessage(String message)
