@@ -32,6 +32,9 @@ jobs:
       - name: Compile
         run: mvn compile -B
 
+      - name: Checkstyle
+        run: mvn checkstyle:check -B
+
       - name: Test
         run: mvn test -B
 
