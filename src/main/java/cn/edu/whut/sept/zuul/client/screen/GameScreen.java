@@ -996,7 +996,12 @@ public class GameScreen implements Screen
             if (engine.tryTriggerTeleport(pcx, pcy)) {
                 actionMessage = engine.getLastMessage();
                 game.getAudio().play(Cue.DOOR);
-                room.loadCurrentRoom(true);
+                float[] sp = room.loadCurrentRoom(true);
+                if (sp != null) {
+                    playerX = sp[0];
+                    playerY = sp[1];
+                    markRoomBanner();
+                }
                 return;
             }
 

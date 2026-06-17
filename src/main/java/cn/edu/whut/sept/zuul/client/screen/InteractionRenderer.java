@@ -92,6 +92,29 @@ public class InteractionRenderer
 
     private InteractionPrompt currentInteractionPrompt(float playerX, float playerY)
     {
+        float pcx = playerX + playerW / 2f;
+        float pcy = playerY + playerH / 2f;
+
+        // 王座（仅 throne-hall 房间）
+        float[] thronePos = engine.getRoomActItemPos("throne");
+        if (thronePos != null) {
+            float dx = pcx - thronePos[0];
+            float dy = pcy - thronePos[1];
+            if (dx * dx + dy * dy <= 6400f)
+                return new InteractionPrompt("E 坐上王座", UiDrawUtils.ICON_USE);
+        }
+
+        // 传送阵（仅 teleport 房间）
+        if (engine.getCurrentRoom().isTeleport()) {
+            float[] tpPos = engine.getRoomActItemPos("teleporter");
+            if (tpPos != null) {
+                float dx = pcx - tpPos[0];
+                float dy = pcy - tpPos[1];
+                if (dx * dx + dy * dy <= 6400f)
+                    return new InteractionPrompt("E 传送", UiDrawUtils.ICON_ROOM);
+            }
+        }
+
         if (npcManager.findNearbyNpcId(playerX, playerY, playerW, playerH) != null)
             return new InteractionPrompt("E 交谈", UiDrawUtils.ICON_LOOK);
 

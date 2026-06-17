@@ -365,6 +365,12 @@ public class GameEngine
         roomActItems.clear();
     }
 
+    /** 获取指定名称的 act-item 位置 [cx, cy]，无则返回 null */
+    public float[] getRoomActItemPos(String name)
+    {
+        return roomActItems.get(name);
+    }
+
     /**
      * 王座互动：玩家走到王座前按 E 触发结局判定。
      * 位置从 tmx objects 层 type=act-item name=throne 读取。

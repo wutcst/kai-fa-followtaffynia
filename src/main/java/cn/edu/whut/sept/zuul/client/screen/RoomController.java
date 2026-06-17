@@ -133,6 +133,7 @@ public class RoomController
                 engine.isLockUnlocked("guard-gate"));
             itemManager.buildItemPlaceholders(roomId);
             buildActItems(objectsLayer);
+            buildSpawns(objectsLayer);
             currentMapPath = tmxPath;
             exitCooldown = 0.3f;
             return snapAfterLoad ? resolveSpawn() : null;
@@ -285,6 +286,29 @@ public class RoomController
             float cx = ox + ow / 2f;
             float cy = oy + oh / 2f;
             engine.setRoomActItem(name, cx, cy);
+        }
+    }
+
+    /** 解析 tmx objects 层中 type=spawn 的对象，覆盖 WorldFactory 默认出生点 */
+    private void buildSpawns(MapObjects objectsLayer)
+    {
+        if (objectsLayer == null) return;
+        Room room = engine.getCurrentRoom();
+        if (room == null || room.getScene() == null) return;
+        for (MapObject obj : objectsLayer) {
+            if (!"spawn".equals(obj.getProperties().get("type", String.class)))
+                continue;
+            MapProperties props = obj.getProperties();
+            String dirStr = props.get("direction", String.class);
+            if (dirStr == null || dirStr.trim().isEmpty()) continue;
+            float ox = props.get("x", Float.class) == null ? 0f : props.get("x", Float.class);
+            float oy = props.get("y", Float.class) == null ? 0f : props.get("y", Float.class);
+            float ow = props.get("width", Float.class) == null ? 32f : props.get("width", Float.class);
+            float oh = props.get("height", Float.class) == null ? 32f : props.get("height", Float.class);
+            float tileX = (ox + ow / 2f) / tile;
+            float tileY = (oy + oh / 2f) / tile;
+            Direction dir = Direction.fromExitKey(dirStr.trim().toLowerCase());
+            room.getScene().addSpawn(dir, tileX, tileY);
         }
     }
 }

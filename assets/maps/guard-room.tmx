@@ -78,7 +78,7 @@
     <property name="direction" value="east"/>
    </properties>
   </object>
-  <object id="7" name="spawn-default" type="spawn" x="159.937" y="199.266" width="57.7625" height="63.4753">
+  <object id="7" name="spawn-default" type="spawn" x="283.27" y="195.266" width="57.7625" height="63.4753">
    <properties>
     <property name="direction" value="default"/>
    </properties>
