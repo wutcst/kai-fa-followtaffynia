@@ -56,6 +56,10 @@ class GameEngineDialogueQuestTest
     {
         engine.getPlayer().addItem(new Item("gem-light", "Light Gem",
             "test", 5, "light:full"));
+        engine.getPlayer().addItem(new Item("light-mark", "Light Mark",
+            "test", 1, null));
+        engine.getPlayer().addItem(new Item("guard-medal", "Guard Medal",
+            "test", 1, null));
         enterThroneHall();
         assertEquals(EndingType.LIGHT, engine.getCurrentEnding());
         assertTrue(engine.getQuestManager().isCompleted(QuestManager.QUEST_THRONE));
@@ -65,6 +69,8 @@ class GameEngineDialogueQuestTest
     void endingShadowWhenNegativeReputation()
     {
         engine.getPlayer().setReputation(-1);
+        engine.getPlayer().addItem(new Item("shadow-pact", "Shadow Pact",
+            "test", 1, null));
         enterThroneHall();
         assertEquals(EndingType.SHADOW, engine.getCurrentEnding());
     }
@@ -74,6 +80,8 @@ class GameEngineDialogueQuestTest
     {
         engine.getPlayer().addItem(new Item("gem-light", "Light Gem",
             "test", 5, "light:full"));
+        engine.getPlayer().addItem(new Item("shadow-pact", "Shadow Pact",
+            "test", 1, null));
         engine.getPlayer().setHp(200);
         engine.startCombat("guard");
         for (int i = 0; i < 30 && engine.isInCombat(); i++) {
