@@ -19,6 +19,7 @@ class GameEngineDialogueQuestTest
     void setUp()
     {
         engine = new GameEngine("测试者");
+        engine.setRoomActItem("throne", 480, 400);
     }
 
     @Test

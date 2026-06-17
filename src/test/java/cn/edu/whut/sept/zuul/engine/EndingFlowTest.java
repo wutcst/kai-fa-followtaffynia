@@ -26,6 +26,7 @@ class EndingFlowTest
         engine.unlockLock("guard-gate");
         engine.unlockLock("vault-door");
         engine.getPlayer().setHp(500);
+        engine.setRoomActItem("throne", 480, 400);
     }
 
     // ========== LIGHT ==========

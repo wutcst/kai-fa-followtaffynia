@@ -132,6 +132,7 @@ public class RoomController
                 engine.getDefeatedNpcs(),
                 engine.isLockUnlocked("guard-gate"));
             itemManager.buildItemPlaceholders(roomId);
+            buildActItems(objectsLayer);
             currentMapPath = tmxPath;
             exitCooldown = 0.3f;
             return snapAfterLoad ? resolveSpawn() : null;
@@ -264,5 +265,26 @@ public class RoomController
     {
         final RoomController self = this;
         deferDispose.accept(self::disposeMap);
+    }
+
+    /** 解析 tmx objects 层中 type=act-item 的对象，注册到 GameEngine */
+    private void buildActItems(MapObjects objectsLayer)
+    {
+        engine.clearRoomActItems();
+        if (objectsLayer == null) return;
+        for (MapObject obj : objectsLayer) {
+            if (!"act-item".equals(obj.getProperties().get("type", String.class)))
+                continue;
+            MapProperties props = obj.getProperties();
+            String name = props.get("name", String.class);
+            if (name == null || name.trim().isEmpty()) continue;
+            float ox = props.get("x", Float.class) == null ? 0f : props.get("x", Float.class);
+            float oy = props.get("y", Float.class) == null ? 0f : props.get("y", Float.class);
+            float ow = props.get("width", Float.class) == null ? 32f : props.get("width", Float.class);
+            float oh = props.get("height", Float.class) == null ? 32f : props.get("height", Float.class);
+            float cx = ox + ow / 2f;
+            float cy = oy + oh / 2f;
+            engine.setRoomActItem(name, cx, cy);
+        }
     }
 }

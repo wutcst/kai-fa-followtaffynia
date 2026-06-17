@@ -42,6 +42,8 @@ public class GameEngine
     private final Set<String> playerFlags;
     /** 非持久——进入vault时若golem未死则自动触发战斗 */
     private String pendingAutoCombat;
+    /** 当前房间的可交互对象（从 tmx objects 层 type=act-item 解析）——key=名称, value=[centerX, centerY] */
+    private final Map<String, float[]> roomActItems = new java.util.LinkedHashMap<>();
     private final UseEffectRegistry useEffectRegistry;
     private final CombatActionRegistry combatActionRegistry;
     private final QuestManager questManager;
@@ -351,33 +353,47 @@ public class GameEngine
         exploredRoomIds.add(currentRoom.getRoomId());
     }
 
+    /** RoomController 加载地图时调用，注册 tmx 中的 act-item 对象 */
+    public void setRoomActItem(String name, float cx, float cy)
+    {
+        roomActItems.put(name, new float[]{cx, cy});
+    }
+
+    /** 清空当前房间的交互对象 */
+    public void clearRoomActItems()
+    {
+        roomActItems.clear();
+    }
+
     /**
      * 王座互动：玩家走到王座前按 E 触发结局判定。
-     * @return true 如果成功触发结局（玩家在王座大厅且在范围内）
+     * 位置从 tmx objects 层 type=act-item name=throne 读取。
      */
     public boolean tryTriggerEnding(float playerCx, float playerCy)
     {
         if (!"throne-hall".equals(currentRoom.getRoomId())) return false;
-        // 王座中心在 (480, 400)，互动范围 80px
-        float dx = playerCx - 480f;
-        float dy = playerCy - 400f;
-        if (dx * dx + dy * dy > 6400f) return false; // 80^2
+        float[] pos = roomActItems.get("throne");
+        if (pos == null) return false;
+        float dx = playerCx - pos[0];
+        float dy = playerCy - pos[1];
+        if (dx * dx + dy * dy > 6400f) return false;
         currentEnding = endingEvaluator.evaluate(player, defeatedNpcs);
-        LOG.info("Ending triggered by player interaction: " + currentEnding);
+        LOG.info("Ending triggered by throne interaction: " + currentEnding);
         lastMessage = "你触碰了王座……";
         return true;
     }
 
     /**
      * 传送阵互动：玩家走到传送阵前按 E 触发传送。
-     * @return true 如果成功传送
+     * 位置从 tmx objects 层 type=act-item name=teleporter 读取。
      */
     public boolean tryTriggerTeleport(float playerCx, float playerCy)
     {
         if (!currentRoom.isTeleport()) return false;
-        // 传送阵中心在 (480, 240)，互动范围 80px
-        float dx = playerCx - 480f;
-        float dy = playerCy - 240f;
+        float[] pos = roomActItems.get("teleporter");
+        if (pos == null) return false;
+        float dx = playerCx - pos[0];
+        float dy = playerCy - pos[1];
         if (dx * dx + dy * dy > 6400f) return false;
         resolveTeleportIfNeeded();
         lastMessage = "你触碰了传送阵，被传送到了 " + currentRoom.getRoomId() + "！";
