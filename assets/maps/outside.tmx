@@ -63,22 +63,22 @@
   <image source="../map_bg/outside.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
-  <object id="1" name="spawn-north" type="spawn" x="469.586" y="82.4824" width="63.4753" height="36.1809">
+  <object id="1" name="spawn-north" type="spawn" x="453.586" y="87.1491" width="63.4753" height="36.1809">
    <properties>
     <property name="direction" value="north"/>
    </properties>
   </object>
-  <object id="2" name="spawn-south" type="spawn" x="466.33" y="358.274" width="60.3015" height="35.5462">
+  <object id="2" name="spawn-south" type="spawn" x="455.663" y="350.274" width="60.3015" height="35.5462">
    <properties>
     <property name="direction" value="south"/>
    </properties>
   </object>
-  <object id="3" name="spawn-west" type="spawn" x="76.8264" y="221.617" width="53.954" height="67.2838">
+  <object id="3" name="spawn-west" type="spawn" x="86.1597" y="196.284" width="53.954" height="67.2838">
    <properties>
     <property name="direction" value="west"/>
    </properties>
   </object>
-  <object id="4" name="spawn-east" type="spawn" x="864.737" y="199.172" width="31.4114" height="66.7288">
+  <object id="4" name="spawn-east" type="spawn" x="848.07" y="198.505" width="50.7447" height="70.0621">
    <properties>
     <property name="direction" value="east"/>
    </properties>

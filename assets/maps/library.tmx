@@ -63,17 +63,17 @@
   <image source="../map_bg/library.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
-  <object id="2" name="spawn-south" type="spawn" x="459.63" y="404.066" width="60.3015" height="35.5462">
+  <object id="2" name="spawn-north" type="spawn" x="458.297" y="110.733" width="60.3015" height="35.5462">
    <properties>
-    <property name="direction" value="south"/>
+    <property name="direction" value="north"/>
    </properties>
   </object>
-  <object id="3" name="spawn-west" type="spawn" x="190.139" y="221.51" width="53.954" height="67.2838">
+  <object id="3" name="spawn-west" type="spawn" x="69.4723" y="261.51" width="53.954" height="67.2838">
    <properties>
     <property name="direction" value="west"/>
    </properties>
   </object>
-  <object id="4" name="spawn-east" type="spawn" x="854.619" y="196.384" width="34.9114" height="79.9788">
+  <object id="4" name="spawn-east" type="spawn" x="819.952" y="196.384" width="58.2447" height="59.3121">
    <properties>
     <property name="direction" value="east"/>
    </properties>

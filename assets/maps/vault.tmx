@@ -63,9 +63,9 @@
   <image source="../map_bg/vault.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
-  <object id="4" name="spawn-east" type="spawn" x="849.486" y="192.256" width="34.9114" height="79.9788">
+  <object id="4" name="spawn-north" type="spawn" x="450.993" y="106.475" width="65.2305" height="54.3516" rotation="359.292">
    <properties>
-    <property name="direction" value="east"/>
+    <property name="direction" value="north"/>
    </properties>
   </object>
   <object id="7" name="spawn-default" type="spawn" x="315.27" y="221.933" width="57.7625" height="63.4753">

@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.glutils.HdpiMode;
 
 /**
  * LibGDX 桌面启动器（设计文档规定的 GUI 入口）。
+ * 
  */
 public class DesktopLauncher
 {

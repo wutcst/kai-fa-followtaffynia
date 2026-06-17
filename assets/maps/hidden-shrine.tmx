@@ -63,9 +63,9 @@
   <image source="../map_bg/hiddenshrine.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
-  <object id="1" name="spawn-north" type="spawn" x="502.724" y="59.032" width="63.4753" height="36.1809">
+  <object id="1" name="spawn-south" type="spawn" x="456.724" y="366.365" width="63.4753" height="36.1809">
    <properties>
-    <property name="direction" value="north"/>
+    <property name="direction" value="south"/>
    </properties>
   </object>
   <object id="7" name="spawn-default" type="spawn" x="269.092" y="266.674" width="57.7625" height="63.4753">

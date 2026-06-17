@@ -63,14 +63,14 @@
   <image source="../map_bg/theatre.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
-  <object id="1" name="spawn-north" type="spawn" x="485.586" y="96.4824" width="63.4753" height="36.1809">
+  <object id="1" name="spawn-east" type="spawn" x="826.919" y="211.149" width="53.4753" height="48.8476">
    <properties>
     <property name="direction" value="north"/>
    </properties>
   </object>
-  <object id="3" name="spawn-west" type="spawn" x="86.3264" y="276.117" width="53.954" height="67.2838">
+  <object id="3" name="spawn-south" type="spawn" x="448.993" y="354.784" width="66.6207" height="39.9505">
    <properties>
-    <property name="direction" value="west"/>
+    <property name="direction" value="south"/>
    </properties>
   </object>
   <object id="7" name="spawn-default" type="spawn" x="340.603" y="363.266" width="43.7625" height="41.4753">

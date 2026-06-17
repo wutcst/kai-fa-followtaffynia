@@ -63,9 +63,9 @@
   <image source="../map_bg/office.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
-  <object id="3" name="spawn-west" type="spawn" x="81.2484" y="243.745" width="53.954" height="67.2838">
+  <object id="3" name="spawn-east" type="spawn" x="765.248" y="211.078" width="53.954" height="67.2838">
    <properties>
-    <property name="direction" value="west"/>
+    <property name="direction" value="east"/>
    </properties>
   </object>
   <object id="7" name="spawn-default" type="spawn" x="605.04" y="218.1" width="57.7625" height="63.4753">

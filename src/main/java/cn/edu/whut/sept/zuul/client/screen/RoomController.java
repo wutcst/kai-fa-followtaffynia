@@ -190,10 +190,10 @@ public class RoomController
             Rectangle exitRect = new Rectangle(ox, oy, ow, oh);
             if (!playerRect.overlaps(exitRect)) continue;
             String target = props.get("targetRoomId", String.class);
-            Direction dir = resolveDirectionToTarget(target);
+            String dv = props.get("direction", String.class);
+            Direction dir = Direction.fromExitKey(dv);
             if (dir == Direction.DEFAULT) {
-                String dv = props.get("direction", String.class);
-                dir = Direction.fromExitKey(dv);
+                dir = resolveDirectionToTarget(target);
             }
             LOG.info("exit: trigger target=" + target + " dir=" + dir.toExitKey());
             if (dir != Direction.DEFAULT && engine.movePlayer(dir)) {
@@ -306,7 +306,9 @@ public class RoomController
             float ow = props.get("width", Float.class) == null ? 32f : props.get("width", Float.class);
             float oh = props.get("height", Float.class) == null ? 32f : props.get("height", Float.class);
             float tileX = (ox + ow / 2f) / tile;
-            float tileY = (oy + oh / 2f) / tile;
+            // LibGDX 已把 Tiled y（从上往下）转为世界坐标 y（从下往上），需转回 Tiled 行号
+            float tiledY = mapPixelHeight() - oy - oh;
+            float tileY = (tiledY + oh / 2f) / tile;
             Direction dir = Direction.fromExitKey(dirStr.trim().toLowerCase());
             room.getScene().addSpawn(dir, tileX, tileY);
         }

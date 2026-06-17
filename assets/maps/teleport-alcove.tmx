@@ -63,9 +63,9 @@
   <image source="../map_bg/teleport.jpg" width="1000" height="500"/>
  </imagelayer>
  <objectgroup id="3" name="objects">
-  <object id="4" name="spawn-east" type="spawn" x="858.82" y="233.589" width="34.9114" height="79.9788">
+  <object id="4" name="spawn-west" type="spawn" x="96.1533" y="216.922" width="58.2447" height="57.9788">
    <properties>
-    <property name="direction" value="east"/>
+    <property name="direction" value="west"/>
    </properties>
   </object>
   <object id="7" name="spawn-default" type="spawn" x="182.937" y="220.266" width="57.7625" height="63.4753">
