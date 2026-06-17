@@ -800,6 +800,21 @@ public class GameScreen implements Screen
             }
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+            // 优先检查王座互动和传送阵互动
+            float pcx = playerX + PLAYER_W / 2f;
+            float pcy = playerY + PLAYER_H / 2f;
+            if (engine.tryTriggerEnding(pcx, pcy)) {
+                actionMessage = engine.getLastMessage();
+                game.getAudio().play(Cue.MENU_OPEN);
+                return;
+            }
+            if (engine.tryTriggerTeleport(pcx, pcy)) {
+                actionMessage = engine.getLastMessage();
+                game.getAudio().play(Cue.DOOR);
+                room.loadCurrentRoom(true);
+                return;
+            }
+
             String npcId = npcManager.findNearbyNpcId(playerX, playerY, PLAYER_W, PLAYER_H);
             if (npcId != null) {
                 encounterUi.openMenu(npcId);

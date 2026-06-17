@@ -315,7 +315,6 @@ public class GameEngine
         this.pendingAutoCombat = null;
         currentRoom = next;
         String toIdBeforeTeleport = currentRoom.getRoomId();
-        resolveTeleportIfNeeded();
         exploredRoomIds.add(currentRoom.getRoomId());
         questManager.onRoomEntered(currentRoom, exploredRoomIds);
 
@@ -324,10 +323,8 @@ public class GameEngine
             pendingAutoCombat = "golem";
         }
 
-        if ("throne-hall".equals(currentRoom.getRoomId())) {
-            currentEnding = endingEvaluator.evaluate(player, defeatedNpcs);
-            LOG.info("Ending triggered: " + currentEnding);
-        }
+        // 结局不再自动触发——玩家需走到王座前按E互动
+        // 传送不再自动触发——玩家需走到传送阵前按E互动
 
         if (!toIdBeforeTeleport.equals(currentRoom.getRoomId())) {
             LOG.info("movePlayer: " + fromId + " --[" + direction.toExitKey() + "]--> "
@@ -352,6 +349,39 @@ public class GameEngine
         currentRoom = WorldFactory.randomRoomExcept(fromId);
         entryDirection = Direction.DEFAULT;
         exploredRoomIds.add(currentRoom.getRoomId());
+    }
+
+    /**
+     * 王座互动：玩家走到王座前按 E 触发结局判定。
+     * @return true 如果成功触发结局（玩家在王座大厅且在范围内）
+     */
+    public boolean tryTriggerEnding(float playerCx, float playerCy)
+    {
+        if (!"throne-hall".equals(currentRoom.getRoomId())) return false;
+        // 王座中心在 (480, 400)，互动范围 80px
+        float dx = playerCx - 480f;
+        float dy = playerCy - 400f;
+        if (dx * dx + dy * dy > 6400f) return false; // 80^2
+        currentEnding = endingEvaluator.evaluate(player, defeatedNpcs);
+        LOG.info("Ending triggered by player interaction: " + currentEnding);
+        lastMessage = "你触碰了王座……";
+        return true;
+    }
+
+    /**
+     * 传送阵互动：玩家走到传送阵前按 E 触发传送。
+     * @return true 如果成功传送
+     */
+    public boolean tryTriggerTeleport(float playerCx, float playerCy)
+    {
+        if (!currentRoom.isTeleport()) return false;
+        // 传送阵中心在 (480, 240)，互动范围 80px
+        float dx = playerCx - 480f;
+        float dy = playerCy - 240f;
+        if (dx * dx + dy * dy > 6400f) return false;
+        resolveTeleportIfNeeded();
+        lastMessage = "你触碰了传送阵，被传送到了 " + currentRoom.getRoomId() + "！";
+        return true;
     }
 
     public boolean takeItem(String itemId) { return itemManager.takeItem(itemId); }

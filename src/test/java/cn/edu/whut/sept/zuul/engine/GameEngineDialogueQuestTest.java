@@ -151,5 +151,6 @@ class GameEngineDialogueQuestTest
         engine.movePlayer(Direction.SOUTH);
         engine.movePlayer(Direction.SOUTH);
         assertEquals("throne-hall", engine.getCurrentRoom().getRoomId());
+        assertTrue(engine.tryTriggerEnding(480, 400), "触摸王座触发结局");
     }
 }

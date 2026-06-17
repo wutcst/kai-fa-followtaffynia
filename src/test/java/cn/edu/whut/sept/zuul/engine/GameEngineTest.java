@@ -123,7 +123,10 @@ class GameEngineTest
     void teleportRoom_movesAwayImmediately()
     {
         WorldFactory.getRoom("theatre").setTeleport(true);
-        assertTrue(engine.movePlayer(Direction.NORTH));  // outside → theatre → teleport
+        assertTrue(engine.movePlayer(Direction.NORTH));  // outside → theatre
+        assertEquals("theatre", engine.getCurrentRoom().getRoomId());
+        // 走到传送阵前按E互动
+        assertTrue(engine.tryTriggerTeleport(480, 240), "传送阵互动应成功");
         assertNotEquals("theatre", engine.getCurrentRoom().getRoomId());
     }
 
@@ -134,7 +137,9 @@ class GameEngineTest
         engine.movePlayer(Direction.NORTH);  // outside → theatre
         engine.movePlayer(Direction.EAST);   // theatre → library
         assertTrue(engine.movePlayer(Direction.EAST));  // library → teleport-alcove
-        // 进入传送房后应立即被传走
+        assertEquals("teleport-alcove", engine.getCurrentRoom().getRoomId());
+        // 走到传送阵前按E互动
+        assertTrue(engine.tryTriggerTeleport(480, 240), "传送阵互动应成功");
         assertNotEquals("teleport-alcove", engine.getCurrentRoom().getRoomId());
     }
 

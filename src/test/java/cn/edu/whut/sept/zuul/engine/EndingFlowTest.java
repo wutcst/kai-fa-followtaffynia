@@ -37,6 +37,7 @@ class EndingFlowTest
         returnToOutside();         // vault → lab → outside
 
         navigateToThroneHall();    // 经 guard-room → throne-hall
+        assertTrue(engine.tryTriggerEnding(480, 400), "触摸王座触发结局");
         assertEquals(EndingType.LIGHT, engine.getCurrentEnding(),
             "光明结局：有 gem、声望 OK、不杀人");
     }
@@ -51,6 +52,7 @@ class EndingFlowTest
         navigateToGuardRoom();
         killNpc("guard");
         navigateToThroneHallFromGuardRoom();
+        assertTrue(engine.tryTriggerEnding(480, 400), "触摸王座触发结局");
         assertEquals(EndingType.SHADOW, engine.getCurrentEnding(),
             "暗影结局：杀守卫 → 声望 -15 < 0");
     }
@@ -66,6 +68,7 @@ class EndingFlowTest
         killNpc("hermit");
         returnToOutsideFromShrine();
         navigateToThroneHall();
+        assertTrue(engine.tryTriggerEnding(480, 400), "触摸王座触发结局");
         assertEquals(EndingType.SHADOW, engine.getCurrentEnding(),
             "暗影结局：杀隐士 → hermitDead");
     }
@@ -78,6 +81,7 @@ class EndingFlowTest
     void neutralEnding_noGemNoKill()
     {
         navigateToThroneHall();
+        assertTrue(engine.tryTriggerEnding(480, 400), "触摸王座触发结局");
         assertEquals(EndingType.NEUTRAL, engine.getCurrentEnding(),
             "中立结局：无 gem、不杀人、声望 OK");
     }
@@ -92,6 +96,7 @@ class EndingFlowTest
         navigateToGuardRoom();
         killNpc("guard");
         navigateToThroneHallFromGuardRoom();
+        assertTrue(engine.tryTriggerEnding(480, 400), "触摸王座触发结局");
         assertEquals(EndingType.SHADOW, engine.getCurrentEnding(),
             "暗影结局：杀守卫 + 无 gem → guardDead && !hasGem");
     }
