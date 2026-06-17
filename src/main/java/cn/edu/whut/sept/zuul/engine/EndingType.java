@@ -9,7 +9,7 @@ public enum EndingType
     LIGHT,
     /** 声望低迷，暗影笼罩 */
     SHADOW,
-    /** 未集齐关键要素的中立结局 */
+    /** 拒绝光暗、清醒旁观的中立之路 */
     NEUTRAL,
     /** 尚未触发结局 */
     NONE;
@@ -36,7 +36,10 @@ public enum EndingType
             case SHADOW:
                 return "暗影吞噬了王座，编年史者在沉默中离去。";
             case NEUTRAL:
-                return "Realm 依旧破碎，但编年史者留下了未完成的篇章。";
+                return "你触碰了王座，却知晓它不属于你。\n"
+                    + "你已走过光明与暗影的两端，了解 Realm 的一切。\n"
+                    + "你选择等待——等待那最终之人成为永恒的王，\n"
+                    + "而你，将以编年史者之名，辅佐左右。";
             default:
                 return "";
         }
