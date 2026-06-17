@@ -69,6 +69,7 @@ public class GameScreen implements Screen
     private final BitmapFont smallFont;
     private final ShapeRenderer shapes;
     private final OrthographicCamera fullScreenCam;
+    private final GlyphLayout layout;
     private final GameUiSkin uiSkin;
 
     // sub-components
@@ -102,6 +103,15 @@ public class GameScreen implements Screen
     private float feedbackFlashTimer;
     private float visualTimer;
     private float roomBannerTimer;
+    private float gameOverAlpha;
+    private boolean gameOverAnnounced;
+    private float shopPopupTimer;
+    private int shopPopupJunkCount;
+    private int shopPopupHerbCount;
+    private String shopPopupTitle;
+    private String shopPopupMessage;
+    private String lastShopPopupSource;
+    private EndingType activeEndingScreen;
     private String roomBannerRoomId;
     private final Color feedbackFlashColor;
     private final Map<String, Texture> npcPortraits;
@@ -129,8 +139,9 @@ public class GameScreen implements Screen
         shapes.setAutoShapeType(true);
         this.fullScreenCam = new OrthographicCamera();
         this.uiSkin = new GameUiSkin();
-        GlyphLayout layout = new GlyphLayout();
-        this.draw = new UiDrawUtils(font, smallFont, uiSkin, layout, UI_LIGHT_TEXT, UI_DARK_TEXT, UI_GRID);
+        this.layout = new GlyphLayout();
+        this.draw = new UiDrawUtils(font, smallFont, uiSkin, this.layout,
+            UI_LIGHT_TEXT, UI_DARK_TEXT, UI_GRID);
         this.camera = new CameraController();
         // room must be assigned first so lambdas below can capture the field reference
         this.room = new RoomController(engine, batch, TILE, PLAYER_W, PLAYER_H,
@@ -211,12 +222,29 @@ public class GameScreen implements Screen
     {
         String[] npcIds = {"guard", "hermit", "merchant", "priest", "follower", "scholar", "apprentice"};
         for (String npcId : npcIds) {
-            try {
-                Texture tex = new Texture(Gdx.files.internal("npc/" + npcId + "_head.png"));
-                npcPortraits.put(npcId, tex);
-            } catch (Exception e) {
-                LOG.warning("Failed to load portrait for " + npcId + ": " + e.getMessage());
+            Texture tex = loadPortraitTexture(npcId, "_head.png");
+            if (tex == null) {
+                tex = loadPortraitTexture(npcId, ".png");
             }
+            if (tex != null) {
+                npcPortraits.put(npcId, tex);
+            }
+        }
+    }
+
+    private Texture loadPortraitTexture(String npcId, String suffix)
+    {
+        try {
+            Texture tex = new Texture(Gdx.files.internal("npc/" + npcId + suffix));
+            tex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+            if (tex.getWidth() < 16 || tex.getHeight() < 16) {
+                tex.dispose();
+                return null;
+            }
+            return tex;
+        } catch (Exception e) {
+            LOG.warning("Failed to load portrait for " + npcId + suffix + ": " + e.getMessage());
+            return null;
         }
     }
 
@@ -226,6 +254,11 @@ public class GameScreen implements Screen
     public void render(float delta)
     {
         visualTimer += delta;
+        if (engine.isPlayerDead()) {
+            drawGameOverScreen(delta);
+            return;
+        }
+
         EndingType ending = engine.getCurrentEnding();
         if (ending != null && ending != EndingType.NONE) {
             drawEndingScreen(ending, delta);
@@ -265,6 +298,7 @@ public class GameScreen implements Screen
         }
         updateDamageFeedback();
         updateFeedbackFlash(delta);
+        updateShopPopup(delta);
 
         Gdx.gl.glClearColor(0.06f, 0.06f, 0.1f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -358,6 +392,7 @@ public class GameScreen implements Screen
         batch.end();
 
         if (worldMapOpen) drawWorldMap(delta);
+        drawShopPopup();
         drawFeedbackFlash();
     }
 
@@ -515,7 +550,8 @@ public class GameScreen implements Screen
         float playerPx = boxX + boxW - DIALOG_PORTRAIT_W - 16f;
         float playerPy = npcPy;
 
-        // 玩家头像占位框
+        drawDialoguePortraitFrame(npcPx, npcPy, !showingChoice,
+            showingChoice ? DIALOG_NPC_DIM_FILL : DIALOG_NPC_ACTIVE_FILL);
         drawDialoguePortraitFrame(playerPx, playerPy, showingChoice,
             showingChoice ? DIALOG_PLAYER_ACTIVE_FILL : DIALOG_PLAYER_DIM_FILL);
 
@@ -642,6 +678,154 @@ public class GameScreen implements Screen
         batch.end();
     }
 
+    // ========== 商店交易弹窗 ==========
+
+    private void maybeShowShopPopup(String message)
+    {
+        if (message == null || message.equals(lastShopPopupSource)) {
+            return;
+        }
+        if (!message.contains("商人")
+            || (!message.contains("草药") && !message.contains("感兴趣"))) {
+            return;
+        }
+
+        lastShopPopupSource = message;
+        shopPopupJunkCount = extractFirstNumber(message);
+        shopPopupHerbCount = shopPopupJunkCount;
+        boolean traded = shopPopupJunkCount > 0;
+        shopPopupTitle = traded ? "交易完成" : "没有可交换的杂物";
+        shopPopupMessage = traded
+            ? "交出 " + shopPopupJunkCount + " 件杂物，获得 "
+                + shopPopupHerbCount + " 株草药"
+            : "商人翻遍了背包，没有找到他感兴趣的东西。";
+        shopPopupTimer = 4.2f;
+        game.getAudio().play(traded ? Cue.USE : Cue.ERROR);
+        flash(traded ? 0.45f : 1f, traded ? 0.9f : 0.22f,
+            traded ? 0.55f : 0.15f, traded ? 0.13f : 0.15f);
+    }
+
+    private int extractFirstNumber(String message)
+    {
+        int value = 0;
+        boolean reading = false;
+        for (int i = 0; i < message.length(); i++) {
+            char ch = message.charAt(i);
+            if (ch >= '0' && ch <= '9') {
+                reading = true;
+                value = value * 10 + (ch - '0');
+            } else if (reading) {
+                return value;
+            }
+        }
+        return value;
+    }
+
+    private void updateShopPopup(float delta)
+    {
+        if (shopPopupTimer > 0f) {
+            shopPopupTimer = Math.max(0f, shopPopupTimer - delta);
+        }
+    }
+
+    private void drawShopPopup()
+    {
+        if (shopPopupTimer <= 0f) {
+            return;
+        }
+
+        camera.applyFullViewport();
+        float alpha = shopPopupTimer < 0.45f ? shopPopupTimer / 0.45f : 1f;
+        float w = CameraController.DESIGN_W;
+        float h = CameraController.DESIGN_H;
+        float panelW = 536f;
+        float panelH = 178f;
+        float panelX = (w - panelW) / 2f;
+        float panelY = h * 0.56f - panelH / 2f;
+
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        shapes.setProjectionMatrix(camera.getUiCamera().combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0f, 0f, 0f, 0.38f * alpha);
+        shapes.rect(0f, 0f, w, h);
+        shapes.setColor(0.03f, 0.025f, 0.03f, 0.96f * alpha);
+        shapes.rect(panelX, panelY, panelW, panelH);
+        shapes.setColor(0.22f, 0.14f, 0.07f, 0.95f * alpha);
+        shapes.rect(panelX + 6f, panelY + 6f, panelW - 12f, panelH - 12f);
+        shapes.setColor(1f, 0.75f, 0.22f, 0.92f * alpha);
+        drawFrameFilled(panelX, panelY, panelW, panelH, 3f);
+        shapes.setColor(0.05f, 0.035f, 0.025f, 0.92f * alpha);
+        shapes.rect(panelX + 18f, panelY + 64f, panelW - 36f, 74f);
+
+        float iconY = panelY + 84f;
+        drawJunkIcon(panelX + 106f, iconY, alpha);
+        drawTradeArrow(panelX + panelW / 2f, iconY + 14f, alpha);
+        drawHerbIcon(panelX + panelW - 138f, iconY, alpha);
+        shapes.end();
+
+        batch.setProjectionMatrix(camera.getUiCamera().combined);
+        batch.begin();
+        font.setColor(1f, 0.9f, 0.55f, alpha);
+        layout.setText(font, shopPopupTitle);
+        font.draw(batch, shopPopupTitle, panelX + (panelW - layout.width) / 2f,
+            panelY + panelH - 28f);
+
+        smallFont.setColor(1f, 0.96f, 0.82f, alpha);
+        layout.setText(smallFont, shopPopupMessage);
+        smallFont.draw(batch, shopPopupMessage, panelX + (panelW - layout.width) / 2f,
+            panelY + 48f);
+
+        if (shopPopupJunkCount > 0) {
+            String left = "x" + shopPopupJunkCount;
+            String right = "x" + shopPopupHerbCount;
+            smallFont.setColor(1f, 0.88f, 0.48f, alpha);
+            smallFont.draw(batch, left, panelX + 142f, iconY + 18f);
+            smallFont.setColor(0.58f, 1f, 0.58f, alpha);
+            smallFont.draw(batch, right, panelX + panelW - 102f, iconY + 18f);
+        }
+        batch.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    private void drawJunkIcon(float x, float y, float alpha)
+    {
+        shapes.setColor(0.43f, 0.28f, 0.12f, alpha);
+        shapes.rect(x, y, 42f, 30f);
+        shapes.setColor(0.24f, 0.14f, 0.06f, alpha);
+        shapes.rect(x + 5f, y + 6f, 32f, 5f);
+        shapes.rect(x + 10f, y + 18f, 22f, 4f);
+        shapes.setColor(0.86f, 0.66f, 0.28f, alpha);
+        shapes.rect(x + 9f, y + 28f, 24f, 7f);
+        shapes.rect(x + 4f, y + 2f, 34f, 3f);
+    }
+
+    private void drawHerbIcon(float x, float y, float alpha)
+    {
+        shapes.setColor(0.10f, 0.34f, 0.12f, alpha);
+        shapes.rect(x + 18f, y + 4f, 6f, 34f);
+        shapes.setColor(0.34f, 0.86f, 0.28f, alpha);
+        shapes.circle(x + 14f, y + 26f, 12f, 14);
+        shapes.circle(x + 30f, y + 30f, 11f, 14);
+        shapes.circle(x + 24f, y + 18f, 13f, 14);
+        shapes.setColor(0.75f, 1f, 0.48f, 0.55f * alpha);
+        shapes.rect(x + 20f, y + 12f, 3f, 22f);
+    }
+
+    private void drawTradeArrow(float x, float y, float alpha)
+    {
+        shapes.setColor(1f, 0.75f, 0.22f, alpha);
+        shapes.rect(x - 34f, y - 3f, 58f, 6f);
+        shapes.triangle(x + 30f, y + 14f, x + 30f, y - 14f, x + 50f, y);
+    }
+
+    private void drawFrameFilled(float x, float y, float w, float h, float t)
+    {
+        shapes.rect(x, y, w, t);
+        shapes.rect(x, y + h - t, w, t);
+        shapes.rect(x, y, t, h);
+        shapes.rect(x + w - t, y, t, h);
+    }
+
     // ==================== input ====================
 
     private void handleInput(float delta)
@@ -700,6 +884,7 @@ public class GameScreen implements Screen
                 actionMessage = sb.toString();
                 if (!actionMessage.equals(before)) {
                     game.getAudio().play(Cue.CLICK);
+                    maybeShowShopPopup(engine.getLastMessage());
                 }
                 // 对话结束 → 自动触发战斗
                 String autoCombat = dialogueUi.getPendingCombatNpcId();
@@ -1187,44 +1372,134 @@ public class GameScreen implements Screen
         Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
-    // ========== 结局画面 ==========
+    // ========== 死亡 / 结局画面 ==========
 
     private float endingAlpha = 0f;
     private static final float ENDING_FADE_SPEED = 0.6f;
 
+    private void drawGameOverScreen(float delta)
+    {
+        if (!gameOverAnnounced) {
+            gameOverAnnounced = true;
+            game.getAudio().stopMusic();
+            game.getAudio().play(Cue.HIT);
+        }
+        gameOverAlpha = Math.min(1f, gameOverAlpha + delta * 1.25f);
+
+        camera.applyFullViewport();
+        float w = CameraController.DESIGN_W;
+        float h = CameraController.DESIGN_H;
+        Gdx.gl.glClearColor(0.015f, 0.01f, 0.015f, 1f);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        shapes.setProjectionMatrix(camera.getUiCamera().combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(0.015f, 0.01f, 0.015f, 1f);
+        shapes.rect(0f, 0f, w, h);
+        shapes.setColor(0.24f, 0.02f, 0.025f, 0.42f * gameOverAlpha);
+        shapes.rect(0f, 0f, w, h);
+        for (int i = 0; i < 36; i++) {
+            float x = (i * 91f + visualTimer * 12f) % w;
+            float y = (i * 53f + visualTimer * 18f) % h;
+            float size = 2f + (i % 4) * 2f;
+            shapes.setColor(0.85f, 0.04f, 0.03f, (0.18f + (i % 3) * 0.06f) * gameOverAlpha);
+            shapes.rect(x, y, size, size);
+        }
+
+        float cx = w / 2f;
+        float heartY = h * 0.68f;
+        drawBrokenHeart(cx, heartY, 38f, gameOverAlpha);
+        drawFlatline(cx, h * 0.50f, gameOverAlpha);
+
+        float panelW = 560f;
+        float panelH = 206f;
+        float panelX = (w - panelW) / 2f;
+        float panelY = h * 0.20f;
+        shapes.setColor(0f, 0f, 0f, 0.70f * gameOverAlpha);
+        shapes.rect(panelX, panelY, panelW, panelH);
+        shapes.setColor(0.74f, 0.06f, 0.05f, 0.84f * gameOverAlpha);
+        drawFrameFilled(panelX, panelY, panelW, panelH, 3f);
+        shapes.end();
+
+        batch.setProjectionMatrix(camera.getUiCamera().combined);
+        batch.begin();
+        font.setColor(1f, 0.16f, 0.12f, gameOverAlpha);
+        layout.setText(font, "你倒下了");
+        font.draw(batch, "你倒下了", cx - layout.width / 2f, panelY + panelH - 42f);
+
+        smallFont.setColor(0.9f, 0.82f, 0.78f, gameOverAlpha);
+        String body = "失落 Realm 吞没了最后一页。";
+        layout.setText(smallFont, body);
+        smallFont.draw(batch, body, cx - layout.width / 2f, panelY + panelH - 82f);
+
+        String hint = SaveGameService.hasSave()
+            ? "F9 / L 读档    T 返回标题"
+            : "暂无存档    T 返回标题";
+        smallFont.setColor(1f, 0.74f, 0.32f, gameOverAlpha);
+        layout.setText(smallFont, hint);
+        smallFont.draw(batch, hint, cx - layout.width / 2f, panelY + 66f);
+        if (actionMessage != null && actionMessage.startsWith("读档失败")) {
+            smallFont.setColor(1f, 0.42f, 0.36f, gameOverAlpha);
+            layout.setText(smallFont, actionMessage);
+            smallFont.draw(batch, actionMessage, cx - layout.width / 2f, panelY + 34f);
+        }
+        batch.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F9)
+            || Gdx.input.isKeyJustPressed(Input.Keys.L)) {
+            loadGame();
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
+            game.getAudio().play(Cue.CLICK);
+            switchToTitle();
+        }
+    }
+
     private void drawEndingScreen(EndingType ending, float delta)
     {
+        if (activeEndingScreen != ending) {
+            activeEndingScreen = ending;
+            endingAlpha = 0f;
+            game.getAudio().stopMusic();
+            game.getAudio().play(Cue.MENU_OPEN);
+        }
         endingAlpha = Math.min(1f, endingAlpha + ENDING_FADE_SPEED * delta);
 
-        Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
+        Gdx.gl.glClearColor(0.01f, 0.01f, 0.015f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         camera.applyFullViewport();
-        batch.setProjectionMatrix(camera.getUiCamera().combined);
-        Gdx.gl.glEnable(GL20.GL_BLEND);
-        batch.begin();
-
         float w = CameraController.DESIGN_W;
         float h = CameraController.DESIGN_H;
         float cx = w / 2f;
 
-        // 结局标题
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        shapes.setProjectionMatrix(camera.getUiCamera().combined);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        drawEndingBackdrop(ending, w, h, endingAlpha);
+        drawEndingParticles(ending, w, h, endingAlpha);
+        drawThroneSilhouette(ending, w, h, endingAlpha);
+        shapes.end();
+
+        batch.setProjectionMatrix(camera.getUiCamera().combined);
+        batch.begin();
+
         String title = ending.getTitle();
         GlyphLayout gl = new GlyphLayout(font, title);
-        font.setColor(1f, 1f, 1f, endingAlpha);
-        font.draw(batch, title, cx - gl.width / 2f, h * 0.45f);
+        Color titleColor = endingTitleColor(ending);
+        font.setColor(titleColor.r, titleColor.g, titleColor.b, endingAlpha);
+        font.draw(batch, title, cx - gl.width / 2f, h * 0.36f);
 
-        // 结局描述
         String desc = ending.getDescription();
-        gl.setText(smallFont, desc);
-        smallFont.setColor(0.8f, 0.8f, 0.8f, endingAlpha);
-        smallFont.draw(batch, desc, cx - gl.width / 2f, h * 0.55f);
+        smallFont.setColor(0.92f, 0.88f, 0.78f, endingAlpha);
+        smallFont.draw(batch, desc, cx - 330f, h * 0.48f, 660f,
+            com.badlogic.gdx.utils.Align.center, true);
 
-        // 按 T 返回标题
         String hint = "按 T 返回标题";
         gl.setText(smallFont, hint);
-        smallFont.setColor(1f, 1f, 1f, 0.6f * endingAlpha);
-        smallFont.draw(batch, hint, cx - gl.width / 2f, h * 0.68f);
+        smallFont.setColor(1f, 0.9f, 0.58f, 0.72f * endingAlpha);
+        smallFont.draw(batch, hint, cx - gl.width / 2f, h * 0.84f);
 
         batch.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
@@ -1232,6 +1507,123 @@ public class GameScreen implements Screen
         if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
             switchToTitle();
         }
+    }
+
+    private void drawEndingBackdrop(EndingType ending, float w, float h, float alpha)
+    {
+        if (ending == EndingType.LIGHT) {
+            shapes.setColor(0.08f, 0.07f, 0.05f, 1f);
+            shapes.rect(0f, 0f, w, h);
+            shapes.setColor(0.95f, 0.68f, 0.18f, 0.24f * alpha);
+            shapes.rect(0f, h * 0.50f, w, h * 0.50f);
+            for (int i = 0; i < 9; i++) {
+                float beamX = i * w / 8f - 18f;
+                shapes.setColor(1f, 0.86f, 0.34f, (0.07f + i % 2 * 0.05f) * alpha);
+                shapes.rect(beamX, 0f, 36f, h);
+            }
+        } else if (ending == EndingType.SHADOW) {
+            shapes.setColor(0.015f, 0.01f, 0.018f, 1f);
+            shapes.rect(0f, 0f, w, h);
+            shapes.setColor(0.42f, 0.02f, 0.04f, 0.36f * alpha);
+            shapes.rect(0f, 0f, w, h);
+            for (int i = 0; i < 10; i++) {
+                float x = i * 108f - 40f;
+                shapes.setColor(0f, 0f, 0f, 0.46f * alpha);
+                shapes.triangle(x, 0f, x + 92f, 0f, x + 42f, h * (0.35f + (i % 3) * 0.08f));
+            }
+        } else {
+            shapes.setColor(0.045f, 0.048f, 0.055f, 1f);
+            shapes.rect(0f, 0f, w, h);
+            shapes.setColor(0.34f, 0.34f, 0.32f, 0.20f * alpha);
+            shapes.rect(0f, h * 0.48f, w, h * 0.52f);
+            for (int i = 0; i < 12; i++) {
+                float x = i * 86f;
+                shapes.setColor(0.11f, 0.12f, 0.13f, 0.72f * alpha);
+                shapes.rect(x, h * 0.10f, 42f, h * 0.42f);
+            }
+        }
+    }
+
+    private void drawEndingParticles(EndingType ending, float w, float h, float alpha)
+    {
+        for (int i = 0; i < 72; i++) {
+            float x = (i * 79f + visualTimer * (ending == EndingType.SHADOW ? 9f : 18f)) % w;
+            float yBase = (i * 43f) % h;
+            float y = ending == EndingType.SHADOW
+                ? h - ((yBase + visualTimer * 34f) % h)
+                : (yBase + visualTimer * (ending == EndingType.NEUTRAL ? 22f : 14f)) % h;
+            float size = 2f + (i % 4);
+            if (ending == EndingType.LIGHT) {
+                shapes.setColor(1f, 0.82f, 0.24f, (0.30f + (i % 3) * 0.09f) * alpha);
+                shapes.rect(x, y, size, size);
+            } else if (ending == EndingType.SHADOW) {
+                shapes.setColor(0.90f, 0.05f, 0.06f, (0.18f + (i % 3) * 0.07f) * alpha);
+                shapes.rect(x, y, size + 1f, size + 5f);
+            } else {
+                shapes.setColor(0.78f, 0.74f, 0.62f, (0.22f + (i % 4) * 0.05f) * alpha);
+                shapes.rect(x, y, 16f + (i % 3) * 4f, 10f);
+                shapes.setColor(0.32f, 0.31f, 0.28f, 0.24f * alpha);
+                shapes.rect(x + 3f, y + 5f, 10f, 1f);
+            }
+        }
+    }
+
+    private void drawThroneSilhouette(EndingType ending, float w, float h, float alpha)
+    {
+        float cx = w / 2f;
+        float baseY = h * 0.13f;
+        float throneW = 176f;
+        Color glow = endingTitleColor(ending);
+        shapes.setColor(glow.r, glow.g, glow.b, 0.14f * alpha);
+        shapes.circle(cx, baseY + 132f, 176f, 30);
+        shapes.setColor(0.02f, 0.018f, 0.02f, 0.88f * alpha);
+        shapes.rect(cx - throneW / 2f, baseY, throneW, 138f);
+        shapes.rect(cx - throneW * 0.34f, baseY + 126f, throneW * 0.68f, 92f);
+        shapes.rect(cx - throneW * 0.52f, baseY + 18f, 34f, 92f);
+        shapes.rect(cx + throneW * 0.33f, baseY + 18f, 34f, 92f);
+        shapes.triangle(cx - 62f, baseY + 218f, cx, baseY + 258f, cx + 62f, baseY + 218f);
+        shapes.setColor(glow.r, glow.g, glow.b, 0.48f * alpha);
+        drawFrameFilled(cx - throneW / 2f, baseY, throneW, 138f, 3f);
+    }
+
+    private void drawBrokenHeart(float x, float y, float r, float alpha)
+    {
+        shapes.setColor(0f, 0f, 0f, 0.70f * alpha);
+        shapes.circle(x - r * 0.42f, y + r * 0.20f, r * 0.56f, 16);
+        shapes.circle(x + r * 0.42f, y + r * 0.20f, r * 0.56f, 16);
+        shapes.triangle(x - r, y + r * 0.1f, x + r, y + r * 0.1f, x, y - r * 1.15f);
+        shapes.setColor(0.94f, 0.04f, 0.04f, alpha);
+        shapes.circle(x - r * 0.42f, y + r * 0.20f, r * 0.48f, 16);
+        shapes.circle(x + r * 0.42f, y + r * 0.20f, r * 0.48f, 16);
+        shapes.triangle(x - r * 0.88f, y + r * 0.08f,
+            x + r * 0.88f, y + r * 0.08f, x, y - r);
+        shapes.setColor(0.02f, 0.01f, 0.015f, alpha);
+        shapes.rect(x - 3f, y - r * 0.66f, 6f, r * 1.55f);
+        shapes.rect(x + 8f, y - r * 0.30f, 6f, r * 0.58f);
+    }
+
+    private void drawFlatline(float x, float y, float alpha)
+    {
+        shapes.setColor(1f, 0.10f, 0.08f, 0.74f * alpha);
+        shapes.rect(x - 210f, y, 96f, 4f);
+        shapes.rect(x - 112f, y, 32f, 4f);
+        shapes.rect(x - 82f, y, 4f, 36f);
+        shapes.rect(x - 82f, y + 32f, 36f, 4f);
+        shapes.rect(x - 46f, y - 24f, 4f, 60f);
+        shapes.rect(x - 46f, y - 24f, 36f, 4f);
+        shapes.rect(x - 10f, y - 24f, 4f, 28f);
+        shapes.rect(x - 6f, y, 216f, 4f);
+    }
+
+    private Color endingTitleColor(EndingType ending)
+    {
+        if (ending == EndingType.LIGHT) {
+            return new Color(1f, 0.84f, 0.24f, 1f);
+        }
+        if (ending == EndingType.SHADOW) {
+            return new Color(1f, 0.18f, 0.12f, 1f);
+        }
+        return new Color(0.82f, 0.82f, 0.76f, 1f);
     }
 
     private boolean isFailureMessage(String message)
