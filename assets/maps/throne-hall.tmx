@@ -75,6 +75,7 @@
   </object>
   <object id="13" x="459.467" y="314.329" width="57.0958" height="82.142">
    <properties>
+    <property name="name" value="throne"/>
     <property name="type" value="act-item"/>
    </properties>
   </object>
