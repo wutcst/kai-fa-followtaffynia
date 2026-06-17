@@ -377,7 +377,7 @@ public class GameEngine
         float dx = playerCx - pos[0];
         float dy = playerCy - pos[1];
         if (dx * dx + dy * dy > 6400f) return false;
-        currentEnding = endingEvaluator.evaluate(player, defeatedNpcs);
+        currentEnding = endingEvaluator.evaluate(player, defeatedNpcs, playerFlags);
         LOG.info("Ending triggered by throne interaction: " + currentEnding);
         lastMessage = "你触碰了王座……";
         return true;

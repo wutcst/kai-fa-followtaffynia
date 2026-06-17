@@ -87,9 +87,31 @@ class EndingFlowTest
     {
         giveItem("balance-book");
         giveItem("guard-medal");
+        engine.setFlag("refused-priest");
+        engine.setFlag("refused-follower");
         navigateToThroneHall();
         assertTrue(engine.tryTriggerEnding(480, 400), "触摸王座触发结局");
         assertEquals(EndingType.NEUTRAL, engine.getCurrentEnding());
+    }
+
+    // ========== FAKE ==========
+
+    @Test
+    void fakeEnding_emptyPlayer()
+    {
+        navigateToThroneHall();
+        assertTrue(engine.tryTriggerEnding(480, 400), "触摸王座触发结局");
+        assertEquals(EndingType.FAKE, engine.getCurrentEnding(), "什么都没干 → FAKE");
+    }
+
+    @Test
+    void fakeEnding_justKilledGuard()
+    {
+        navigateToGuardRoom();
+        killNpc("guard");
+        navigateToThroneHallFromGuardRoom();
+        assertTrue(engine.tryTriggerEnding(480, 400), "触摸王座触发结局");
+        assertEquals(EndingType.FAKE, engine.getCurrentEnding(), "杀了守卫但无暗影之契 → FAKE");
     }
 
     // ========== 导航工具 ==========

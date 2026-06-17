@@ -5,18 +5,22 @@ import cn.edu.whut.sept.zuul.domain.Player;
 import java.util.Set;
 
 /**
- * 根据玩家状态与 NPC 命运判定三结局（光明 / 暗影 / 中立）。
+ * 根据玩家状态与 NPC 命运判定四结局。
  *
- * <h3>判定规则</h3>
+ * <h3>真结局（必须满足严格条件）</h3>
  * <pre>
- * LIGHT:  光明印记 + 光明宝石 + 守卫勋章 + 声望>=0 + 守卫未死 + 隐士未死
- * SHADOW: 暗影之契 + (守卫死 OR 声望<0)
- * NEUTRAL: 平衡之书 + 守卫勋章（不满足光明/暗影时触发）
+ * LIGHT:   光明印记 + 光之宝石 + 守卫勋章 + 声望>=0 + 守卫未死 + 隐士未死
+ * SHADOW:  暗影之契 + (守卫死 OR 声望<0)
+ * NEUTRAL: 拒绝祭司 + 拒绝信徒 + 平衡之书 + 守卫勋章 + 声望>=0
  * </pre>
+ *
+ * <h3>假结局（兜底）</h3>
+ * 未满足任何真结局条件 → FAKE —— 王座无回应，主角如蜉蝣消失。
  */
 public final class EndingEvaluator
 {
-    public EndingType evaluate(Player player, Set<String> defeatedNpcs)
+    public EndingType evaluate(Player player, Set<String> defeatedNpcs,
+                                Set<String> playerFlags)
     {
         boolean hasLightMark = hasItem(player, "light-mark");
         boolean hasGem = hasItem(player, "gem-light");
@@ -28,36 +32,28 @@ public final class EndingEvaluator
         boolean guardDead = defeatedNpcs != null && defeatedNpcs.contains("guard");
         boolean hermitDead = defeatedNpcs != null && defeatedNpcs.contains("hermit");
 
-        // 光明结局：光明印记 + 光之宝石 + 守卫勋章 + 声望OK + 无人死亡
+        // 光明结局：三步缺一不可
         if (hasLightMark && hasGem && hasGuardMedal
             && reputation >= 0 && !guardDead && !hermitDead) {
             return EndingType.LIGHT;
         }
 
-        // 暗影结局：暗影之契 + (杀守卫 OR 声望为负)
+        // 暗影结局：拥抱暗影，以力破门
         if (hasShadowPact && (guardDead || reputation < 0)) {
             return EndingType.SHADOW;
         }
 
-        // 中立结局：平衡之书 + 守卫勋章
-        if (hasBalanceBook && hasGuardMedal) {
+        // 中立结局：拒绝光暗两条邀请，走第三条路
+        boolean refusedPriest = playerFlags != null && playerFlags.contains("refused-priest");
+        boolean refusedFollower = playerFlags != null && playerFlags.contains("refused-follower");
+        if (hasBalanceBook && hasGuardMedal
+            && refusedPriest && refusedFollower
+            && reputation >= 0 && !guardDead && !hermitDead) {
             return EndingType.NEUTRAL;
         }
 
-        // 回退：旧版兼容逻辑（无新物品时按旧规则判定）
-        boolean hasAnyNewItem = hasLightMark || hasShadowPact || hasBalanceBook;
-        if (!hasAnyNewItem) {
-            if (hasGem && reputation >= 0 && !guardDead && !hermitDead) {
-                return EndingType.LIGHT;
-            }
-            if (reputation < 0 || hermitDead || (guardDead && !hasGem)) {
-                return EndingType.SHADOW;
-            }
-            if (!guardDead && !hermitDead) {
-                return EndingType.NEUTRAL;
-            }
-        }
-        return EndingType.NEUTRAL;
+        // 不满足任何真结局 → 假结局
+        return EndingType.FAKE;
     }
 
     private static boolean hasItem(Player player, String itemId)
