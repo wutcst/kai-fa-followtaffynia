@@ -220,7 +220,7 @@ public class GameScreen implements Screen
 
     private void loadNpcPortraits()
     {
-        String[] npcIds = {"guard", "hermit", "merchant", "priest", "follower", "scholar", "apprentice"};
+        String[] npcIds = {"guard", "hermit", "merchant", "priest", "follower", "scholar", "apprentice", "golem"};
         for (String npcId : npcIds) {
             Texture tex = loadPortraitTexture(npcId, "_head.png");
             if (tex == null) {
