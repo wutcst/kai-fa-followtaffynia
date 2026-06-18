@@ -79,8 +79,8 @@ public class NpcPlaceholderManager
             if (!npcRenderer.hasNpc(npc.npcId)) continue;
 
             Rectangle b = npc.bounds;
-            int rw = npcRenderer.getRenderW();
-            int rh = npcRenderer.getRenderH();
+            int rw = npcRenderer.getRenderW(npc.npcId);
+            int rh = npcRenderer.getRenderH(npc.npcId);
 
             // 水平居中，脚底对齐 bounds 底部（b.y）
             float drawX = b.x + b.width / 2f - rw / 2f;

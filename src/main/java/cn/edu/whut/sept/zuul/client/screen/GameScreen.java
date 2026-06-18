@@ -115,6 +115,7 @@ public class GameScreen implements Screen
     private String roomBannerRoomId;
     private final Color feedbackFlashColor;
     private final Map<String, Texture> npcPortraits;
+    private Texture playerPortrait;
 
     public GameScreen(RpgMain game, SpriteBatch batch, GameEngine engine)
     {
@@ -172,6 +173,7 @@ public class GameScreen implements Screen
         this.feedbackFlashColor = new Color(1f, 1f, 1f, 0f);
         this.npcPortraits = new HashMap<>();
         loadNpcPortraits();
+        this.playerPortrait = loadPlayerPortrait();
 
         movement.setFacing((savedFacing != null && !savedFacing.isEmpty()) ? savedFacing : "south");
 
@@ -216,6 +218,7 @@ public class GameScreen implements Screen
         for (Texture tex : npcPortraits.values()) {
             if (tex != null) tex.dispose();
         }
+        if (playerPortrait != null) playerPortrait.dispose();
     }
 
     private void loadNpcPortraits()
@@ -244,6 +247,18 @@ public class GameScreen implements Screen
             return tex;
         } catch (Exception e) {
             LOG.warning("Failed to load portrait for " + npcId + suffix + ": " + e.getMessage());
+            return null;
+        }
+    }
+
+    private Texture loadPlayerPortrait()
+    {
+        try {
+            Texture tex = new Texture(Gdx.files.internal("role/me_head.png"));
+            tex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+            return tex;
+        } catch (Exception e) {
+            LOG.warning("Failed to load player portrait: " + e.getMessage());
             return null;
         }
     }
@@ -568,6 +583,16 @@ public class GameScreen implements Screen
             batch.draw(npcTex, npcPx, npcPy, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
             batch.setColor(c);
         }
+
+        // 玩家头像
+        if (playerPortrait != null) {
+            Color c = batch.getColor();
+            float alpha = showingChoice ? 1f : 0.6f;
+            batch.setColor(1f, 1f, 1f, alpha);
+            batch.draw(playerPortrait, playerPx, playerPy, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
+            batch.setColor(c);
+        }
+
         float textX = npcPx + DIALOG_PORTRAIT_W + 16f;
         float textW = playerPx - textX - 16f;
 

@@ -22,39 +22,64 @@ public class NpcRenderer implements Disposable
 
     private final Map<String, Animation<TextureRegion>> anims = new HashMap<>();
     private final Map<String, Texture> textures = new HashMap<>();
+    private final Map<String, Integer> renderWidths = new HashMap<>();
+    private final Map<String, Integer> renderHeights = new HashMap<>();
     private float stateTime;
-    private int frameW, frameH;
-    private int renderW, renderH;
 
     public NpcRenderer(String... npcIds)
     {
         for (String npcId : npcIds) {
             load(npcId);
         }
-        renderW = Math.round(frameW * SCALE);
-        renderH = Math.round(frameH * SCALE);
     }
 
     private void load(String npcId)
     {
         try {
-            String path = "npc/" + npcId + ".png";
-            Texture tex = new Texture(Gdx.files.internal(path));
-            tex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-            textures.put(npcId, tex);
+            if ("apprentice".equals(npcId)) {
+                loadFrames(npcId, 6);
+            } else {
+                String path = "npc/" + npcId + ".png";
+                Texture tex = new Texture(Gdx.files.internal(path));
+                tex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+                textures.put(npcId, tex);
 
-            int fw = tex.getWidth() / FRAME_COLS;
-            int fh = tex.getHeight() / FRAME_ROWS;
-            frameW = fw;
-            frameH = fh;
+                int fw = tex.getWidth() / FRAME_COLS;
+                int fh = tex.getHeight() / FRAME_ROWS;
 
-            TextureRegion[][] split = TextureRegion.split(tex, fw, fh);
-            Animation<TextureRegion> anim = new Animation<>(FRAME_DURATION, split[0]);
-            anim.setPlayMode(Animation.PlayMode.LOOP);
-            anims.put(npcId, anim);
+                renderWidths.put(npcId, Math.round(fw * SCALE));
+                renderHeights.put(npcId, Math.round(fh * SCALE));
+
+                TextureRegion[][] split = TextureRegion.split(tex, fw, fh);
+                Animation<TextureRegion> anim = new Animation<>(FRAME_DURATION, split[0]);
+                anim.setPlayMode(Animation.PlayMode.LOOP);
+                anims.put(npcId, anim);
+            }
         } catch (Exception e) {
             System.err.println("[NpcRenderer] Failed to load: " + npcId + " - " + e.getMessage());
         }
+    }
+
+    /** 从独立帧图片加载动画（如 apprentice1.png ~ apprentice6.png） */
+    private void loadFrames(String npcId, int frameCount)
+    {
+        TextureRegion[] frames = new TextureRegion[frameCount];
+        for (int i = 0; i < frameCount; i++) {
+            String path = "npc/" + npcId + (i + 1) + ".png";
+            Texture tex = new Texture(Gdx.files.internal(path));
+            tex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+            textures.put(npcId + "_" + i, tex);
+            frames[i] = new TextureRegion(tex);
+        }
+        int fw = frames[0].getTexture().getWidth();
+        int fh = frames[0].getTexture().getHeight();
+
+        renderWidths.put(npcId, Math.round(fw * SCALE));
+        renderHeights.put(npcId, Math.round(fh * SCALE));
+
+        Animation<TextureRegion> anim = new Animation<>(FRAME_DURATION, frames);
+        anim.setPlayMode(Animation.PlayMode.LOOP);
+        anims.put(npcId, anim);
     }
 
     public void update(float delta)
@@ -67,8 +92,17 @@ public class NpcRenderer implements Disposable
         return anims.containsKey(npcId);
     }
 
-    public int getRenderW() { return renderW; }
-    public int getRenderH() { return renderH; }
+    public int getRenderW(String npcId)
+    {
+        Integer w = renderWidths.get(npcId);
+        return w != null ? w : 0;
+    }
+
+    public int getRenderH(String npcId)
+    {
+        Integer h = renderHeights.get(npcId);
+        return h != null ? h : 0;
+    }
 
     /**
      * 按 SCALE 缩放后的尺寸绘制当前动画帧。
@@ -78,7 +112,9 @@ public class NpcRenderer implements Disposable
         Animation<TextureRegion> anim = anims.get(npcId);
         if (anim == null) return;
         TextureRegion frame = anim.getKeyFrame(stateTime);
-        batch.draw(frame, x, y, renderW, renderH);
+        int rw = getRenderW(npcId);
+        int rh = getRenderH(npcId);
+        batch.draw(frame, x, y, rw, rh);
     }
 
     @Override
@@ -89,5 +125,7 @@ public class NpcRenderer implements Disposable
         }
         textures.clear();
         anims.clear();
+        renderWidths.clear();
+        renderHeights.clear();
     }
 }
