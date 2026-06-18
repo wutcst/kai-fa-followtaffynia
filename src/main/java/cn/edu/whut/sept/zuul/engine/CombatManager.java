@@ -127,15 +127,18 @@ public class CombatManager
     }
 
     /** MERCY/认输结束战斗时为 true */
+    private boolean lastWasSpared;
+
     public boolean wasSpared()
     {
-        return activeCombat != null && activeCombat.wasSpared();
+        return lastWasSpared;
     }
 
     public void applyCombatOutcome()
     {
         if (activeCombat == null) return;
         CombatOutcome oc = activeCombat.getOutcome();
+        lastWasSpared = activeCombat.wasSpared();  // 在 clearCombat 前保存
         if (oc == CombatOutcome.VICTORY) {
             lastDef = activeCombat.getDef();
             applyCombatVictory(lastDef);

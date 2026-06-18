@@ -31,7 +31,8 @@
   },
   "onDefeat": {
     "reputation": 5,
-    "markDefeated": true
+    "markDefeated": true,
+    "noMercy": true
   },
   "actOptions": {
     "check": "金库魔像 HP: 70  ATK: 15\n一尊巨大的石像，眼睛燃烧着古老的光。"

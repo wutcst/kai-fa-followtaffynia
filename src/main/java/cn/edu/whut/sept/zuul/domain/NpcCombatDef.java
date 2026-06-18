@@ -28,6 +28,9 @@ public final class NpcCombatDef
     /** 战斗台词：key=start|hp50|hp10|mercy1|mercy2 → "color: text" */
     public final Map<String, BattleLine> battleLines;
 
+    /** 不可饶恕的 NPC（如魔像）：MERCY 选项灰掉 */
+    public final boolean noMercy;
+
     public NpcCombatDef(String npcId, String displayName, int maxHp, String defaultState,
         Map<String, Double> stateHpThresholds,
         Map<String, List<String>> stateSkills,
@@ -37,7 +40,7 @@ public final class NpcCombatDef
         this(npcId, displayName, maxHp, defaultState,
             stateHpThresholds, stateSkills, skills,
             onDefeatReputation, onDefeatUnlock, onDefeatMarkDefeated,
-            null, Collections.emptyMap(), Collections.emptyMap());
+            null, Collections.emptyMap(), Collections.emptyMap(), false);
     }
 
     public NpcCombatDef(String npcId, String displayName, int maxHp, String defaultState,
@@ -47,7 +50,8 @@ public final class NpcCombatDef
         int onDefeatReputation, String onDefeatUnlock, boolean onDefeatMarkDefeated,
         String onDefeatSpawnItem,
         Map<String, String> actOptions,
-        Map<String, BattleLine> battleLines)
+        Map<String, BattleLine> battleLines,
+        boolean noMercy)
     {
         this.npcId = npcId;
         this.displayName = displayName;
@@ -62,6 +66,7 @@ public final class NpcCombatDef
         this.onDefeatSpawnItem = onDefeatSpawnItem;
         this.actOptions = Collections.unmodifiableMap(new HashMap<>(actOptions));
         this.battleLines = Collections.unmodifiableMap(new HashMap<>(battleLines));
+        this.noMercy = noMercy;
     }
 
     public static final class NpcSkill

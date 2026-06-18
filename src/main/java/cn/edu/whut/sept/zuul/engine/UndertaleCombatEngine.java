@@ -177,6 +177,7 @@ public class UndertaleCombatEngine implements CombatSystem
     public String getCurrentBattleLineColor() { return currentBattleLineColor; }
     public boolean isMercyExited() { return mercyExited; }
     @Override public boolean wasSpared() { return spared || mercyExited; }
+    public boolean canMercy() { return !def.noMercy; }
     public int getNpcHp() { return npcHp; }
     public int getNpcMaxHp() { return npcMaxHp; }
     /** 上一次节奏攻击是否命中"完美"区间（供客户端打击感特效判定）。 */

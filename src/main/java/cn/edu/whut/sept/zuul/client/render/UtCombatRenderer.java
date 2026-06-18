@@ -25,6 +25,7 @@ public class UtCombatRenderer implements Disposable
     private static final Color PANEL = new Color(0.02f, 0.018f, 0.028f, 0.98f);
     private static final Color BUTTON = new Color(0.03f, 0.026f, 0.035f, 0.96f);
     private static final Color BUTTON_ACTIVE = new Color(0.13f, 0.10f, 0.035f, 0.96f);
+    private static final Color DISABLED_BUTTON = new Color(0.05f, 0.05f, 0.06f, 0.85f);
 
     // ===== 像素风调色板（程序化像素精灵）=====
     private static final Color PX_OUTLINE = new Color(0.03f, 0.025f, 0.05f, 1f);
@@ -178,7 +179,9 @@ public class UtCombatRenderer implements Disposable
         if (phase == UndertaleCombatPhase.MENU) {
             for (int i = 0; i < 4; i++) {
                 float bx = boxX + i * (btnW + btnGap);
-                drawUtButtonBg(bx, btnY, btnW, btnH, i == ut.getMenuIndex());
+                boolean selected = (i == ut.getMenuIndex());
+                boolean disabled = (i == 3 && !ut.canMercy());  // MERCY 灰掉
+                drawUtButtonBg(bx, btnY, btnW, btnH, selected, disabled);
             }
             // 纯数字菜单（menuIndex<0）不画游标
             if (ut.getMenuIndex() >= 0)
@@ -198,7 +201,9 @@ public class UtCombatRenderer implements Disposable
         if (phase == UndertaleCombatPhase.MENU) {
             for (int i = 0; i < 4; i++) {
                 float bx = boxX + i * (btnW + btnGap);
-                drawButtonLabel(i, bx, btnY, btnW, btnH, i == ut.getMenuIndex());
+                boolean sel = (i == ut.getMenuIndex());
+                boolean dis = (i == 3 && !ut.canMercy());
+                drawButtonLabel(i, bx, btnY, btnW, btnH, sel, dis);
             }
         } else {
             smallFont.draw(batch, phaseHint(ut), boxX + 12f, boxY - 20f);
@@ -220,11 +225,15 @@ public class UtCombatRenderer implements Disposable
         return ut.getPhaseMessage();
     }
 
-    private void drawButtonLabel(int index, float x, float y, float w, float h, boolean selected)
+    private void drawButtonLabel(int index, float x, float y, float w, float h, boolean selected, boolean disabled)
     {
         String text = (index + 1) + "  " + MENU_LABELS[index];
         layout.setText(smallFont, text);
-        smallFont.setColor(selected ? GOLD : WHITE);
+        if (disabled) {
+            smallFont.setColor(0.35f, 0.35f, 0.38f, 0.6f);
+        } else {
+            smallFont.setColor(selected ? GOLD : WHITE);
+        }
         smallFont.draw(batch, text, x + (w - layout.width) / 2f + 8f,
             y + (h + layout.height) / 2f + 1f);
     }
@@ -519,17 +528,26 @@ public class UtCombatRenderer implements Disposable
 
     public void drawUtButtonBg(float x, float y, float w, float h)
     {
-        drawUtButtonBg(x, y, w, h, false);
+        drawUtButtonBg(x, y, w, h, false, false);
     }
 
-    private void drawUtButtonBg(float x, float y, float w, float h, boolean active)
+    private void drawUtButtonBg(float x, float y, float w, float h, boolean active, boolean disabled)
     {
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(active ? BUTTON_ACTIVE : BUTTON);
+        if (disabled) {
+            shapes.setColor(DISABLED_BUTTON);
+        } else {
+            shapes.setColor(active ? BUTTON_ACTIVE : BUTTON);
+        }
         shapes.rect(x, y, w, h);
-        shapes.setColor(active ? GOLD : GOLD_DIM);
-        drawFrame(x, y, w, h, active ? 3f : 2f);
-        if (active) {
+        if (!disabled) {
+            shapes.setColor(active ? GOLD : GOLD_DIM);
+            drawFrame(x, y, w, h, active ? 3f : 2f);
+        } else {
+            shapes.setColor(0.2f, 0.2f, 0.22f, 1f);
+            drawFrame(x, y, w, h, 1f);
+        }
+        if (active && !disabled) {
             shapes.setColor(1f, 0.78f, 0.16f, 0.18f);
             shapes.rect(x + 5f, y + 5f, w - 10f, h - 10f);
         }
