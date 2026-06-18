@@ -144,10 +144,10 @@ class CombatEngineTest
         CombatEngine c = new CombatEngine(player, guardDef,
             new CombatActionRegistry(), new Random(42));
         CombatSnapshot snap = c.processPlayerAction(CombatAction.ATTACK, null);
-        // BASE_ATTACK(10) + SWORD_BONUS(5) = 15
-        int expectedHp = 80 - 15;
+        // BASE_ATTACK(10) + SWORD_BONUS(3) = 13
+        int expectedHp = 80 - 13;
         assertEquals(expectedHp, snap.npcHp,
-            "持有锈剑应造成15点伤害(10基础+5加成)");
+            "持有锈剑应造成13点伤害(10基础+3加成)");
     }
 
     // ---- 新增：NPC 防御减半 ----

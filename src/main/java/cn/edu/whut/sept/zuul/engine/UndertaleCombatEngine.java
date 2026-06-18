@@ -42,8 +42,9 @@ import java.util.Random;
  */
 public class UndertaleCombatEngine implements CombatSystem
 {
-    private static final int BASE_DAMAGE = 15;
-    private static final int SWORD_BONUS = 8;
+    private static final int BASE_DAMAGE = 8;
+    private static final int SWORD_BONUS = 3;
+    private static final int SHIELD_REDUCTION = 1;
     private static final float FIGHT_BAR_SPEED = 1.55f;
     private static final float FIGHT_BAR_MAX = 1.0f;
     private static final float SOUL_SPEED = 0.78f;
@@ -358,11 +359,11 @@ public class UndertaleCombatEngine implements CombatSystem
         float dist = Math.abs(fightBarPos - 0.5f);
         int damage;
         String quality;
-        if (dist < 0.1f) { damage = BASE_DAMAGE + SWORD_BONUS; quality = "完美！"; lastAttackPerfect = true; }
+        if (dist < 0.1f) { damage = BASE_DAMAGE * 2; quality = "完美！"; lastAttackPerfect = true; }
         else if (dist < 0.2f) { damage = BASE_DAMAGE; quality = "不错。"; lastAttackPerfect = false; }
         else { damage = BASE_DAMAGE / 2; quality = "偏离了……"; lastAttackPerfect = false; }
         if (hasItem("sword-rusty")) damage += SWORD_BONUS;
-        if (defDebuff) damage += 6;
+        if (defDebuff) damage += 3;
         npcHp = Math.max(0, npcHp - damage);
         log.add(quality + " 造成 " + damage + " 点伤害。");
         phaseMessage = quality + " 造成 " + damage + " 点伤害。";
@@ -564,7 +565,7 @@ public class UndertaleCombatEngine implements CombatSystem
                     hitsTaken++;
                     int dmg = b.damage;
                     if (atkDebuff) dmg = Math.max(1, dmg - 3);
-                    if (hasItem("shield-wooden")) dmg = Math.max(1, dmg - 2);
+                    if (hasItem("shield-wooden")) dmg = Math.max(1, dmg - SHIELD_REDUCTION);
                     player.setHp(Math.max(0, player.getHp() - dmg));
                     soulInvuln = INVULN_TIME;
                     log.add("被击中了！-" + dmg + " HP");

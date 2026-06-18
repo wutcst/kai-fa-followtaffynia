@@ -126,6 +126,12 @@ public class CombatManager
         return lastDef;
     }
 
+    /** MERCY/认输结束战斗时为 true */
+    public boolean wasSpared()
+    {
+        return activeCombat != null && activeCombat.wasSpared();
+    }
+
     public void applyCombatOutcome()
     {
         if (activeCombat == null) return;

@@ -17,7 +17,7 @@ import java.util.Random;
 public final class CombatEngine implements CombatSystem
 {
     private static final int BASE_ATTACK = 10;
-    private static final int SWORD_BONUS = 5;
+    private static final int SWORD_BONUS = 3;
     private static final double FLEE_CHANCE = 0.7;
 
     private final Player player;

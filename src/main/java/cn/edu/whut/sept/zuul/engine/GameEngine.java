@@ -268,7 +268,8 @@ public class GameEngine
         NpcCombatDef def = combatManager.getLastDef();
         if (def != null && def.onDefeatSpawnItem != null
             && !def.onDefeatSpawnItem.isEmpty()
-            && getLastCombatOutcome() == CombatOutcome.VICTORY)
+            && getLastCombatOutcome() == CombatOutcome.VICTORY
+            && !combatManager.wasSpared())
         {
             Item spawn = createKnownItem(def.onDefeatSpawnItem);
             if (spawn != null) {

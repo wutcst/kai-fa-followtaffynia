@@ -6,7 +6,7 @@ import java.util.List;
 
 public class Player
 {
-    public static final double DEFAULT_MAX_WEIGHT = 50.0;
+    public static final double DEFAULT_MAX_WEIGHT = 100.0;
     public static final int DEFAULT_MAX_HP = 100;
 
     private final String name;
