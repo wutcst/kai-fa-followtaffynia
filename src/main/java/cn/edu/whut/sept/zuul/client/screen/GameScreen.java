@@ -1489,11 +1489,11 @@ public class GameScreen implements Screen
         GlyphLayout gl = new GlyphLayout(font, title);
         Color titleColor = endingTitleColor(ending);
         font.setColor(titleColor.r, titleColor.g, titleColor.b, endingAlpha);
-        font.draw(batch, title, cx - gl.width / 2f, h * 0.36f);
+        font.draw(batch, title, cx - gl.width / 2f, h * 0.94f);
 
         String desc = ending.getDescription();
         smallFont.setColor(0.92f, 0.88f, 0.78f, endingAlpha);
-        smallFont.draw(batch, desc, cx - 330f, h * 0.48f, 660f,
+        smallFont.draw(batch, desc, cx - 330f, h * 0.55f, 660f,
             com.badlogic.gdx.utils.Align.center, true);
 
         String hint = "按 T 返回标题";

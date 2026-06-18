@@ -264,9 +264,9 @@ public class GameEngine
         {
             Item spawn = createKnownItem(def.onDefeatSpawnItem);
             if (spawn != null) {
-                currentRoom.addItem(spawn);
+                player.addItem(spawn);
                 LOG.info("Combat loot: " + spawn.getItemId()
-                    + " spawned in " + currentRoom.getRoomId());
+                    + " added to player inventory");
             }
         }
     }
