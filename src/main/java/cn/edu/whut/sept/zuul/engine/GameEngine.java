@@ -175,6 +175,13 @@ public class GameEngine
         return playerFlags.contains(flag);
     }
 
+    /** 检查玩家背包是否包含指定物品 */
+    private boolean hasItem(String itemId)
+    {
+        return player.getInventory().stream()
+            .anyMatch(i -> itemId.equals(i.getItemId()));
+    }
+
     public String getPendingAutoCombat()
     {
         return pendingAutoCombat;
@@ -455,6 +462,19 @@ public class GameEngine
             && hasFlag("refused-follower"))
         {
             return dialogueManager.talkNpc("scholar_neutral");
+        }
+        // 守卫中立路线对话
+        if ("guard".equals(npcId)
+            && hasItem("balance-book")
+            && hasItem("guard-medal")
+            && !hasItem("light-mark"))
+        {
+            return dialogueManager.talkNpc("guard_neutral");
+        }
+        // 学徒中立路线对话：有平衡之书时走 greeting_balance 节点
+        if ("apprentice".equals(npcId) && hasItem("balance-book"))
+        {
+            return dialogueManager.talkNpcWithStart("apprentice", "greeting_balance");
         }
         return dialogueManager.talkNpc(npcId);
     }

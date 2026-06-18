@@ -80,8 +80,6 @@ public class ItemManager
             String lockId = effect.substring("unlock:".length()).trim();
             if (lockId.isEmpty()) return ItemUseCheck.blocked("这把钥匙似乎坏了。");
             if (unlockedLocks.contains(lockId)) return ItemUseCheck.blocked("对应的门已经打开了。");
-            if (!hasAdjacentLockedExit(lockId))
-                return ItemUseCheck.needLocation("钥匙需在通往「" + lockId + "」的上锁出口旁使用。");
             return ItemUseCheck.anytime();
         }
         return ItemUseCheck.anytime();
