@@ -152,16 +152,7 @@ public class EncounterUi
                 if (ut.getOutcome() != CombatOutcome.ONGOING) {
                     engine.applyCombatOutcome();
                     activeCombatSnapshot = null;
-                    if (ut.isMercyExited()) {
-                        String mercyLine = ut.getCurrentBattleLine();
-                        // 仅当 NPC 拥有对话时才开启和解对话；无对话者（如魔像）只结束战斗
-                        if (engine.hasDialogue(ut.getDef().npcId)) {
-                            if (mercyLine != null && !mercyLine.isEmpty()) {
-                                engine.talkNpcWithPrefix(ut.getDef().npcId, mercyLine);
-                            }
-                            dialogueUi.startDialogue(engine.talkNpc(ut.getDef().npcId));
-                        }
-                    }
+                    // MERCY 退出后不自动对话——玩家需再按E交谈
                 }
                 return msg;
             }
@@ -214,13 +205,7 @@ public class EncounterUi
         if (ut.getOutcome() != CombatOutcome.ONGOING) {
             engine.applyCombatOutcome();
             activeCombatSnapshot = null;
-            if (ut.isMercyExited()) {
-                String mercyLine = ut.getCurrentBattleLine();
-                if (mercyLine != null && !mercyLine.isEmpty()) {
-                    engine.talkNpcWithPrefix(ut.getDef().npcId, mercyLine);
-                    dialogueUi.startDialogue(engine.talkNpc(ut.getDef().npcId));
-                }
-            }
+            // MERCY 退出后不自动对话——玩家需再按E交谈
         }
         return null;
     }
