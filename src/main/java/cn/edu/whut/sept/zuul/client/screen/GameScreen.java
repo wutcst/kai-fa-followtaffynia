@@ -577,20 +577,20 @@ public class GameScreen implements Screen
         // NPC 头像
         Texture npcTex = npcPortraits.get(d.getNpcId());
         if (npcTex != null) {
-            Color c = batch.getColor();
+            Color saved = new Color(batch.getColor());
             float alpha = showingChoice ? 0.6f : 1f;
             batch.setColor(1f, 1f, 1f, alpha);
             batch.draw(npcTex, npcPx, npcPy, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
-            batch.setColor(c);
+            batch.setColor(saved);
         }
 
         // 玩家头像
         if (playerPortrait != null) {
-            Color c = batch.getColor();
+            Color saved = new Color(batch.getColor());
             float alpha = showingChoice ? 1f : 0.6f;
             batch.setColor(1f, 1f, 1f, alpha);
             batch.draw(playerPortrait, playerPx, playerPy, DIALOG_PORTRAIT_W, DIALOG_PORTRAIT_H);
-            batch.setColor(c);
+            batch.setColor(saved);
         }
 
         float textX = npcPx + DIALOG_PORTRAIT_W + 16f;
