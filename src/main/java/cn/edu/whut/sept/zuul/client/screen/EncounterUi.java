@@ -154,8 +154,11 @@ public class EncounterUi
                     activeCombatSnapshot = null;
                     if (ut.isMercyExited()) {
                         String mercyLine = ut.getCurrentBattleLine();
-                        if (mercyLine != null && !mercyLine.isEmpty()) {
-                            engine.talkNpcWithPrefix(ut.getDef().npcId, mercyLine);
+                        // 仅当 NPC 拥有对话时才开启和解对话；无对话者（如魔像）只结束战斗
+                        if (engine.hasDialogue(ut.getDef().npcId)) {
+                            if (mercyLine != null && !mercyLine.isEmpty()) {
+                                engine.talkNpcWithPrefix(ut.getDef().npcId, mercyLine);
+                            }
                             dialogueUi.startDialogue(engine.talkNpc(ut.getDef().npcId));
                         }
                     }
@@ -190,11 +193,21 @@ public class EncounterUi
                 ut.pressFightBar();
         } else if (phase == UndertaleCombatPhase.ENEMY_TURN) {
             float mx = 0f, my = 0f;
-            if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) my = 1f;
-            if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) my = -1f;
             if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) mx = -1f;
             if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) mx = 1f;
-            ut.moveSoul(mx, my, delta);
+            if (ut.isGravityMode()) {
+                // 重力/平台模式：A/D 走动，空格跳跃（可二段跳）
+                if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)
+                    || Gdx.input.isKeyJustPressed(Input.Keys.W)
+                    || Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+                    ut.soulJump();
+                }
+                ut.moveSoul(mx, 0f, delta);
+            } else {
+                if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) my = 1f;
+                if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) my = -1f;
+                ut.moveSoul(mx, my, delta);
+            }
         }
 
         activeCombatSnapshot = ut.snapshot();

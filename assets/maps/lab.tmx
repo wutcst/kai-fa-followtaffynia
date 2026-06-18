@@ -86,7 +86,7 @@
   </object>
   <object id="10" name="exit-to-vault" type="exit" x="430.405" y="382.618" width="105.228" height="58.1986">
    <properties>
-    <property name="direction" value="east"/>
+    <property name="direction" value="south"/>
     <property name="targetRoomId" value="vault"/>
    </properties>
   </object>

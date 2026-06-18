@@ -38,6 +38,17 @@ public class DialogueManager
         return activeDialogueTree != null;
     }
 
+    /** 该 NPC 是否拥有对话数据（用于决定 mercy 后是否开启和解对话）。 */
+    public boolean hasDialogue(String npcId)
+    {
+        try {
+            DialogueLoader.load(npcId);
+            return true;
+        } catch (IOException ex) {
+            return false;
+        }
+    }
+
     public Dialogue talkNpc(String npcId)
     {
         endDialogue();

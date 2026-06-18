@@ -37,7 +37,7 @@ public class NpcPlaceholderManager
     }
 
     public void buildNpcPlaceholders(String roomId, MapObjects objectsLayer,
-        Set<String> defeatedNpcs, boolean guardGateUnlocked)
+        Set<String> defeatedNpcs, Set<String> sparedNpcs, boolean guardGateUnlocked)
     {
         placeholders.clear();
 
@@ -50,15 +50,17 @@ public class NpcPlaceholderManager
                 if (npcId == null || npcId.trim().isEmpty()) continue;
                 Rectangle rect = ((RectangleMapObject) obj).getRectangle();
                 boolean defeated = defeatedNpcs != null && defeatedNpcs.contains(npcId);
+                boolean spared = sparedNpcs != null && sparedNpcs.contains(npcId);
 
-                if (defeated) {
-                    // 已击杀的 NPC 留下尸体，必须停在死亡地点。
+                if (defeated && !spared) {
+                    // 真正被击杀：留下尸体，停在死亡地点。
                     // 守卫死在 garden（被杀时门尚锁着），死亡才解锁门，故尸体只放 garden，
                     // 不随解锁后的位置逻辑漂移到 guard-room。
                     if ("guard".equals(npcId) && !"garden".equals(roomId)) continue;
                     placeholders.add(NpcPlaceholder.corpse(npcId, rect));
                 } else {
-                    // 存活 NPC：位置性跳过（守卫随门状态出现在不同房间）
+                    // 存活 / 被仁慈感化的 NPC：仍站在原地（化解者已不再敌对，但不消失、不变尸体）。
+                    // 位置性跳过（守卫随门状态出现在不同房间）。
                     if (guardPositionalSkip(npcId, roomId, guardGateUnlocked)) continue;
                     placeholders.add(NpcPlaceholder.forNpc(npcId, rect));
                 }

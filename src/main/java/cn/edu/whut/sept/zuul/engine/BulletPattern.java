@@ -199,9 +199,156 @@ public abstract class BulletPattern
                     if (len < 1e-3f) len = 1f;
                     float speed = 0.5f;
                     warnings.add(WarningZone.line(sx, 0.02f, sx, 0.22f, 0.3f));
-                    bullets.add(Bullet.circle(sx, sy, 0.028f,
-                        dx / len * speed, dy / len * speed, damage));
+                    bullets.add(Bullet.circle(sx, sy, 0.030f,
+                        dx / len * speed, dy / len * speed, damage)
+                        .withKind(Bullet.Kind.AIMED));
                     spawned++;
+                }
+            }
+        };
+    }
+
+    /**
+     * 守卫招式「飞剑」：长剑从四面八方高速飞来，先亮红线预警全程飞行轨迹（约 0.5s），
+     * 再射出长条剑沿轨迹飞过场地、最终插入对面边框停留片刻。命中持续受伤（有无敌帧）。
+     * <p>飞行/嵌入由引擎对 {@link Bullet.Kind#SWORD} 的边界吸附逻辑处理。</p>
+     */
+    public static BulletPattern flyingSwords(float duration, int damage, Random rng)
+    {
+        return new BulletPattern(duration, rng)
+        {
+            private static final float WARN = 0.5f;
+            private static final float CYCLE = 1.5f;
+            private float waveStart = 0.15f;
+            private boolean warned;
+            private boolean struck;
+            private int dir;     // 0:向左 1:向右 2:向下 3:向上
+            private float pos;   // 垂直/水平轨迹位置
+
+            @Override
+            protected void emit(List<Bullet> bullets, List<WarningZone> warnings)
+            {
+                float local = timer - waveStart;
+                if (local < 0f) return;
+                if (!warned) {
+                    dir = rng.nextInt(4);
+                    pos = 0.2f + rng.nextFloat() * 0.6f;
+                    if (dir <= 1) warnings.add(WarningZone.line(0f, pos, 1f, pos, WARN));
+                    else warnings.add(WarningZone.line(pos, 0f, pos, 1f, WARN));
+                    warned = true;
+                } else if (!struck && local >= WARN) {
+                    addSword(bullets);
+                    struck = true;
+                } else if (struck && local >= CYCLE) {
+                    warned = false;
+                    struck = false;
+                    waveStart = timer;
+                }
+            }
+
+            private void addSword(List<Bullet> bullets)
+            {
+                float len = 0.45f, t = 0.06f, sp = 2.4f;
+                Bullet s;
+                switch (dir) {
+                    case 0:  s = Bullet.rect(1.06f, pos - t / 2f, len, t, -sp, 0f, damage); break; // 飞向左，插左框
+                    case 1:  s = Bullet.rect(-0.51f, pos - t / 2f, len, t, sp, 0f, damage); break; // 飞向右，插右框
+                    case 2:  s = Bullet.rect(pos - t / 2f, 1.06f, t, len, 0f, -sp, damage); break; // 飞向下，插底框
+                    default: s = Bullet.rect(pos - t / 2f, -0.51f, t, len, 0f, sp, damage); break;  // 飞向上，插顶框
+                }
+                bullets.add(s.withKind(Bullet.Kind.SWORD).withLife(1.7f));
+            }
+        };
+    }
+
+    /** 神父招式「圣十字」：交替从顶/左推出整排子弹墙，各留安全缺口，形成十字封锁。 */
+    public static BulletPattern crossSweep(float duration, int damage, Random rng)
+    {
+        return new BulletPattern(duration, rng)
+        {
+            private float spawnTimer;
+            private float interval = 1.0f;
+            private boolean vertical;
+            private static final int N = 7;
+
+            @Override
+            protected void emit(List<Bullet> bullets, List<WarningZone> warnings)
+            {
+                spawnTimer += lastDelta;
+                if (spawnTimer < interval) return;
+                spawnTimer -= interval;
+                interval = 0.85f + rng.nextFloat() * 0.4f;
+                int gap = rng.nextInt(N);
+                for (int i = 0; i < N; i++) {
+                    if (i == gap) continue;
+                    float p = (i + 0.5f) / N;
+                    if (vertical) {            // 从顶部落下
+                        warnings.add(WarningZone.line(p, 0f, p, 1f, 0.3f));
+                        bullets.add(Bullet.circle(p, 1.08f, 0.028f, 0f, -0.5f, damage));
+                    } else {                   // 从左侧推进
+                        warnings.add(WarningZone.line(0f, p, 1f, p, 0.3f));
+                        bullets.add(Bullet.circle(-0.08f, p, 0.028f, 0.5f, 0f, damage));
+                    }
+                }
+                vertical = !vertical;
+            }
+        };
+    }
+
+    /** 追随者招式「血环」：从中心一圈圈向外扩散的子弹环。 */
+    public static BulletPattern ringWaves(float duration, int damage, Random rng)
+    {
+        return new BulletPattern(duration, rng)
+        {
+            private float spawnTimer;
+            private final float interval = 0.85f;
+            private int ring;
+
+            @Override
+            protected void emit(List<Bullet> bullets, List<WarningZone> warnings)
+            {
+                spawnTimer += lastDelta;
+                if (spawnTimer < interval) return;
+                spawnTimer -= interval;
+                int n = 12;
+                float phase = (ring % 2) * (float) Math.PI / n;   // 交错
+                warnings.add(WarningZone.box(0.42f, 0.42f, 0.16f, 0.16f, 0.28f));
+                for (int i = 0; i < n; i++) {
+                    double a = phase + i * Math.PI * 2 / n;
+                    float vx = (float) Math.cos(a) * 0.42f;
+                    float vy = (float) Math.sin(a) * 0.42f;
+                    bullets.add(Bullet.circle(0.5f, 0.5f, 0.026f, vx, vy, damage));
+                }
+                ring++;
+            }
+        };
+    }
+
+    /**
+     * 魔像招式「土墙」：玩家进入重力模式后，从右侧不断冲出不同高度的土墙，
+     * 须用 A/D + 跳跃躲过。墙贴底生成、向左移动，命中持续受伤（有无敌帧）。
+     */
+    public static BulletPattern gravityWalls(float duration, int damage, Random rng)
+    {
+        return new BulletPattern(duration, rng)
+        {
+            private float spawnTimer;
+            private float interval = 1.0f;
+            private boolean first = true;
+
+            @Override
+            protected void emit(List<Bullet> bullets, List<WarningZone> warnings)
+            {
+                if (first) { spawnTimer = 0.6f; first = false; }
+                spawnTimer += lastDelta;
+                if (spawnTimer >= interval) {
+                    spawnTimer -= interval;
+                    interval = 0.85f + rng.nextFloat() * 0.5f;
+                    float h = 0.14f + rng.nextInt(3) * 0.11f;   // 0.14 / 0.25 / 0.36
+                    float w = 0.07f;
+                    warnings.add(WarningZone.box(1f - 0.02f, 0f, 0.02f, h, 0.3f));
+                    bullets.add(Bullet.rect(1.12f, 0f, w, h, -0.55f, 0f, damage)
+                        .withKind(Bullet.Kind.WALL));
                 }
             }
         };

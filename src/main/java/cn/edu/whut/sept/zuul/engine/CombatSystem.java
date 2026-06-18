@@ -25,4 +25,7 @@ public interface CombatSystem
 
     /** 给 NPC 加致盲 debuff（物品效果）。 */
     void addNpcBlindTurns(int turns);
+
+    /** 本次胜利是否为"仁慈/认输"化解（而非击杀）。用于区分尸体 vs 已离去。 */
+    default boolean wasSpared() { return false; }
 }

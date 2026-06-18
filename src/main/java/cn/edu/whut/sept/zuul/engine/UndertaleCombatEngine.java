@@ -52,6 +52,13 @@ public class UndertaleCombatEngine implements CombatSystem
     private static final float BULLET_SPEED_MULTIPLIER = 0.58f;
     private static final int MENU_COUNT = 4;
 
+    // 重力/平台模式（魔像招式）参数
+    private static final float GRAVITY_ACC = 5.5f;
+    private static final float JUMP_V = 1.78f;
+    private static final int MAX_JUMPS = 2;
+    private static final float SOUL_HSPEED = 0.65f;
+    private static final float INVULN_TIME = 0.6f;
+
     private final Player player;
     private final NpcCombatDef def;
     private final CombatActionRegistry itemRegistry;
@@ -92,6 +99,13 @@ public class UndertaleCombatEngine implements CombatSystem
     private float soulX, soulY;
     private final List<String> log;
     private boolean spared;
+
+    // 重力/平台模式状态
+    private boolean gravityMode;
+    private float soulVy;
+    private int jumpsUsed;
+    private float soulInvuln;   // 受击后无敌帧倒计时
+    private int lastAttackId = -1;   // 上一回合招式，用于避免连续重复
 
     /** ACT 效果：敌人攻击力下降 */
     private boolean atkDebuff;
@@ -161,12 +175,15 @@ public class UndertaleCombatEngine implements CombatSystem
     public String getCurrentBattleLine() { return currentBattleLine; }
     public String getCurrentBattleLineColor() { return currentBattleLineColor; }
     public boolean isMercyExited() { return mercyExited; }
+    @Override public boolean wasSpared() { return spared || mercyExited; }
     public int getNpcHp() { return npcHp; }
     public int getNpcMaxHp() { return npcMaxHp; }
     /** 上一次节奏攻击是否命中"完美"区间（供客户端打击感特效判定）。 */
     public boolean wasLastAttackPerfect() { return lastAttackPerfect; }
     public float getSoulX() { return soulX; }
     public float getSoulY() { return soulY; }
+    /** 是否处于重力/平台模式（魔像招式）：客户端据此切换输入与渲染。 */
+    public boolean isGravityMode() { return gravityMode; }
     public float getFightBarPos() { return fightBarPos; }
     public int getMenuIndex() { return menuIndex; }
     public float getEnemyTurnProgress() { return enemyTurnDuration > 0 ? enemyTurnTimer / enemyTurnDuration : 0f; }
@@ -352,10 +369,11 @@ public class UndertaleCombatEngine implements CombatSystem
 
         checkHpThresholdLines();
 
-        // 切磋模式：NPC 半血以下自动投降
+        // 切磋模式：NPC 半血以下自动投降（算作仁慈结束，避免卡在 RESULT 阶段）
         if (!def.onDefeatMarkDefeated && npcHp > 0
             && npcHp <= npcMaxHp / 2)
         {
+            spared = true;
             phase = UndertaleCombatPhase.RESULT;
             phaseMessage = def.displayName + " 认输了！\"你确实很强——这枚勋章，是你应得的。\"";
             return;
@@ -429,27 +447,93 @@ public class UndertaleCombatEngine implements CombatSystem
         hitsTaken = 0;
         bullets.clear();
         warnings.clear();
+        gravityMode = false;
+        soulVy = 0f;
+        jumpsUsed = 0;
+        soulInvuln = 0f;
 
-        // 低血狂暴：HP ≤ 50% 时弹幕更密集
+        // 低血狂暴：HP ≤ 50% 时弹幕更密集、更易触发 Boss 招式
         float ratio = npcMaxHp > 0 ? (float) npcHp / npcMaxHp : 1f;
         boolean enraged = ratio <= 0.5f;
         int extra = enraged ? 4 : 0;
 
-        int idx = rng.nextInt(6);
-        switch (idx) {
+        // 候选招式池：6 种普通弹幕 + 该 Boss 专属招式（狂暴时招式权重更高）
+        List<Integer> pool = new ArrayList<>();
+        for (int i = 0; i < 6; i++) pool.add(i);
+        int sigId = signatureId(def.npcId);
+        if (sigId >= 0) {
+            int weight = enraged ? 3 : 2;
+            for (int k = 0; k < weight; k++) pool.add(sigId);
+        }
+        // 选一个与上回合不同的招式（保证"每次躲避都是不同的招式"）
+        int pick = pool.get(rng.nextInt(pool.size()));
+        for (int tries = 0; tries < 8 && pick == lastAttackId; tries++) {
+            pick = pool.get(rng.nextInt(pool.size()));
+        }
+        lastAttackId = pick;
+        launchAttack(pick, enraged, extra);
+    }
+
+    /** 该 NPC 的专属招式 id（100+），无则返回 -1。 */
+    private int signatureId(String npcId)
+    {
+        switch (npcId == null ? "" : npcId) {
+            case "guard": return 100;
+            case "golem": return 101;
+            case "priest": return 102;
+            case "follower": return 103;
+            case "apprentice": return 104;
+            default: return -1;
+        }
+    }
+
+    /** 根据招式 id 启动对应弹幕/招式并设置提示。 */
+    private void launchAttack(int id, boolean enraged, int extra)
+    {
+        String prefix = enraged ? "【狂暴】" : "";
+        switch (id) {
             case 0: activePattern = BulletPattern.wave(enemyTurnDuration, 10 + extra, 4, rng); break;
             case 1: activePattern = BulletPattern.burst(enemyTurnDuration, 14 + extra, 4, rng); break;
             case 2: activePattern = BulletPattern.randomScatter(enemyTurnDuration, 11 + extra, 4, rng); break;
             case 3: activePattern = BulletPattern.spiral(enemyTurnDuration, 18 + extra, 4, rng); break;
             case 4: activePattern = BulletPattern.aimed(enemyTurnDuration, 8 + extra, 5, rng); break;
-            default: activePattern = BulletPattern.pillars(enemyTurnDuration, 6 + extra / 2, 4, rng); break;
+            case 5: activePattern = BulletPattern.pillars(enemyTurnDuration, 6 + extra / 2, 4, rng); break;
+            case 100:   // 守卫：飞剑
+                activePattern = BulletPattern.flyingSwords(enemyTurnDuration, 6, rng);
+                phaseMessage = def.displayName + " 拔剑——「飞剑·四面斩」！看红线，躲开飞来的长剑！";
+                return;
+            case 101:   // 魔像：重力强袭
+                gravityMode = true;
+                soulX = 0.5f;
+                soulY = SOUL_RADIUS;
+                soulVy = 0f;
+                jumpsUsed = 0;
+                activePattern = BulletPattern.gravityWalls(enemyTurnDuration, 6, rng);
+                phaseMessage = def.displayName + " 一拳将你砸向地面！空格跳跃(可二段)，A/D 躲避土墙！";
+                return;
+            case 102:   // 神父：圣十字
+                activePattern = BulletPattern.crossSweep(enemyTurnDuration, 5, rng);
+                phaseMessage = def.displayName + " 展开「圣十字」！穿过封锁的缺口！";
+                return;
+            case 103:   // 追随者：血环
+                activePattern = BulletPattern.ringWaves(enemyTurnDuration, 4, rng);
+                phaseMessage = def.displayName + " 释放「血环」！在环的间隙穿行！";
+                return;
+            case 104:   // 学徒：奥术风暴
+                activePattern = BulletPattern.spiral(enemyTurnDuration, 24 + extra, 4, rng);
+                phaseMessage = def.displayName + " 召唤「奥术风暴」！";
+                return;
+            default: activePattern = BulletPattern.wave(enemyTurnDuration, 12, 4, rng); break;
         }
-        phaseMessage = (enraged ? "【狂暴】" : "") + "躲避 " + def.displayName + " 的攻击！";
+        phaseMessage = prefix + "躲避 " + def.displayName + " 的攻击！";
     }
 
     public void updateEnemyTurn(float delta)
     {
         if (phase != UndertaleCombatPhase.ENEMY_TURN || battleLineActive) return;
+
+        if (soulInvuln > 0f) soulInvuln = Math.max(0f, soulInvuln - delta);
+        if (gravityMode) applyGravity(delta);
 
         if (activePattern != null) activePattern.update(delta, bullets, warnings, soulX, soulY);
         for (WarningZone warning : warnings) {
@@ -459,14 +543,30 @@ public class UndertaleCombatEngine implements CombatSystem
 
         float bulletDelta = delta * (bulletSlow ? 0.5f : BULLET_SPEED_MULTIPLIER);
         for (Bullet b : bullets) {
-            if (b.alive) {
-                b.update(bulletDelta);
-                if (b.collidesWith(soulX, soulY, SOUL_RADIUS)) {
-                    b.alive = false; hitsTaken++;
+            if (!b.alive) continue;
+            b.update(bulletDelta);
+            // 飞剑触及对面边框 → 吸附停住（插入边框停留）
+            if (b.kind == Bullet.Kind.SWORD) {
+                if (b.vx < 0f && b.x <= 0f) { b.x = 0f; b.vx = 0f; }
+                else if (b.vx > 0f && b.x + b.width >= 1f) { b.x = 1f - b.width; b.vx = 0f; }
+                if (b.vy < 0f && b.y <= 0f) { b.y = 0f; b.vy = 0f; }
+                else if (b.vy > 0f && b.y + b.height >= 1f) { b.y = 1f - b.height; b.vy = 0f; }
+            }
+            // 按真实时间倒计时存活（剑停留计时不受弹幕减速影响）
+            if (b.life >= 0f) {
+                b.life -= delta;
+                if (b.life <= 0f) { b.alive = false; continue; }
+            }
+            if (b.collidesWith(soulX, soulY, SOUL_RADIUS)) {
+                boolean persistent = b.kind == Bullet.Kind.SWORD || b.kind == Bullet.Kind.WALL;
+                if (!persistent) b.alive = false;   // 普通弹命中即消失；剑/墙是持续危险
+                if (soulInvuln <= 0f) {
+                    hitsTaken++;
                     int dmg = b.damage;
                     if (atkDebuff) dmg = Math.max(1, dmg - 3);
                     if (hasItem("shield-wooden")) dmg = Math.max(1, dmg - 2);
                     player.setHp(Math.max(0, player.getHp() - dmg));
+                    soulInvuln = INVULN_TIME;
                     log.add("被击中了！-" + dmg + " HP");
                 }
             }
@@ -479,9 +579,34 @@ public class UndertaleCombatEngine implements CombatSystem
         }
     }
 
+    /** 重力模式每帧物理：重力下坠 + 落地复位跳跃次数。 */
+    private void applyGravity(float delta)
+    {
+        soulVy -= GRAVITY_ACC * delta;
+        soulY += soulVy * delta;
+        float ground = SOUL_RADIUS;
+        if (soulY <= ground) { soulY = ground; soulVy = 0f; jumpsUsed = 0; }
+        float ceil = 1f - SOUL_RADIUS;
+        if (soulY > ceil) { soulY = ceil; soulVy = 0f; }
+    }
+
+    /** 重力模式跳跃（支持二段跳）。 */
+    public void soulJump()
+    {
+        if (!gravityMode) return;
+        if (jumpsUsed < MAX_JUMPS) { soulVy = JUMP_V; jumpsUsed++; }
+    }
+
     private void endEnemyTurn()
     {
         bullets.clear(); warnings.clear(); activePattern = null;
+        // 退出重力模式，灵魂复位
+        gravityMode = false;
+        soulVy = 0f;
+        jumpsUsed = 0;
+        soulInvuln = 0f;
+        soulX = 0.5f;
+        soulY = 0.5f;
         if (hitsTaken == 0) log.add("完美躲避！");
         if (player.isDead()) { phase = UndertaleCombatPhase.RESULT; phaseMessage = "你倒下了……"; }
         else { phase = UndertaleCombatPhase.MENU; phaseMessage = "你的回合。"; }
@@ -494,6 +619,11 @@ public class UndertaleCombatEngine implements CombatSystem
 
     public void moveSoul(float dx, float dy, float delta)
     {
+        if (gravityMode) {
+            // 重力模式：仅水平移动，垂直由重力/跳跃控制
+            soulX = clamp(soulX + dx * SOUL_HSPEED * delta, SOUL_RADIUS, 1f - SOUL_RADIUS);
+            return;
+        }
         if (dx != 0f && dy != 0f) {
             float inv = 0.70710677f;
             dx *= inv;

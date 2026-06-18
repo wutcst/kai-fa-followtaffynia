@@ -75,7 +75,7 @@
   </object>
   <object id="12" name="exit-to-lab" type="exit" x="453.277" y="16.7838" width="67.7802" height="64.6298">
    <properties>
-    <property name="direction" value="west"/>
+    <property name="direction" value="north"/>
     <property name="targetRoomId" value="lab"/>
    </properties>
   </object>

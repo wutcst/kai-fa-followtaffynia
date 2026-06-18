@@ -38,6 +38,14 @@ public class UtCombatRenderer implements Disposable
     private static final Color BUL_ROCK = new Color(0.55f, 0.50f, 0.46f, 1f);
     private static final Color BUL_ROCK_HI = new Color(0.78f, 0.74f, 0.68f, 1f);
     private static final Color BUL_PURPLE = new Color(0.66f, 0.42f, 0.95f, 1f);
+    private static final Color BUL_MAGENTA = new Color(1f, 0.20f, 0.78f, 1f);
+    private static final Color STEEL = new Color(0.74f, 0.78f, 0.86f, 1f);
+    private static final Color STEEL_HI = new Color(0.93f, 0.96f, 1f, 1f);
+    private static final Color EARTH = new Color(0.45f, 0.32f, 0.18f, 1f);
+    private static final Color EARTH_HI = new Color(0.56f, 0.42f, 0.25f, 1f);
+    private static final Color EARTH_TOP = new Color(0.34f, 0.55f, 0.24f, 1f);
+    private static final Color GUARD_GOLD = new Color(0.88f, 0.66f, 0.20f, 1f);
+    private static final Color HANDLE_BROWN = new Color(0.40f, 0.24f, 0.12f, 1f);
 
     // 位图：'o'=描边 'b'=主体 'h'=高光 '.'=透明
     private static final String[] PX_HEART = {
@@ -131,6 +139,8 @@ public class UtCombatRenderer implements Disposable
         drawBattleScene(boxX, boxY, boxW, boxH, phase);
 
         if (phase == UndertaleCombatPhase.ENEMY_TURN) {
+            // 重力模式：画出地面，便于判断落点
+            if (ut.isGravityMode()) drawGravityGround(boxX, boxY, boxW, boxH);
             drawUtWarnings(ut, boxX, boxY, boxW, boxH);
             drawUtBullets(ut, boxX, boxY, boxW, boxH);
             // 受击无敌帧：隔帧闪烁
@@ -266,13 +276,20 @@ public class UtCombatRenderer implements Disposable
                 float bx = boxX + b.x * boxW;
                 float by = boxY + b.y * boxH;
                 float br = Math.max(5f, b.radius * Math.min(boxW, boxH) * 1.55f);
-                drawCircleBullet(bx, by, br, b.visualVariant, npcId);
+                if (b.kind == Bullet.Kind.AIMED) {
+                    // 瞄准弹：醒目的品红菱晶（与各 NPC 子弹明显区分）
+                    drawPixelSprite(bx, by, Math.max(2.4f, br * 0.5f), PX_DIAMOND, BUL_MAGENTA, BUL_WHITE);
+                } else {
+                    drawCircleBullet(bx, by, br, b.visualVariant, npcId);
+                }
             } else {
                 float bx = boxX + b.x * boxW;
                 float by = boxY + b.y * boxH;
                 float bw = Math.max(6f, b.width * boxW);
                 float bh = Math.max(6f, b.height * boxH);
-                drawBoneRect(bx, by, bw, bh);
+                if (b.kind == Bullet.Kind.SWORD) drawSword(b, bx, by, bw, bh);
+                else if (b.kind == Bullet.Kind.WALL) drawWall(bx, by, bw, bh);
+                else drawBoneRect(bx, by, bw, bh);
             }
         }
         shapes.end();
@@ -342,6 +359,107 @@ public class UtCombatRenderer implements Disposable
     {
         drawBoneShape(x - 1.5f, y - 1.5f, w + 3f, h + 3f, Color.BLACK);
         drawBoneShape(x, y, w, h, WHITE);
+    }
+
+    /** 重力模式地面：底部一条泥土带 + 草沿，给玩家落点参考。 */
+    private void drawGravityGround(float boxX, float boxY, float boxW, float boxH)
+    {
+        float gh = Math.max(8f, boxH * 0.05f);
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        shapes.setColor(EARTH);
+        shapes.rect(boxX, boxY, boxW, gh);
+        shapes.setColor(EARTH_TOP);
+        shapes.rect(boxX, boxY + gh - Math.max(2f, gh * 0.25f), boxW, Math.max(2f, gh * 0.25f));
+        shapes.end();
+    }
+
+    /**
+     * 真正的剑（守卫招式）：钢色刀身 + 中央血槽高光 + 尖锐剑尖（三角）+ 金色护手十字 + 木柄。
+     * <b>剑尖朝飞行方向（前端），剑柄在尾端。</b>朝向由子弹速度/嵌入位置推断。
+     */
+    private void drawSword(Bullet b, float x, float y, float w, float h)
+    {
+        boolean horizontal = w >= h;
+        if (horizontal) {
+            // 剑尖朝左：飞行向左，或已嵌入左框
+            boolean tipLeft = b.vx < 0f || (b.vx == 0f && b.x <= 0.05f);
+            float handleLen = w * 0.20f;
+            float bladeLen = w - handleLen;
+            float midY = y + h / 2f;
+            float guardW = Math.max(3f, w * 0.025f);
+            if (tipLeft) {
+                // 刀身在左[x, x+bladeLen]，柄在右
+                shapes.setColor(STEEL);
+                shapes.rect(x, y, bladeLen, h);
+                shapes.triangle(x - h * 0.9f, midY, x, y, x, y + h);            // 剑尖在最左
+                shapes.setColor(STEEL_HI);
+                shapes.rect(x, y + h * 0.38f, bladeLen, Math.max(1f, h * 0.24f));
+                shapes.setColor(GUARD_GOLD);
+                shapes.rect(x + bladeLen - guardW / 2f, y - h * 0.85f, guardW, h * 2.7f); // 护手在刀身/柄交界
+                shapes.setColor(HANDLE_BROWN);
+                shapes.rect(x + bladeLen + handleLen * 0.1f, y + h * 0.12f, handleLen * 0.8f, h * 0.76f); // 柄在最右
+            } else {
+                // 刀身在右[x+handleLen, x+w]，柄在左
+                shapes.setColor(STEEL);
+                shapes.rect(x + handleLen, y, bladeLen, h);
+                shapes.triangle(x + w + h * 0.9f, midY, x + w, y, x + w, y + h);  // 剑尖在最右
+                shapes.setColor(STEEL_HI);
+                shapes.rect(x + handleLen, y + h * 0.38f, bladeLen, Math.max(1f, h * 0.24f));
+                shapes.setColor(GUARD_GOLD);
+                shapes.rect(x + handleLen - guardW / 2f, y - h * 0.85f, guardW, h * 2.7f);
+                shapes.setColor(HANDLE_BROWN);
+                shapes.rect(x + handleLen * 0.1f, y + h * 0.12f, handleLen * 0.8f, h * 0.76f); // 柄在最左
+            }
+        } else {
+            // 剑尖朝下：飞行向下（vy<0），或已嵌入底框
+            boolean tipDown = b.vy < 0f || (b.vy == 0f && b.y <= 0.05f);
+            float handleLen = h * 0.20f;
+            float bladeLen = h - handleLen;
+            float midX = x + w / 2f;
+            float guardH = Math.max(3f, h * 0.025f);
+            if (tipDown) {
+                // 刀身在下[y, y+bladeLen]，柄在上
+                shapes.setColor(STEEL);
+                shapes.rect(x, y, w, bladeLen);
+                shapes.triangle(midX, y - w * 0.9f, x, y, x + w, y);            // 剑尖在最下
+                shapes.setColor(STEEL_HI);
+                shapes.rect(x + w * 0.38f, y, Math.max(1f, w * 0.24f), bladeLen);
+                shapes.setColor(GUARD_GOLD);
+                shapes.rect(x - w * 0.85f, y + bladeLen - guardH / 2f, w * 2.7f, guardH);
+                shapes.setColor(HANDLE_BROWN);
+                shapes.rect(x + w * 0.12f, y + bladeLen + handleLen * 0.1f, w * 0.76f, handleLen * 0.8f); // 柄在最上
+            } else {
+                // 刀身在上[y+handleLen, y+h]，柄在下
+                shapes.setColor(STEEL);
+                shapes.rect(x, y + handleLen, w, bladeLen);
+                shapes.triangle(midX, y + h + w * 0.9f, x, y + h, x + w, y + h);  // 剑尖在最上
+                shapes.setColor(STEEL_HI);
+                shapes.rect(x + w * 0.38f, y + handleLen, Math.max(1f, w * 0.24f), bladeLen);
+                shapes.setColor(GUARD_GOLD);
+                shapes.rect(x - w * 0.85f, y + handleLen - guardH / 2f, w * 2.7f, guardH);
+                shapes.setColor(HANDLE_BROWN);
+                shapes.rect(x + w * 0.12f, y + handleLen * 0.1f, w * 0.76f, handleLen * 0.8f); // 柄在最下
+            }
+        }
+    }
+
+    /** 土墙（魔像招式）：泥褐砖块 + 顶部草沿，带黑描边。 */
+    private void drawWall(float x, float y, float w, float h)
+    {
+        shapes.setColor(PX_OUTLINE);
+        shapes.rect(x - 2f, y - 2f, w + 4f, h + 4f);
+        shapes.setColor(EARTH);
+        shapes.rect(x, y, w, h);
+        // 砖块纹理：交错的高光小块
+        shapes.setColor(EARTH_HI);
+        float cell = Math.max(4f, w * 0.45f);
+        for (float yy = y + 3f; yy < y + h - cell; yy += cell * 2f) {
+            shapes.rect(x + 2f, yy, Math.max(2f, w * 0.35f), Math.max(2f, cell * 0.6f));
+            shapes.rect(x + w * 0.55f, yy + cell, Math.max(2f, w * 0.35f), Math.max(2f, cell * 0.6f));
+        }
+        // 顶部草沿
+        shapes.setColor(EARTH_TOP);
+        shapes.rect(x, y + h - Math.max(3f, h * 0.12f), w, Math.max(3f, h * 0.12f));
     }
 
     private void drawBoneShape(float x, float y, float w, float h, Color color)

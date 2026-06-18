@@ -39,6 +39,8 @@ public class GameEngine
     private final Set<String> exploredRoomIds;
     private final Set<String> unlockedLocks;
     private final Set<String> defeatedNpcs;
+    /** 被仁慈/认输化解的 NPC（dealt-with 但非击杀，渲染为已离去而非尸体） */
+    private final Set<String> sparedNpcs;
     private final Set<String> playerFlags;
     /** 非持久——进入vault时若golem未死则自动触发战斗 */
     private String pendingAutoCombat;
@@ -67,6 +69,7 @@ public class GameEngine
         this.exploredRoomIds = new HashSet<>();
         this.unlockedLocks = new HashSet<>();
         this.defeatedNpcs = new HashSet<>();
+        this.sparedNpcs = new HashSet<>();
         this.playerFlags = new HashSet<>();
         this.useEffectRegistry = new UseEffectRegistry();
         this.combatActionRegistry = new CombatActionRegistry();
@@ -75,7 +78,7 @@ public class GameEngine
         this.dialogueActionExecutor = new DialogueActionExecutor(this);
         this.dialogueManager = new DialogueManager(dialogueActionExecutor,
             msg -> this.lastMessage = msg);
-        this.combatManager = new CombatManager(player, defeatedNpcs, unlockedLocks,
+        this.combatManager = new CombatManager(player, defeatedNpcs, sparedNpcs, unlockedLocks,
             combatActionRegistry, questManager,
             msg -> this.lastMessage = msg);
         this.itemManager = new ItemManager(this, unlockedLocks, questManager,
@@ -155,6 +158,11 @@ public class GameEngine
     public Set<String> getDefeatedNpcs()
     {
         return Collections.unmodifiableSet(defeatedNpcs);
+    }
+
+    public Set<String> getSparedNpcs()
+    {
+        return Collections.unmodifiableSet(sparedNpcs);
     }
 
     public Set<String> getPlayerFlags()
@@ -479,6 +487,12 @@ public class GameEngine
         return dialogueManager.talkNpc(npcId);
     }
 
+    /** 该 NPC 是否拥有对话数据。 */
+    public boolean hasDialogue(String npcId)
+    {
+        return dialogueManager.hasDialogue(npcId);
+    }
+
     /** MERCY 退出后自动对话——前缀拼接在正常对话前 */
     public Dialogue talkNpcWithPrefix(String npcId, String prefix)
     {
@@ -585,6 +599,7 @@ public class GameEngine
         state.getQuestStates().clear();
         state.getQuestStates().putAll(questManager.getQuestStates());
         state.getDefeatedNpcs().addAll(defeatedNpcs);
+        state.getSparedNpcs().addAll(sparedNpcs);
         state.getPlayerFlags().addAll(playerFlags);
         state.getRoomItems().clear();
         for (Room room : WorldFactory.getAllRooms().values()) {
@@ -633,6 +648,10 @@ public class GameEngine
         defeatedNpcs.clear();
         if (state.getDefeatedNpcs() != null) {
             defeatedNpcs.addAll(state.getDefeatedNpcs());
+        }
+        sparedNpcs.clear();
+        if (state.getSparedNpcs() != null) {
+            sparedNpcs.addAll(state.getSparedNpcs());
         }
         playerFlags.clear();
         if (state.getPlayerFlags() != null) {

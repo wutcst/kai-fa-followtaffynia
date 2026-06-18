@@ -20,6 +20,7 @@ public class CombatManager
 
     private final Player player;
     private final Set<String> defeatedNpcs;
+    private final Set<String> sparedNpcs;
     private final Set<String> unlockedLocks;
     private final CombatActionRegistry combatActionRegistry;
     private final QuestManager questManager;
@@ -31,12 +32,14 @@ public class CombatManager
     private CombatOutcome lastCombatOutcome;
     private NpcCombatDef lastDef;
 
-    public CombatManager(Player player, Set<String> defeatedNpcs, Set<String> unlockedLocks,
+    public CombatManager(Player player, Set<String> defeatedNpcs, Set<String> sparedNpcs,
+                          Set<String> unlockedLocks,
                           CombatActionRegistry combatActionRegistry, QuestManager questManager,
                           Consumer<String> onLastMessage)
     {
         this.player = player;
         this.defeatedNpcs = defeatedNpcs;
+        this.sparedNpcs = sparedNpcs;
         this.unlockedLocks = unlockedLocks;
         this.combatActionRegistry = combatActionRegistry;
         this.questManager = questManager;
@@ -155,7 +158,14 @@ public class CombatManager
             defeatedNpcs.add(def.npcId);
             LOG.info("defeatedNpcs: added " + def.npcId);
         }
-        onLastMessage.accept("你击败了 " + def.displayName + "。");
+        // 仁慈/认输化解：记入 sparedNpcs，渲染为"已离去"而非尸体
+        if (activeCombat != null && activeCombat.wasSpared()) {
+            sparedNpcs.add(def.npcId);
+            LOG.info("sparedNpcs: added " + def.npcId);
+            onLastMessage.accept(def.displayName + " 放下了戒备，离开了。");
+        } else {
+            onLastMessage.accept("你击败了 " + def.displayName + "。");
+        }
     }
 
     private void clearCombat()

@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -252,6 +253,84 @@ class CombatEngineTest
         // 数字键直接选择"攻击" → 进入节奏攻击条阶段
         ut.selectFight();
         assertEquals(UndertaleCombatPhase.FIGHT_BAR, ut.getPhase());
+    }
+
+    @Test
+    void golemGravitySignatureRunsToCompletion() throws IOException
+    {
+        NpcCombatDef golemDef = CombatLoader.load("golem");
+        Player p = new Player("英雄");
+        p.setHp(99999);   // 不让玩家死，确保能打到胜利
+        UndertaleCombatEngine ut = new UndertaleCombatEngine(p, golemDef, new CombatActionRegistry());
+
+        int guard = 0;
+        boolean sawGravity = false;
+        while (ut.getOutcome() == CombatOutcome.ONGOING && guard++ < 400) {
+            if (ut.isShowingBattleLine()) { ut.dismissBattleLine(); continue; }
+            switch (ut.getPhase()) {
+                case MENU:
+                    ut.selectFight();
+                    break;
+                case FIGHT_BAR:
+                    ut.pressFightBar();
+                    break;
+                case ENEMY_TURN:
+                    for (int i = 0; i < 200 && ut.getPhase() == UndertaleCombatPhase.ENEMY_TURN
+                        && !ut.isShowingBattleLine(); i++) {
+                        ut.updateEnemyTurn(0.05f);
+                        if (ut.isGravityMode()) { sawGravity = true; ut.soulJump(); }
+                        ut.moveSoul(1f, 0f, 0.05f);
+                    }
+                    break;
+                default:
+                    guard = 1000;   // RESULT
+                    break;
+            }
+        }
+        assertTrue(guard <= 1000, "战斗应在有限步内推进，未死循环");
+        assertEquals(CombatOutcome.VICTORY, ut.getOutcome(), "魔像最终应被击败");
+    }
+
+    @Test
+    void sparNpcAutoSurrenderEndsAsSparedVictory() throws IOException
+    {
+        NpcCombatDef followerDef = CombatLoader.load("follower");   // markDefeated=false → 切磋认输
+        Player p = new Player("英雄");
+        p.setHp(99999);
+        UndertaleCombatEngine ut = new UndertaleCombatEngine(p, followerDef, new CombatActionRegistry());
+
+        int guard = 0;
+        while (ut.getOutcome() == CombatOutcome.ONGOING && guard++ < 300) {
+            if (ut.isShowingBattleLine()) { ut.dismissBattleLine(); continue; }
+            switch (ut.getPhase()) {
+                case MENU: ut.selectFight(); break;
+                case FIGHT_BAR: ut.pressFightBar(); break;
+                case ENEMY_TURN:
+                    for (int i = 0; i < 200 && ut.getPhase() == UndertaleCombatPhase.ENEMY_TURN
+                        && !ut.isShowingBattleLine(); i++) {
+                        ut.updateEnemyTurn(0.05f);
+                    }
+                    break;
+                default: guard = 1000; break;   // RESULT
+            }
+        }
+        // 认输后应结束为胜利（修复：之前 spared 未置位导致卡在 RESULT 阶段）
+        assertEquals(CombatOutcome.VICTORY, ut.getOutcome(), "切磋 NPC 认输应结束为胜利，而非卡死");
+        assertTrue(ut.wasSpared(), "认输应记为仁慈化解（spared）");
+    }
+
+    @Test
+    void swordBulletSurvivesOffscreenSpawn()
+    {
+        // 飞剑从屏幕外（x=-0.51）长距离飞入，不应被越界判定瞬间杀死
+        Bullet sword = Bullet.rect(-0.51f, 0.4f, 0.45f, 0.06f, 2.4f, 0f, 6)
+            .withKind(Bullet.Kind.SWORD);
+        sword.update(0.05f);
+        assertTrue(sword.alive, "飞剑从屏外生成时不应消失");
+        // 普通子弹越界应正常消失
+        Bullet normal = Bullet.circle(-0.51f, 0.4f, 0.03f, 1f, 0f, 5);
+        normal.update(0.05f);
+        assertFalse(normal.alive, "普通子弹越界应消失");
     }
 
     @Test

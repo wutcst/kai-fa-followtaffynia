@@ -129,7 +129,7 @@ public class RoomController
             MapLayer objLayer = map.getLayers().get("objects");
             objectsLayer = objLayer == null ? null : objLayer.getObjects();
             npcManager.buildNpcPlaceholders(roomId, objectsLayer,
-                engine.getDefeatedNpcs(),
+                engine.getDefeatedNpcs(), engine.getSparedNpcs(),
                 engine.isLockUnlocked("guard-gate"));
             itemManager.buildItemPlaceholders(roomId);
             buildActItems(objectsLayer);
@@ -250,7 +250,7 @@ public class RoomController
     {
         String roomId = engine.getCurrentRoom().getRoomId();
         npcManager.buildNpcPlaceholders(roomId, objectsLayer,
-            engine.getDefeatedNpcs(),
+            engine.getDefeatedNpcs(), engine.getSparedNpcs(),
             engine.isLockUnlocked("guard-gate"));
     }
 
