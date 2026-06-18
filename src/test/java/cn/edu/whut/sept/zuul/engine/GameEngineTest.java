@@ -296,20 +296,18 @@ class GameEngineTest
 
         engine.movePlayer(Direction.NORTH);
         ItemUseCheck outside = engine.checkItemUse("key-vault");
-        assertFalse(outside.canUse);
-        assertTrue(outside.requiresLocation);
+        assertTrue(outside.canUse, "钥匙现在可从任意位置使用");
     }
 
     @Test
-    void tryUseItem_keyBlockedAwayFromDoor()
+    void tryUseItem_keyWorksAnywhere()
     {
         goToLab();
         engine.takeItem("key-vault");
-        engine.movePlayer(Direction.NORTH);
+        engine.movePlayer(Direction.NORTH);  // 离开 lab 到 outside
         String msg = engine.tryUseItem("key-vault");
-        assertTrue(msg.contains("上锁出口"));
-        assertTrue(engine.getPlayer().getInventory().stream()
-            .anyMatch(i -> "key-vault".equals(i.getItemId())));
+        assertTrue(msg.contains("已解锁"), msg);
+        assertTrue(engine.isLockUnlocked("vault-door"));
     }
 
     @Test

@@ -54,6 +54,25 @@ public class DialogueManager
         }
     }
 
+    /** 从指定节点启动对话 */
+    public Dialogue talkNpcWithStart(String npcId, String startNodeId)
+    {
+        endDialogue();
+        try {
+            activeDialogueTree = DialogueLoader.load(npcId);
+            activeDialogueNodeId = startNodeId;
+            DialogueNode startNode = activeDialogueTree.getNode(startNodeId);
+            if (startNode == null) {
+                LOG.warning("talkNpcWithStart: node " + startNodeId + " not found, fallback");
+                return talkNpc(npcId);
+            }
+            LOG.info("talkNpcWithStart: " + npcId + " start=" + startNodeId);
+            return presentDialogueNode(startNode);
+        } catch (IOException ex) {
+            return talkNpc(npcId);
+        }
+    }
+
     public Dialogue chooseDialogueOption(int optionIndex)
     {
         if (activeDialogueTree == null || activeDialogueNodeId == null) {
