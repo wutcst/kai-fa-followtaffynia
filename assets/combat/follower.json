@@ -37,7 +37,8 @@
   "onDefeat": {
     "reputation": -5,
     "spawnItem": "shadow-pact",
-    "markDefeated": false
+    "markDefeated": true,
+    "spar": true
   },
   "actOptions": {
     "check": "暗影信徒 HP: 45  ATK: 10\n他身披暗色斗篷，眼中燃烧着暗紫色的火焰。",

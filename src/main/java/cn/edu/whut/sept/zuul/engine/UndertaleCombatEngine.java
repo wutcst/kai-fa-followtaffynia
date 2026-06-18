@@ -372,11 +372,12 @@ public class UndertaleCombatEngine implements CombatSystem
         checkHpThresholdLines();
 
         // 切磋模式：NPC 半血以下自动投降（算作仁慈结束，避免卡在 RESULT 阶段）
-        if (!def.onDefeatMarkDefeated && npcHp > 0
+        // 切磋模式：NPC 半血以下自动投降
+        if (def.spar && npcHp > 0
             && npcHp <= npcMaxHp / 2)
         {
-            spared = true;
             phase = UndertaleCombatPhase.RESULT;
+            spared = true;  // 切磋不标记为击败
             phaseMessage = def.displayName + " 认输了！\"你确实很强——这枚勋章，是你应得的。\"";
             return;
         }

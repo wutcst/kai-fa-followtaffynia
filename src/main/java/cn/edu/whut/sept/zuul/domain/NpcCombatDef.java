@@ -30,6 +30,8 @@ public final class NpcCombatDef
 
     /** 不可饶恕的 NPC（如魔像）：MERCY 选项灰掉 */
     public final boolean noMercy;
+    /** 切磋 NPC：半血自动投降，不给 defeated 标记 */
+    public final boolean spar;
 
     public NpcCombatDef(String npcId, String displayName, int maxHp, String defaultState,
         Map<String, Double> stateHpThresholds,
@@ -40,7 +42,7 @@ public final class NpcCombatDef
         this(npcId, displayName, maxHp, defaultState,
             stateHpThresholds, stateSkills, skills,
             onDefeatReputation, onDefeatUnlock, onDefeatMarkDefeated,
-            null, Collections.emptyMap(), Collections.emptyMap(), false);
+            null, Collections.emptyMap(), Collections.emptyMap(), false, false);
     }
 
     public NpcCombatDef(String npcId, String displayName, int maxHp, String defaultState,
@@ -51,7 +53,8 @@ public final class NpcCombatDef
         String onDefeatSpawnItem,
         Map<String, String> actOptions,
         Map<String, BattleLine> battleLines,
-        boolean noMercy)
+        boolean noMercy,
+        boolean spar)
     {
         this.npcId = npcId;
         this.displayName = displayName;
@@ -67,6 +70,7 @@ public final class NpcCombatDef
         this.actOptions = Collections.unmodifiableMap(new HashMap<>(actOptions));
         this.battleLines = Collections.unmodifiableMap(new HashMap<>(battleLines));
         this.noMercy = noMercy;
+        this.spar = spar;
     }
 
     public static final class NpcSkill

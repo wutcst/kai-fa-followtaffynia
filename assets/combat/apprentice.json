@@ -33,7 +33,8 @@
   "onDefeat": {
     "reputation": 3,
     "spawnItem": "guard-medal",
-    "markDefeated": false
+    "markDefeated": false,
+    "spar": true
   },
   "actOptions": {
     "check": "守卫学徒 HP: 40  ATK: 6\n他摆出标准的战斗姿势，眼中透着友善的战意。",

@@ -27,7 +27,7 @@ public final class CombatLoader
     private static final Pattern DOUBLE_FIELD =
         Pattern.compile("\"whenHpBelow\"\\s*:\\s*([0-9.]+)");
     private static final Pattern BOOL_FIELD =
-        Pattern.compile("\"(markDefeated|noMercy)\"\\s*:\\s*(true|false)");
+        Pattern.compile("\"(markDefeated|noMercy|spar)\"\\s*:\\s*(true|false)");
 
     private CombatLoader()
     {
@@ -75,6 +75,7 @@ public final class CombatLoader
         String unlock = null;
         boolean markDefeated = true;
         boolean noMercy = false;
+        boolean spar = false;
         String spawnItem = null;
         int onDefeatIdx = json.indexOf("\"onDefeat\"");
         if (onDefeatIdx >= 0) {
@@ -102,12 +103,15 @@ public final class CombatLoader
                 if ("noMercy".equals(boolM.group(1))) {
                     noMercy = Boolean.parseBoolean(boolM.group(2));
                 }
+                if ("spar".equals(boolM.group(1))) {
+                    spar = Boolean.parseBoolean(boolM.group(2));
+                }
             }
         }
 
         return new NpcCombatDef(npcId, displayName, maxHp, defaultState,
             stateThresholds, stateSkills, skills, onRep, unlock, markDefeated,
-            spawnItem, parseActOptions(json), parseBattleLines(json), noMercy);
+            spawnItem, parseActOptions(json), parseBattleLines(json), noMercy, spar);
     }
 
     private static void parseStates(String json,

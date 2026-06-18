@@ -33,7 +33,8 @@
   "onDefeat": {
     "reputation": 3,
     "spawnItem": "light-mark",
-    "markDefeated": false
+    "markDefeated": true,
+    "spar": true
   },
   "actOptions": {
     "check": "守光祭司 HP: 50  ATK: 8\n他周身环绕着温和的光芒，眼中充满期待。",

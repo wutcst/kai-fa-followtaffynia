@@ -472,7 +472,14 @@ public class GameEngine
         {
             return dialogueManager.talkNpc("scholar_neutral");
         }
-        // 守卫中立路线对话
+        // 守卫进门后友善对话（门已开 + 在 guard-room + 非暗影路线）
+        if ("guard".equals(npcId)
+            && isLockUnlocked("guard-gate")
+            && "guard-room".equals(currentRoom.getRoomId())
+            && !hasItem("shadow-pact"))
+        {
+            return dialogueManager.talkNpc("guard_post_unlock");
+        }
         if ("guard".equals(npcId)
             && hasItem("balance-book")
             && hasItem("guard-medal")
