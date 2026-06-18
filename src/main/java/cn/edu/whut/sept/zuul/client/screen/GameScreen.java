@@ -1498,13 +1498,13 @@ public class GameScreen implements Screen
 
         String desc = ending.getDescription();
         smallFont.setColor(0.92f, 0.88f, 0.78f, endingAlpha);
-        smallFont.draw(batch, desc, cx - 330f, h * 0.55f, 660f,
+        smallFont.draw(batch, desc, cx - 420f, h * 0.58f, 840f,
             com.badlogic.gdx.utils.Align.center, true);
 
         String hint = "按 T 返回标题";
         gl.setText(smallFont, hint);
         smallFont.setColor(1f, 0.9f, 0.58f, 0.72f * endingAlpha);
-        smallFont.draw(batch, hint, cx - gl.width / 2f, h * 0.84f);
+        smallFont.draw(batch, hint, cx - gl.width / 2f, h * 0.12f);
 
         batch.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
