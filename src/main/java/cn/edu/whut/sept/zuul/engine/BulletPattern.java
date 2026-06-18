@@ -13,6 +13,9 @@ public abstract class BulletPattern
     protected float timer;
     protected final float duration;
     protected float lastDelta;
+    /** 当前灵魂归一化位置（供瞄准类图案使用）。 */
+    protected float soulX = 0.5f;
+    protected float soulY = 0.5f;
 
     protected BulletPattern(float duration, Random rng)
     {
@@ -38,6 +41,15 @@ public abstract class BulletPattern
         lastDelta = delta;
         timer += delta;
         emit(bullets, warnings);
+    }
+
+    /** 带灵魂位置的更新（瞄准类图案据此锁定玩家）。 */
+    public void update(float delta, List<Bullet> bullets, List<WarningZone> warnings,
+                       float soulX, float soulY)
+    {
+        this.soulX = soulX;
+        this.soulY = soulY;
+        update(delta, bullets, warnings);
     }
 
     /** 子类实现：生成子弹。 */
@@ -159,6 +171,66 @@ public abstract class BulletPattern
                     }
                     bullets.add(Bullet.circle(x, y, 0.03f, vx, vy, damage));
                     spawned++;
+                }
+            }
+        };
+    }
+
+    /** 瞄准弹：从顶部随机点锁定玩家当前位置射出（先短预警，再发射）。 */
+    public static BulletPattern aimed(float duration, int totalBullets, int damage, Random rng)
+    {
+        return new BulletPattern(duration, rng)
+        {
+            private int spawned;
+            private float spawnTimer;
+            private final float interval = duration / totalBullets;
+
+            @Override
+            protected void emit(List<Bullet> bullets, List<WarningZone> warnings)
+            {
+                spawnTimer += lastDelta;
+                while (spawnTimer >= interval && spawned < totalBullets) {
+                    spawnTimer -= interval;
+                    float sx = rng.nextFloat();
+                    float sy = -0.08f;
+                    float dx = soulX - sx;
+                    float dy = soulY - sy;
+                    float len = (float) Math.sqrt(dx * dx + dy * dy);
+                    if (len < 1e-3f) len = 1f;
+                    float speed = 0.5f;
+                    warnings.add(WarningZone.line(sx, 0.02f, sx, 0.22f, 0.3f));
+                    bullets.add(Bullet.circle(sx, sy, 0.028f,
+                        dx / len * speed, dy / len * speed, damage));
+                    spawned++;
+                }
+            }
+        };
+    }
+
+    /** 柱列弹：成排从顶部落下的子弹墙，每排随机留一个安全列缺口。 */
+    public static BulletPattern pillars(float duration, int waves, int damage, Random rng)
+    {
+        return new BulletPattern(duration, rng)
+        {
+            private int done;
+            private float waveTimer;
+            private final float interval = duration / Math.max(1, waves);
+            private static final int COLS = 6;
+
+            @Override
+            protected void emit(List<Bullet> bullets, List<WarningZone> warnings)
+            {
+                waveTimer += lastDelta;
+                while (waveTimer >= interval && done < waves) {
+                    waveTimer -= interval;
+                    int gap = rng.nextInt(COLS);
+                    for (int c = 0; c < COLS; c++) {
+                        if (c == gap) continue;
+                        float x = (c + 0.5f) / COLS;
+                        warnings.add(WarningZone.line(x, 0.02f, x, 0.98f, 0.3f));
+                        bullets.add(Bullet.circle(x, -0.08f, 0.03f, 0f, 0.5f, damage));
+                    }
+                    done++;
                 }
             }
         };

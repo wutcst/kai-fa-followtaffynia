@@ -448,6 +448,23 @@ public class GameScreen implements Screen
         shapes.rect(boxX, boxY, boxW, boxH);
         shapes.end();
 
+        // 敌人立绘（战斗框上方）：受击时闪红 + 抖动
+        Texture enemyTex = npcPortraits.get(ut.getDef().npcId);
+        if (enemyTex != null) {
+            float pw = 70f, ph = 70f;
+            float baseY = boxY + boxH + 16f;
+            if (baseY + ph <= sh - TOP_BAR_HEIGHT - 2f) {
+                float f = combatFx.enemyFlashAmount();
+                float px = boxX + (boxW - pw) / 2f + combatFx.enemyBarShakeX();
+                batch.setProjectionMatrix(camera.getUiCamera().combined);
+                batch.begin();
+                batch.setColor(1f, 1f - f * 0.55f, 1f - f * 0.55f, 1f); // 命中偏红
+                batch.draw(enemyTex, px, baseY, pw, ph);
+                batch.setColor(Color.WHITE);
+                batch.end();
+            }
+        }
+
         utRenderer.render(ut, engine, combatFx, boxX, boxY, boxW, boxH);
         combatFx.render(shapes, batch, smallFont, boxX, boxY, boxW, boxH);
         Gdx.gl.glDisable(GL20.GL_BLEND);

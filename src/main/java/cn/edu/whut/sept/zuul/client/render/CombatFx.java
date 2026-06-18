@@ -279,6 +279,9 @@ public class CombatFx
 
     public boolean isHitstop() { return hitstop > 0f; }
 
+    /** 敌人受击闪光量 0..1（供敌人立绘闪红/抖动）。 */
+    public float enemyFlashAmount() { return enemyFlash; }
+
     public float shakeX()
     {
         if (trauma <= 0f) return 0f;

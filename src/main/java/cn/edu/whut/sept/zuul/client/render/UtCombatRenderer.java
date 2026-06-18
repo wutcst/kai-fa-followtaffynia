@@ -34,6 +34,10 @@ public class UtCombatRenderer implements Disposable
     private static final Color BUL_GOLD_HI = new Color(1f, 0.86f, 0.42f, 1f);
     private static final Color BUL_CYAN = new Color(0.42f, 0.72f, 1f, 1f);
     private static final Color BUL_AMBER = new Color(1f, 0.70f, 0.20f, 1f);
+    private static final Color BUL_CRIMSON = new Color(0.86f, 0.16f, 0.20f, 1f);
+    private static final Color BUL_ROCK = new Color(0.55f, 0.50f, 0.46f, 1f);
+    private static final Color BUL_ROCK_HI = new Color(0.78f, 0.74f, 0.68f, 1f);
+    private static final Color BUL_PURPLE = new Color(0.66f, 0.42f, 0.95f, 1f);
 
     // 位图：'o'=描边 'b'=主体 'h'=高光 '.'=透明
     private static final String[] PX_HEART = {
@@ -56,6 +60,13 @@ public class UtCombatRenderer implements Disposable
         ".obo.",
         "obhbo",
         ".obo.",
+        "..o.."
+    };
+    private static final String[] PX_STAR = {
+        "..o..",
+        "o.b.o",
+        ".bhb.",
+        "o.b.o",
         "..o.."
     };
 
@@ -247,6 +258,7 @@ public class UtCombatRenderer implements Disposable
     public void drawUtBullets(UndertaleCombatEngine ut,
                                float boxX, float boxY, float boxW, float boxH)
     {
+        String npcId = ut.getDef() != null ? ut.getDef().npcId : null;
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         for (Bullet b : ut.getBullets()) {
             if (!b.alive) continue;
@@ -254,7 +266,7 @@ public class UtCombatRenderer implements Disposable
                 float bx = boxX + b.x * boxW;
                 float by = boxY + b.y * boxH;
                 float br = Math.max(5f, b.radius * Math.min(boxW, boxH) * 1.55f);
-                drawCircleBullet(bx, by, br, b.visualVariant);
+                drawCircleBullet(bx, by, br, b.visualVariant, npcId);
             } else {
                 float bx = boxX + b.x * boxW;
                 float by = boxY + b.y * boxH;
@@ -266,17 +278,34 @@ public class UtCombatRenderer implements Disposable
         shapes.end();
     }
 
-    private void drawCircleBullet(float x, float y, float r, int visualVariant)
+    /**
+     * 按 NPC 选择子弹"族系"：不同敌人发射不同像素子弹（形状 + 配色），
+     * 增强辨识度与战斗多样性。未知 NPC 回退到按 visualVariant 轮换。
+     */
+    private void drawCircleBullet(float x, float y, float r, int visualVariant, String npcId)
     {
-        int style = Math.floorMod(visualVariant, 3);
-        float cell = Math.max(2f, r * 0.42f);
-        if (style == 0) {
-            drawPixelSprite(x, y, cell, PX_ORB, BUL_WHITE, BUL_GOLD_HI);
-        } else if (style == 1) {
-            drawPixelSprite(x, y, cell, PX_ORB, BUL_CYAN, BUL_WHITE);
-        } else {
-            drawPixelSprite(x, y, cell, PX_DIAMOND, BUL_AMBER, BUL_WHITE);
+        String[] bmp;
+        Color body, hi;
+        float sizeMul = 1f;
+        switch (npcId == null ? "" : npcId) {
+            case "guard":                       // 守卫：钢蓝圆弹
+                bmp = PX_ORB; body = BUL_WHITE; hi = BUL_GOLD_HI; break;
+            case "priest":                      // 神父：神圣菱晶
+                bmp = PX_DIAMOND; body = BUL_WHITE; hi = BUL_CYAN; break;
+            case "follower":                    // 追随者：血色圆弹
+                bmp = PX_ORB; body = BUL_CRIMSON; hi = BUL_WHITE; break;
+            case "apprentice":                  // 学徒：魔法星火
+                bmp = PX_STAR; body = BUL_PURPLE; hi = BUL_WHITE; break;
+            case "golem":                       // 魔像：沉重碎石（更大）
+                bmp = PX_ORB; body = BUL_ROCK; hi = BUL_ROCK_HI; sizeMul = 1.25f; break;
+            default:                            // 其他：按变体轮换形状
+                int s = Math.floorMod(visualVariant, 3);
+                bmp = s == 0 ? PX_ORB : s == 1 ? PX_DIAMOND : PX_STAR;
+                body = s == 0 ? BUL_WHITE : s == 1 ? BUL_CYAN : BUL_AMBER;
+                hi = BUL_WHITE; break;
         }
+        float cell = Math.max(2f, r * 0.42f * sizeMul);
+        drawPixelSprite(x, y, cell, bmp, body, hi);
     }
 
     /**

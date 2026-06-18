@@ -429,21 +429,29 @@ public class UndertaleCombatEngine implements CombatSystem
         hitsTaken = 0;
         bullets.clear();
         warnings.clear();
-        int idx = rng.nextInt(4);
+
+        // 低血狂暴：HP ≤ 50% 时弹幕更密集
+        float ratio = npcMaxHp > 0 ? (float) npcHp / npcMaxHp : 1f;
+        boolean enraged = ratio <= 0.5f;
+        int extra = enraged ? 4 : 0;
+
+        int idx = rng.nextInt(6);
         switch (idx) {
-            case 0: activePattern = BulletPattern.wave(enemyTurnDuration, 10, 4, rng); break;
-            case 1: activePattern = BulletPattern.burst(enemyTurnDuration, 14, 4, rng); break;
-            case 2: activePattern = BulletPattern.randomScatter(enemyTurnDuration, 11, 4, rng); break;
-            default: activePattern = BulletPattern.spiral(enemyTurnDuration, 18, 4, rng); break;
+            case 0: activePattern = BulletPattern.wave(enemyTurnDuration, 10 + extra, 4, rng); break;
+            case 1: activePattern = BulletPattern.burst(enemyTurnDuration, 14 + extra, 4, rng); break;
+            case 2: activePattern = BulletPattern.randomScatter(enemyTurnDuration, 11 + extra, 4, rng); break;
+            case 3: activePattern = BulletPattern.spiral(enemyTurnDuration, 18 + extra, 4, rng); break;
+            case 4: activePattern = BulletPattern.aimed(enemyTurnDuration, 8 + extra, 5, rng); break;
+            default: activePattern = BulletPattern.pillars(enemyTurnDuration, 6 + extra / 2, 4, rng); break;
         }
-        phaseMessage = "躲避 " + def.displayName + " 的攻击！";
+        phaseMessage = (enraged ? "【狂暴】" : "") + "躲避 " + def.displayName + " 的攻击！";
     }
 
     public void updateEnemyTurn(float delta)
     {
         if (phase != UndertaleCombatPhase.ENEMY_TURN || battleLineActive) return;
 
-        if (activePattern != null) activePattern.update(delta, bullets, warnings);
+        if (activePattern != null) activePattern.update(delta, bullets, warnings, soulX, soulY);
         for (WarningZone warning : warnings) {
             warning.update(delta);
         }
