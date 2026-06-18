@@ -26,6 +26,39 @@ public class UtCombatRenderer implements Disposable
     private static final Color BUTTON = new Color(0.03f, 0.026f, 0.035f, 0.96f);
     private static final Color BUTTON_ACTIVE = new Color(0.13f, 0.10f, 0.035f, 0.96f);
 
+    // ===== 像素风调色板（程序化像素精灵）=====
+    private static final Color PX_OUTLINE = new Color(0.03f, 0.025f, 0.05f, 1f);
+    private static final Color SOUL_BODY = new Color(0.95f, 0.11f, 0.13f, 1f);
+    private static final Color SOUL_HI = new Color(1f, 0.52f, 0.55f, 1f);
+    private static final Color BUL_WHITE = new Color(0.97f, 0.97f, 0.95f, 1f);
+    private static final Color BUL_GOLD_HI = new Color(1f, 0.86f, 0.42f, 1f);
+    private static final Color BUL_CYAN = new Color(0.42f, 0.72f, 1f, 1f);
+    private static final Color BUL_AMBER = new Color(1f, 0.70f, 0.20f, 1f);
+
+    // 位图：'o'=描边 'b'=主体 'h'=高光 '.'=透明
+    private static final String[] PX_HEART = {
+        ".oo.oo.",
+        "ohbobbo",
+        "obbbbbo",
+        ".obbbo.",
+        "..obo..",
+        "...o..."
+    };
+    private static final String[] PX_ORB = {
+        ".ooo.",
+        "ohbbo",
+        "obbbo",
+        "obbbo",
+        ".ooo."
+    };
+    private static final String[] PX_DIAMOND = {
+        "..o..",
+        ".obo.",
+        "obhbo",
+        ".obo.",
+        "..o.."
+    };
+
     private final SpriteBatch batch;
     private final ShapeRenderer shapes;
     private final BitmapFont font;
@@ -53,7 +86,7 @@ public class UtCombatRenderer implements Disposable
 
         UndertaleCombatPhase phase = ut.getPhase();
         if (phase == UndertaleCombatPhase.MENU) {
-            sb.append("←/→ 选择，Enter/Space 确认；1-4 快捷键");
+            sb.append("按 1-4 选择行动：1 攻击 2 行动 3 物品 4 仁慈");
         } else if (phase == UndertaleCombatPhase.FIGHT_BAR) {
             sb.append("ENTER/Space=攻击! [");
             int pos = (int)(ut.getFightBarPos() * 20);
@@ -76,6 +109,12 @@ public class UtCombatRenderer implements Disposable
     public void render(UndertaleCombatEngine ut, GameEngine engine,
                        float boxX, float boxY, float boxW, float boxH)
     {
+        render(ut, engine, null, boxX, boxY, boxW, boxH);
+    }
+
+    public void render(UndertaleCombatEngine ut, GameEngine engine, CombatFx fx,
+                       float boxX, float boxY, float boxW, float boxH)
+    {
         UndertaleCombatPhase phase = ut.getPhase();
 
         drawBattleScene(boxX, boxY, boxW, boxH, phase);
@@ -83,7 +122,9 @@ public class UtCombatRenderer implements Disposable
         if (phase == UndertaleCombatPhase.ENEMY_TURN) {
             drawUtWarnings(ut, boxX, boxY, boxW, boxH);
             drawUtBullets(ut, boxX, boxY, boxW, boxH);
-            drawUtSoul(ut, boxX, boxY, boxW, boxH);
+            // 受击无敌帧：隔帧闪烁
+            if (fx == null || fx.soulVisible())
+                drawUtSoul(ut, boxX, boxY, boxW, boxH);
         }
 
         if (phase == UndertaleCombatPhase.FIGHT_BAR) {
@@ -97,10 +138,17 @@ public class UtCombatRenderer implements Disposable
         float columnW = Math.max(120f, (boxW - columnGap) / 2f);
         float enemyX = boxX;
         float playerX = boxX + columnW + columnGap;
-        drawHpBar(enemyX, hpBarY, columnW, 10f,
-            (float) ut.snapshot().npcHp / ut.getDef().maxHp, true);
-        drawHpBar(playerX, hpBarY, columnW, 10f,
-            (float) ut.snapshot().playerHp / engine.getPlayer().getMaxHp(), false);
+        float enemyRatio = (float) ut.snapshot().npcHp / ut.getDef().maxHp;
+        float playerRatio = (float) ut.snapshot().playerHp / engine.getPlayer().getMaxHp();
+        float enemyShake = 0f, playerShake = 0f;
+        if (fx != null) {
+            enemyRatio = fx.enemyBarRatio(enemyRatio);
+            playerRatio = fx.playerBarRatio(playerRatio);
+            enemyShake = fx.enemyBarShakeX();
+            playerShake = fx.playerBarShakeX();
+        }
+        drawHpBar(enemyX + enemyShake, hpBarY, columnW, 10f, enemyRatio, true);
+        drawHpBar(playerX + playerShake, hpBarY, columnW, 10f, playerRatio, false);
 
         float btnGap = 8f;
         float btnH = 34f;
@@ -111,7 +159,9 @@ public class UtCombatRenderer implements Disposable
                 float bx = boxX + i * (btnW + btnGap);
                 drawUtButtonBg(bx, btnY, btnW, btnH, i == ut.getMenuIndex());
             }
-            drawMenuCursor(boxX + ut.getMenuIndex() * (btnW + btnGap), btnY, btnW, btnH);
+            // 纯数字菜单（menuIndex<0）不画游标
+            if (ut.getMenuIndex() >= 0)
+                drawMenuCursor(boxX + ut.getMenuIndex() * (btnW + btnGap), btnY, btnW, btnH);
         } else {
             drawUtMessageBg(boxX, boxY - 42f, boxW, 30f);
         }
@@ -163,12 +213,9 @@ public class UtCombatRenderer implements Disposable
     {
         float sx = boxX + ut.getSoulX() * boxW;
         float sy = boxY + ut.getSoulY() * boxH;
+        float cell = Math.max(2.5f, Math.min(boxW, boxH) * 0.013f);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-        drawHeart(sx, sy, 11f, Color.BLACK);
-        drawHeart(sx, sy, 9.2f, WHITE);
-        drawHeart(sx, sy, 7.4f, new Color(1f, 0.08f, 0.08f, 1f));
-        shapes.setColor(1f, 0.30f, 0.25f, 0.25f);
-        shapes.circle(sx, sy, 14f, 18);
+        drawPixelSprite(sx, sy, cell, PX_HEART, SOUL_BODY, SOUL_HI);
         shapes.end();
     }
 
@@ -222,26 +269,43 @@ public class UtCombatRenderer implements Disposable
     private void drawCircleBullet(float x, float y, float r, int visualVariant)
     {
         int style = Math.floorMod(visualVariant, 3);
+        float cell = Math.max(2f, r * 0.42f);
         if (style == 0) {
-            shapes.setColor(Color.BLACK);
-            shapes.circle(x, y, r + 2f, 14);
-            shapes.setColor(WHITE);
-            shapes.circle(x, y, r, 14);
-            shapes.setColor(1f, 0.84f, 0.32f, 1f);
-            shapes.circle(x, y, r * 0.40f, 10);
+            drawPixelSprite(x, y, cell, PX_ORB, BUL_WHITE, BUL_GOLD_HI);
         } else if (style == 1) {
-            shapes.setColor(Color.BLACK);
-            shapes.circle(x, y, r + 2f, 16);
-            shapes.setColor(WHITE);
-            shapes.circle(x, y, r, 16);
-            shapes.setColor(PANEL);
-            shapes.circle(x, y, r * 0.58f, 14);
-            shapes.setColor(0.35f, 0.62f, 1f, 1f);
-            shapes.circle(x, y, r * 0.24f, 8);
+            drawPixelSprite(x, y, cell, PX_ORB, BUL_CYAN, BUL_WHITE);
         } else {
-            drawDiamond(x, y, r + 2f, Color.BLACK);
-            drawDiamond(x, y, r, WHITE);
-            drawDiamond(x, y, r * 0.48f, new Color(1f, 0.72f, 0.18f, 1f));
+            drawPixelSprite(x, y, cell, PX_DIAMOND, BUL_AMBER, BUL_WHITE);
+        }
+    }
+
+    /**
+     * 程序化像素精灵：按位图网格以小方块拼绘，带黑描边/高光，并将原点对齐到整数像素，
+     * 营造刻意的像素风（避免平滑圆形那种"贴图"感）。
+     * 须在 {@code shapes.begin(Filled)} 与 {@code end()} 之间调用。
+     *
+     * @param cx,cy 精灵中心（屏幕像素）
+     * @param cell  单个"像素"的边长（屏幕像素）
+     * @param rows  位图行（'o'描边 'b'主体 'h'高光 '.'透明）
+     */
+    private void drawPixelSprite(float cx, float cy, float cell, String[] rows,
+                                 Color body, Color hi)
+    {
+        int rowsN = rows.length;
+        int colsN = rows[0].length();
+        float x0 = Math.round(cx - colsN * cell / 2f);
+        float y0 = Math.round(cy - rowsN * cell / 2f);
+        for (int rIdx = 0; rIdx < rowsN; rIdx++) {
+            String row = rows[rIdx];
+            float ry = y0 + (rowsN - 1 - rIdx) * cell;   // 行从上到下，y 向上
+            for (int c = 0; c < colsN; c++) {
+                char ch = row.charAt(c);
+                if (ch == '.') continue;
+                if (ch == 'o') shapes.setColor(PX_OUTLINE);
+                else if (ch == 'h') shapes.setColor(hi);
+                else shapes.setColor(body);
+                shapes.rect(x0 + c * cell, ry, cell, cell);
+            }
         }
     }
 
@@ -407,13 +471,6 @@ public class UtCombatRenderer implements Disposable
         shapes.triangle(x - r * 0.95f, y + r * 0.12f,
             x + r * 0.95f, y + r * 0.12f,
             x, y - r * 1.08f);
-    }
-
-    private void drawDiamond(float x, float y, float r, Color color)
-    {
-        shapes.setColor(color);
-        shapes.triangle(x, y + r, x + r, y, x, y - r);
-        shapes.triangle(x, y + r, x - r, y, x, y - r);
     }
 
     private void drawFrame(float x, float y, float w, float h, float t)

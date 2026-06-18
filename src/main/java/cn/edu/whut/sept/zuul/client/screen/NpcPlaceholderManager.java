@@ -40,7 +40,6 @@ public class NpcPlaceholderManager
         Set<String> defeatedNpcs, boolean guardGateUnlocked)
     {
         placeholders.clear();
-        boolean guardDealt = defeatedNpcs.contains("guard");
 
         if (objectsLayer != null) {
             for (MapObject obj : objectsLayer) {
@@ -49,18 +48,26 @@ public class NpcPlaceholderManager
                 if (!(obj instanceof RectangleMapObject)) continue;
                 String npcId = obj.getProperties().get("npcId", String.class);
                 if (npcId == null || npcId.trim().isEmpty()) continue;
-                if (shouldSkip(npcId, roomId, defeatedNpcs, guardGateUnlocked)) continue;
                 Rectangle rect = ((RectangleMapObject) obj).getRectangle();
-                placeholders.add(NpcPlaceholder.forNpc(npcId, rect));
+                boolean defeated = defeatedNpcs != null && defeatedNpcs.contains(npcId);
+
+                if (defeated) {
+                    // 已击杀的 NPC 留下尸体，必须停在死亡地点。
+                    // 守卫死在 garden（被杀时门尚锁着），死亡才解锁门，故尸体只放 garden，
+                    // 不随解锁后的位置逻辑漂移到 guard-room。
+                    if ("guard".equals(npcId) && !"garden".equals(roomId)) continue;
+                    placeholders.add(NpcPlaceholder.corpse(npcId, rect));
+                } else {
+                    // 存活 NPC：位置性跳过（守卫随门状态出现在不同房间）
+                    if (guardPositionalSkip(npcId, roomId, guardGateUnlocked)) continue;
+                    placeholders.add(NpcPlaceholder.forNpc(npcId, rect));
+                }
             }
         }
     }
 
-    private boolean shouldSkip(String npcId, String roomId,
-        Set<String> defeatedNpcs, boolean guardGateUnlocked)
+    private boolean guardPositionalSkip(String npcId, String roomId, boolean guardGateUnlocked)
     {
-        if (defeatedNpcs != null && defeatedNpcs.contains(npcId)) return true;
-
         if ("guard".equals(npcId)) {
             if ("garden".equals(roomId) && guardGateUnlocked) return true;
             if ("guard-room".equals(roomId) && !guardGateUnlocked) return true;
@@ -80,13 +87,13 @@ public class NpcPlaceholderManager
 
             Rectangle b = npc.bounds;
             int rw = npcRenderer.getRenderW(npc.npcId);
-            int rh = npcRenderer.getRenderH(npc.npcId);
 
             // 水平居中，脚底对齐 bounds 底部（b.y）
             float drawX = b.x + b.width / 2f - rw / 2f;
             float drawY = b.y - 50f;
 
-            npcRenderer.render(batch, npc.npcId, drawX, drawY);
+            if (npc.corpse) npcRenderer.renderCorpse(batch, npc.npcId, drawX, drawY);
+            else npcRenderer.render(batch, npc.npcId, drawX, drawY);
         }
     }
 
@@ -95,6 +102,7 @@ public class NpcPlaceholderManager
         if (placeholders.isEmpty()) return false;
         Rectangle playerRect = new Rectangle(newX, newY, playerW, playerH);
         for (NpcPlaceholder npc : placeholders) {
+            if (npc.corpse) continue;   // 尸体不阻挡，可踩过
             if (npc.bounds.overlaps(playerRect)) return true;
         }
         return false;
@@ -106,6 +114,7 @@ public class NpcPlaceholderManager
         Rectangle interactRect = new Rectangle(
             playerX - 10f, playerY - 10f, playerW + 20f, playerH + 20f);
         for (NpcPlaceholder npc : placeholders) {
+            if (npc.corpse) continue;   // 尸体不可交互
             if (npc.bounds.overlaps(interactRect)) return npc.npcId;
         }
         return null;
@@ -124,16 +133,23 @@ public class NpcPlaceholderManager
     {
         public final String npcId;
         public final Rectangle bounds;
+        public final boolean corpse;
 
-        private NpcPlaceholder(String npcId, Rectangle bounds)
+        private NpcPlaceholder(String npcId, Rectangle bounds, boolean corpse)
         {
             this.npcId = npcId;
             this.bounds = bounds;
+            this.corpse = corpse;
         }
 
         public static NpcPlaceholder forNpc(String npcId, Rectangle bounds)
         {
-            return new NpcPlaceholder(npcId, bounds);
+            return new NpcPlaceholder(npcId, bounds, false);
+        }
+
+        public static NpcPlaceholder corpse(String npcId, Rectangle bounds)
+        {
+            return new NpcPlaceholder(npcId, bounds, true);
         }
     }
 }

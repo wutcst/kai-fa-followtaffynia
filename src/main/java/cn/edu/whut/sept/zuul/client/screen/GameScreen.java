@@ -3,6 +3,7 @@ package cn.edu.whut.sept.zuul.client.screen;
 import cn.edu.whut.sept.zuul.client.RpgMain;
 import cn.edu.whut.sept.zuul.client.audio.GameAudio.Cue;
 import cn.edu.whut.sept.zuul.client.audio.GameAudio.Track;
+import cn.edu.whut.sept.zuul.client.render.CombatFx;
 import cn.edu.whut.sept.zuul.client.render.NpcRenderer;
 import cn.edu.whut.sept.zuul.client.render.PlayerRenderer;
 import cn.edu.whut.sept.zuul.client.render.UtCombatRenderer;
@@ -14,6 +15,7 @@ import cn.edu.whut.sept.zuul.domain.Dialogue;
 import cn.edu.whut.sept.zuul.domain.Item;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
 import cn.edu.whut.sept.zuul.engine.UndertaleCombatEngine;
+import cn.edu.whut.sept.zuul.engine.UndertaleCombatPhase;
 import cn.edu.whut.sept.zuul.infra.GameLogger;
 import cn.edu.whut.sept.zuul.infra.GameState;
 import cn.edu.whut.sept.zuul.infra.SaveGameService;
@@ -80,6 +82,7 @@ public class GameScreen implements Screen
     private final RoomController room;
     private final PlayerMovementController movement;
     private final UtCombatRenderer utRenderer;
+    private final CombatFx combatFx = new CombatFx();
     private final WorldMapRenderer worldMapRenderer;
     private boolean lastFrameInDialogueOrCombat;
     private final NpcRenderer npcRenderer;
@@ -431,6 +434,11 @@ public class GameScreen implements Screen
         float maxBoxY = sh - TOP_BAR_HEIGHT - boxH - 28f;
         float centeredY = (sh - boxH) / 2f;
         float boxY = draw.grid(Math.max(minBoxY, Math.min(centeredY, maxBoxY)));
+
+        // 屏幕震动：偏移整个战斗框及其内容
+        boxX += combatFx.shakeX();
+        boxY += combatFx.shakeY();
+
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         shapes.setColor(0.025f, 0.022f, 0.04f, 0.96f);
         shapes.rect(boxX, boxY, boxW, boxH);
@@ -440,7 +448,8 @@ public class GameScreen implements Screen
         shapes.rect(boxX, boxY, boxW, boxH);
         shapes.end();
 
-        utRenderer.render(ut, engine, boxX, boxY, boxW, boxH);
+        utRenderer.render(ut, engine, combatFx, boxX, boxY, boxW, boxH);
+        combatFx.render(shapes, batch, smallFont, boxX, boxY, boxW, boxH);
         Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
@@ -545,17 +554,19 @@ public class GameScreen implements Screen
         String playerChoice = dialogueUi.getPlayerLastChoice();
         boolean showingChoice = playerChoice != null && !playerChoice.isEmpty();
 
-        // 暗色遮罩
+        float appear = dialogueUi.getAppearProgress();
+
+        // 暗色遮罩（淡入）
         Gdx.gl.glEnable(GL20.GL_BLEND);
         shapes.setProjectionMatrix(camera.getUiCamera().combined);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(0.02f, 0.02f, 0.06f, 0.95f);
+        shapes.setColor(0.02f, 0.02f, 0.06f, 0.95f * appear);
         shapes.rect(boxX, boxY, boxW, boxH);
         shapes.end();
 
-        // 边框
+        // 边框（淡入）
         shapes.begin(ShapeRenderer.ShapeType.Line);
-        shapes.setColor(1f, 0.7f, 0.3f, 0.8f);
+        shapes.setColor(1f, 0.7f, 0.3f, 0.8f * appear);
         shapes.rect(boxX, boxY, boxW, boxH);
         shapes.end();
 
@@ -604,10 +615,8 @@ public class GameScreen implements Screen
             font.setColor(0.6f, 1f, 0.5f, 1f);
             draw.drawCentered(batch, "你", playerPx + DIALOG_PORTRAIT_W / 2f, youNameY);
 
-            // NPC 回应（左对齐）
-            String npcText = dialogueUi.formatDialogue(d);
-            int ln = npcText.lastIndexOf('\n');
-            String npcBody = ln > 0 ? npcText.substring(0, ln) : npcText;
+            // NPC 回应（左对齐，逐字显示）
+            String npcBody = dialogueUi.getVisibleBody();
             float npcTextY = 0;
             if (npcBody != null && !npcBody.trim().isEmpty()) {
                 float respNameY = npcPy + DIALOG_PORTRAIT_H + 28f;
@@ -633,15 +642,13 @@ public class GameScreen implements Screen
             draw.drawCentered(batch, npcName, npcPx + DIALOG_PORTRAIT_W / 2f, nameY);
 
             float textY = boxY + boxH - 40f;
-            String text = dialogueUi.formatDialogue(d);
-            int ln = text.lastIndexOf('\n');
-            String body = ln > 0 ? text.substring(0, ln) : text;
+            String body = dialogueUi.getVisibleBody();
             smallFont.setColor(0.9f, 0.9f, 0.92f, 1f);
             smallFont.draw(batch, body, textX, textY, textW,
                 com.badlogic.gdx.utils.Align.left, true);
 
-            // 如果有选项且已翻完所有文字，显示在底部
-            if (dialogueUi.isAtChoicePoint()) {
+            // 如果有选项且文字已完整显示，显示在底部
+            if (dialogueUi.isAtChoicePoint() && dialogueUi.isPageFullyRevealed()) {
                 List<String> opts = d.getOptionTexts();
                 StringBuilder optLine = new StringBuilder();
                 for (int i = 0; i < opts.size(); i++) {
@@ -653,9 +660,11 @@ public class GameScreen implements Screen
                     com.badlogic.gdx.utils.Align.left, true);
             }
         }
-        drawDialogueHint(boxX, boxY, boxW, dialogueUi.isAtChoicePoint()
-            ? "数字键 1-9 选择  /  Enter 继续"
-            : "Enter 继续 / 关闭对话");
+        String hint;
+        if (!dialogueUi.isPageFullyRevealed()) hint = "Enter 跳过打字";
+        else if (dialogueUi.isAtChoicePoint()) hint = "数字键 1-9 选择  /  Enter 继续";
+        else hint = "Enter 继续 / 关闭对话";
+        drawDialogueHint(boxX, boxY, boxW, hint);
         batch.end();
 
         Gdx.gl.glDisable(GL20.GL_BLEND);
@@ -853,8 +862,48 @@ public class GameScreen implements Screen
 
     // ==================== input ====================
 
+    /**
+     * UT 战斗回合：完全接管输入，驱动打击感特效，并在战斗结束时立即清理。
+     */
+    private void handleUtCombatTurn(float delta)
+    {
+        UndertaleCombatEngine ut = utRenderer.utEngine(engine);
+        combatFx.update(delta);
+        // 命中顿帧：hitstop 期间冻结战斗推进（输入 delta 置 0）
+        float fxDelta = combatFx.isHitstop() ? 0f : delta;
+        int beforeHp = engine.getPlayer().getHp();
+        String msg = encounterUi.handleUtCombatInput(fxDelta, ut);
+        if (msg != null) actionMessage = msg;
+        // 打击感：侦测 HP 变化触发特效，并采样灵魂拖尾
+        if (ut != null) {
+            combatFx.observe(engine.getPlayer().getHp(), engine.getPlayer().getMaxHp(),
+                ut.getNpcHp(), ut.getNpcMaxHp(), ut.getSoulX(), ut.getSoulY(),
+                ut.wasLastAttackPerfect());
+            if (ut.getPhase() == UndertaleCombatPhase.ENEMY_TURN)
+                combatFx.sampleSoul(ut.getSoulX(), ut.getSoulY());
+            else
+                combatFx.clearTrail();   // 离开躲避阶段：清掉红心拖尾残影
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)
+            || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
+            || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            game.getAudio().playThrottled(Cue.ATTACK, 140L);
+        } else if (engine.getPlayer().getHp() < beforeHp) {
+            game.getAudio().playThrottled(Cue.HIT, 120L);
+        }
+        // 战斗刚结束：立即清理特效，避免红心/粒子残留到对话或探索
+        if (!engine.isInCombat()) combatFx.clear();
+        lastFrameInDialogueOrCombat = true;
+    }
+
     private void handleInput(float delta)
     {
+        // 战斗进行中：完全接管输入，屏蔽 ESC/暂停/地图/背包/存读档等无关按键
+        if (engine.isInCombat() && engine.isUndertaleCombat()) {
+            handleUtCombatTurn(delta);
+            return;
+        }
+
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             if (worldMapOpen) {
                 worldMapOpen = false;
@@ -903,6 +952,7 @@ public class GameScreen implements Screen
         if (nowInDialogueOrCombat) {
             lastFrameInDialogueOrCombat = true;
             if (dialogueUi.isActive() || engine.isInDialogue()) {
+                dialogueUi.updateAnim(delta);
                 String before = actionMessage;
                 StringBuilder sb = new StringBuilder(actionMessage);
                 dialogueUi.handleInput(sb);
@@ -921,32 +971,21 @@ public class GameScreen implements Screen
                 return;
             }
             if (engine.isInCombat()) {
-                if (engine.isUndertaleCombat()) {
-                    int beforeHp = engine.getPlayer().getHp();
-                    String msg = encounterUi.handleUtCombatInput(delta, utRenderer.utEngine(engine));
-                    if (msg != null) actionMessage = msg;
-                    if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)
-                        || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
-                        || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-                        game.getAudio().playThrottled(Cue.ATTACK, 140L);
-                    } else if (engine.getPlayer().getHp() < beforeHp) {
-                        game.getAudio().playThrottled(Cue.HIT, 120L);
-                    }
-                } else {
-                    int beforeHp = engine.getPlayer().getHp();
-                    String msg = encounterUi.handleCombatInput();
-                    if (msg != null) {
-                        actionMessage = msg;
-                        game.getAudio().play(msg.contains("造成") ? Cue.ATTACK : Cue.CLICK);
-                    }
-                    if (engine.getPlayer().getHp() < beforeHp) {
-                        game.getAudio().play(Cue.HIT);
-                    }
+                // UT 战斗已在 handleInput 顶部接管；此处仅处理传统回合制战斗
+                int beforeHp = engine.getPlayer().getHp();
+                String msg = encounterUi.handleCombatInput();
+                if (msg != null) {
+                    actionMessage = msg;
+                    game.getAudio().play(msg.contains("造成") ? Cue.ATTACK : Cue.CLICK);
+                }
+                if (engine.getPlayer().getHp() < beforeHp) {
+                    game.getAudio().play(Cue.HIT);
                 }
                 return;
             }
         } else if (lastFrameInDialogueOrCombat) {
             lastFrameInDialogueOrCombat = false;
+            combatFx.clear();
             room.rebuildNpcs();
         }
 

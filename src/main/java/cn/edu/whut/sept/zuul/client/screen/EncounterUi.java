@@ -170,16 +170,8 @@ public class EncounterUi
         UndertaleCombatPhase phase = ut.getPhase();
 
         if (phase == UndertaleCombatPhase.MENU) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.A)
-                || Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
-                ut.moveMenuSelection(-1);
-            } else if (Gdx.input.isKeyJustPressed(Input.Keys.D)
-                || Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
-                ut.moveMenuSelection(1);
-            } else if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
-                || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-                ut.confirmMenuSelection();
-            } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) ut.selectFight();
+            // 仅数字键 1-4 操作（WASD/方向键保留给弹幕躲避，避免一键多用混淆）
+            if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) ut.selectFight();
             else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
                 if (!ut.getDef().actOptions.isEmpty()) {
                     String actId = ut.getDef().actOptions.keySet().iterator().next();

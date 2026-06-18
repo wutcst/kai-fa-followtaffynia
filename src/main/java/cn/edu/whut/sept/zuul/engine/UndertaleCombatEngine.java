@@ -72,6 +72,7 @@ public class UndertaleCombatEngine implements CombatSystem
 
     private int npcHp;
     private int npcMaxHp;
+    private boolean lastAttackPerfect;
     private int mercyCount;
     private boolean mercyExited;
     private boolean triggerHp50Line;
@@ -115,6 +116,7 @@ public class UndertaleCombatEngine implements CombatSystem
         this.soulX = 0.5f;
         this.soulY = 0.5f;
         this.mercyCount = 0;
+        this.menuIndex = -1;   // 纯数字键操作，无方向导航游标
         this.triggerHp50Line = true;
         this.triggerHp10Line = true;
 
@@ -159,6 +161,10 @@ public class UndertaleCombatEngine implements CombatSystem
     public String getCurrentBattleLine() { return currentBattleLine; }
     public String getCurrentBattleLineColor() { return currentBattleLineColor; }
     public boolean isMercyExited() { return mercyExited; }
+    public int getNpcHp() { return npcHp; }
+    public int getNpcMaxHp() { return npcMaxHp; }
+    /** 上一次节奏攻击是否命中"完美"区间（供客户端打击感特效判定）。 */
+    public boolean wasLastAttackPerfect() { return lastAttackPerfect; }
     public float getSoulX() { return soulX; }
     public float getSoulY() { return soulY; }
     public float getFightBarPos() { return fightBarPos; }
@@ -335,9 +341,9 @@ public class UndertaleCombatEngine implements CombatSystem
         float dist = Math.abs(fightBarPos - 0.5f);
         int damage;
         String quality;
-        if (dist < 0.1f) { damage = BASE_DAMAGE + SWORD_BONUS; quality = "完美！"; }
-        else if (dist < 0.2f) { damage = BASE_DAMAGE; quality = "不错。"; }
-        else { damage = BASE_DAMAGE / 2; quality = "偏离了……"; }
+        if (dist < 0.1f) { damage = BASE_DAMAGE + SWORD_BONUS; quality = "完美！"; lastAttackPerfect = true; }
+        else if (dist < 0.2f) { damage = BASE_DAMAGE; quality = "不错。"; lastAttackPerfect = false; }
+        else { damage = BASE_DAMAGE / 2; quality = "偏离了……"; lastAttackPerfect = false; }
         if (hasItem("sword-rusty")) damage += SWORD_BONUS;
         if (defDebuff) damage += 6;
         npcHp = Math.max(0, npcHp - damage);

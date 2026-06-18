@@ -1,6 +1,7 @@
 package cn.edu.whut.sept.zuul.client.render;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -115,6 +116,23 @@ public class NpcRenderer implements Disposable
         int rw = getRenderW(npcId);
         int rh = getRenderH(npcId);
         batch.draw(frame, x, y, rw, rh);
+    }
+
+    /**
+     * 绘制 NPC "尸体"：灰化 + 旋转 90° 倒地（静态首帧），表示被击杀后倒下。
+     */
+    public void renderCorpse(SpriteBatch batch, String npcId, float x, float y)
+    {
+        Animation<TextureRegion> anim = anims.get(npcId);
+        if (anim == null) return;
+        TextureRegion frame = anim.getKeyFrame(0f);
+        int rw = getRenderW(npcId);
+        int rh = getRenderH(npcId);
+        Color saved = batch.getColor().cpy();
+        batch.setColor(0.42f, 0.42f, 0.48f, 0.92f);       // 灰化（尸体）
+        // 以底部中心为支点旋转 90°，呈倒地姿态
+        batch.draw(frame, x, y, rw / 2f, 0f, rw, rh, 1f, 1f, 90f);
+        batch.setColor(saved);
     }
 
     @Override

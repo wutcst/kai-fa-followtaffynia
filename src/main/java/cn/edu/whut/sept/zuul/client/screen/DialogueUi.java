@@ -37,6 +37,11 @@ public class DialogueUi
     private String playerLastChoice;  // 玩家刚选的对话选项文本
     private String pendingCombatNpcId; // 对话结束后自动触发战斗的 NPC ID
 
+    /** 逐字打字机：每秒显示字数。 */
+    private static final float CHARS_PER_SEC = 34f;
+    private float typeTimer;     // 当前页打字计时
+    private float appearT;       // 对话框淡入进度 0..1
+
     public DialogueUi(GameEngine engine, SpriteBatch batch, BitmapFont smallFont,
                        ShapeRenderer shapes, UiDrawUtils draw, GlyphLayout layout,
                        NpcPlaceholderManager npcManager, OrthographicCamera worldCamera)
@@ -76,6 +81,8 @@ public class DialogueUi
         pendingCombatNpcId = null;
         dialoguePages.clear();
         dialoguePageIndex = 0;
+        typeTimer = 0f;
+        appearT = 0f;
     }
 
     public void startDialogue(Dialogue d)
@@ -84,6 +91,56 @@ public class DialogueUi
         playerLastChoice = null;
         dialoguePages.clear();
         dialoguePageIndex = 0;
+        typeTimer = 0f;
+        appearT = 0f;
+    }
+
+    // ========== 逐字打字机 + 淡入动画 ==========
+
+    /** 每帧推进打字与淡入进度（仅在对话激活时调用）。 */
+    public void updateAnim(float delta)
+    {
+        if (activeDialogue == null) return;
+        typeTimer += delta;
+        if (appearT < 1f) appearT = Math.min(1f, appearT + delta * 6f);
+    }
+
+    /** 对话框淡入进度 0..1（缓出）。 */
+    public float getAppearProgress()
+    {
+        return appearT * (2f - appearT);
+    }
+
+    private String currentPageRaw()
+    {
+        if (dialoguePages.isEmpty() && activeDialogue != null) prepareDialoguePages(activeDialogue);
+        if (dialoguePages.isEmpty()) return "";
+        return dialoguePages.get(Math.min(dialoguePageIndex, dialoguePages.size() - 1));
+    }
+
+    private int shownChars()
+    {
+        return (int) (typeTimer * CHARS_PER_SEC);
+    }
+
+    /** 当前页已显示的文本（逐字揭示）。 */
+    public String getVisibleBody()
+    {
+        String raw = currentPageRaw();
+        int n = Math.min(raw.length(), Math.max(0, shownChars()));
+        return raw.substring(0, n);
+    }
+
+    /** 当前页是否已完整显示（决定选项/提示是否出现）。 */
+    public boolean isPageFullyRevealed()
+    {
+        return shownChars() >= currentPageRaw().length();
+    }
+
+    /** 立即显示当前页全部文本（玩家在打字途中按 Enter）。 */
+    public void revealCurrentPage()
+    {
+        typeTimer = (currentPageRaw().length() + 2) / CHARS_PER_SEC;
     }
 
     /**
@@ -98,8 +155,14 @@ public class DialogueUi
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            // 打字未完成 → 第一次 Enter 先显示全部，不翻页
+            if (!isPageFullyRevealed()) {
+                revealCurrentPage();
+                return;
+            }
             if (dialoguePageIndex + 1 < dialoguePages.size()) {
                 dialoguePageIndex++;
+                typeTimer = 0f;   // 新页重新打字
                 playerLastChoice = null;
                 actionMessage.setLength(0);
                 actionMessage.append(formatDialogue(activeDialogue));
@@ -124,6 +187,7 @@ public class DialogueUi
         }
 
         if (dialoguePageIndex + 1 < dialoguePages.size()) return;
+        if (!isPageFullyRevealed()) return;   // 文字未显示完不接受选项
 
         List<String> opts = activeDialogue.getOptionTexts();
         if (opts == null || opts.isEmpty()) return;
@@ -133,6 +197,7 @@ public class DialogueUi
                 playerLastChoice = opts.get(i);  // 记录玩家说了什么
                 activeDialogue = engine.chooseDialogueOption(i);
                 prepareDialoguePages(activeDialogue);
+                typeTimer = 0f;   // 新回应重新打字
                 actionMessage.setLength(0);
                 actionMessage.append(formatDialogue(activeDialogue));
                 return;

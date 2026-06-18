@@ -240,19 +240,17 @@ class CombatEngineTest
     }
 
     @Test
-    void undertaleMenuSelectionWrapsAndConfirms()
+    void undertaleNumericMenuSelectsActions()
     {
         UndertaleCombatEngine ut = new UndertaleCombatEngine(player, guardDef,
             new CombatActionRegistry());
         ut.dismissBattleLine();
 
-        assertEquals(0, ut.getMenuIndex());
-        ut.moveMenuSelection(-1);
-        assertEquals(3, ut.getMenuIndex());
-        ut.moveMenuSelection(1);
-        assertEquals(0, ut.getMenuIndex());
+        // 纯数字键菜单：初始无方向导航游标（-1 表示不高亮）
+        assertEquals(-1, ut.getMenuIndex());
 
-        ut.confirmMenuSelection();
+        // 数字键直接选择"攻击" → 进入节奏攻击条阶段
+        ut.selectFight();
         assertEquals(UndertaleCombatPhase.FIGHT_BAR, ut.getPhase());
     }
 
