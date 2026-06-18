@@ -163,12 +163,11 @@ public class CombatManager
                 questManager.onLockUnlocked(lockId);
             }
         }
-        if (def.onDefeatMarkDefeated) {
+        if (def.onDefeatMarkDefeated && !lastWasSpared) {
             defeatedNpcs.add(def.npcId);
             LOG.info("defeatedNpcs: added " + def.npcId);
         }
-        // 仁慈/认输化解：记入 sparedNpcs，渲染为"已离去"而非尸体
-        if (activeCombat != null && activeCombat.wasSpared()) {
+        if (lastWasSpared) {
             sparedNpcs.add(def.npcId);
             LOG.info("sparedNpcs: added " + def.npcId);
             onLastMessage.accept(def.displayName + " 放下了戒备，离开了。");
