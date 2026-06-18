@@ -346,7 +346,20 @@ public class UndertaleCombatEngine implements CombatSystem
 
         checkHpThresholdLines();
 
-        if (npcHp <= 0) { phase = UndertaleCombatPhase.RESULT; phaseMessage = "你击败了 " + def.displayName + "！"; return; }
+        // 切磋模式：NPC 半血以下自动投降
+        if (!def.onDefeatMarkDefeated && npcHp > 0
+            && npcHp <= npcMaxHp / 2)
+        {
+            phase = UndertaleCombatPhase.RESULT;
+            phaseMessage = def.displayName + " 认输了！\"你确实很强——这枚勋章，是你应得的。\"";
+            return;
+        }
+
+        if (npcHp <= 0) {
+            phase = UndertaleCombatPhase.RESULT;
+            phaseMessage = "你击败了 " + def.displayName + "！";
+            return;
+        }
         if (!battleLineActive) { phase = UndertaleCombatPhase.ENEMY_TURN; startEnemyTurn(); }
     }
 
