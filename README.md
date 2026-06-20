@@ -5,9 +5,11 @@
 [![Java 8+](https://img.shields.io/badge/Java-8+-f89820?style=flat-square&logo=openjdk&logoColor=white)](https://adoptium.net/)
 [![Maven](https://img.shields.io/badge/Maven-Build-c71a36?style=flat-square&logo=apachemaven&logoColor=white)](https://maven.apache.org/)
 [![LibGDX 1.12.1](https://img.shields.io/badge/LibGDX-1.12.1-e74c3c?style=flat-square)](https://libgdx.com/)
-[![Tests 80/80](https://img.shields.io/badge/tests-80/80-brightgreen?style=flat-square)](https://junit.org/junit5/)
+[![Tests 88/88](https://img.shields.io/badge/tests-88/88-brightgreen?style=flat-square)](https://junit.org/junit5/)
 
 ---
+
+![游戏画面](screenshots/gameplay-main.png)
 
 ## 一、项目简介
 
@@ -15,7 +17,7 @@
 
 项目的核心创新在于将原本纯文本交互的 Zuul 框架，彻底改造为具备图形化客户端、弹幕战斗、多线叙事和完整存档机制的现代 RPG 游戏。
 
-**技术成果**：15 张 TMX 地图 | 8 个 NPC（6 可战斗） | 20+ 物品 | 3 条任务线 | 4 种结局 | 80 个单元测试 | 完整存档/读档
+**技术成果**：15 张 TMX 地图 | 8 个 NPC（6 可战斗） | 20 种物品 | 3 条任务线 | 4 种结局 | 88 个单元测试 | 完整存档/读档
 
 ---
 
@@ -24,7 +26,7 @@
 | 成员 | 负责模块 | 主要产出 |
 |------|----------|----------|
 | dcr_coof | 世界与地图 | 15 张 TMX 地图（30×15 格，手绘 tileset）；房间拓扑连接；8 个 NPC 的对话 JSON 与战斗 JSON；TMX 对象层 NPC/出口/生成点/传送阵/王座配置；物品放置；tileset 制作 |
-| huayif | 引擎与玩法 | GameEngine 全部 API（40+ 公开方法）；Undertale 弹幕战斗引擎（五阶段 + 4 种弹幕模式 + 节奏攻击 + MERCY 双连 + 战斗台词）；QuestManager（3 条任务线）；EndingEvaluator（4 结局多条件判定）；物品效果策略模式；DialogueActionExecutor；80 个单元测试 |
+| huayif | 引擎与玩法 | GameEngine 全部 API（40+ 公开方法）；Undertale 弹幕战斗引擎（五阶段 + 4 种弹幕模式 + 节奏攻击 + MERCY 双连 + 战斗台词）；QuestManager（3 条任务线）；EndingEvaluator（4 结局多条件判定）；物品效果策略模式；DialogueActionExecutor；88 个单元测试 |
 | PercyGeza | 客户端与存档 | LibGDX 屏幕体系（TitleScreen / GameScreen / EndingScreen）；CameraController 设计分辨率系统（1280×720 双摄像机）；HudRenderer（顶栏 5 区 + 底栏日志/按键提示）；DialogueUi（对话状态机 + 选项分支）；EncounterUi（遭遇菜单 1交谈/2战斗/3离开）；InventoryPanel（背包面板）；WorldMapRenderer（世界地图）；SaveGameService（Java 序列化存档）；GameUiSkin（Kenney RPG 九宫格皮肤）；GameAudio（音频 + 程序化波形合成回退）；PlayerRenderer / NpcRenderer（精灵渲染） |
 
 **分支策略**：三人分别维护 `feature/worldAndMap`、`feature/engineAndPlay`、`feature/clientAndDocu` 三个特性分支，按里程碑分阶段合入 `master`。提交遵循 `feat(world)` / `feat(engine)` / `feat(client)` / `test` / `docs` 前缀规范。
@@ -165,7 +167,7 @@ armory → 西 → garden → 南 → guard-room → 和平通行 → 南 → th
 - Client 通过 `GameEngine` 公开 API 操作游戏状态，**绝不**直接修改 Room / Player 字段
 - Engine 不导入任何 LibGDX 类（`com.badlogic.gdx.*`），可脱离图形界面独立运行和测试
 - Domain 为纯 POJO，不含任何业务逻辑或框架依赖
-- 80 个单元测试全部覆盖 Engine 和 Infra 层，无需图形环境即可运行
+- 88 个单元测试全部覆盖 Engine 和 Infra 层，无需图形环境即可运行
 
 ### 5.2 GameEngine API 接口
 
@@ -271,13 +273,12 @@ HUD 栏背景使用独立的 `OrthographicCamera` + `ShapeRenderer` 绘制，按
 | theatre | E | library | |
 | pub | S | cellar | |
 | pub | E | garden | |
-| lab | E | vault | vault 有锁 `vault-door`，需 `key-vault` |
+| lab | S | vault | vault 有锁 `vault-door`，需 `key-vault` |
 | library | N | hidden-shrine | |
 | library | E | teleport-alcove | 传送房 |
 | garden | S | guard-room | guard-room 有锁 `guard-gate`，需 `key-guard` 或守卫对话开门 |
 | garden | E | armory | |
 | guard-room | S | throne-hall | 结局房间 |
-| guard-room | W | armory | |
 | armory | S | forge | |
 
 > 以上所有连接均为**双向**。例如 `outside → N → theatre` 同时意味着 `theatre → S → outside`。
@@ -333,7 +334,7 @@ HUD 栏背景使用独立的 `OrthographicCamera` + `ShapeRenderer` 绘制，按
 
 | NPC ID | 位置 | 可战斗 | 对话 | 描述 |
 |--------|------|--------|------|------|
-| guard | garden / guard-room | 是 | guard.json | 王座守卫，根据游戏状态在两房间切换出现 |
+| guard | garden / guard-room | 是 | guard.json / guard_neutral.json / guard_post_unlock.json | 王座守卫，根据游戏状态在两房间切换出现，依状态选用不同对话文件 |
 | hermit | hidden-shrine | 是 | hermit.json | 守秘隐士，提供线索 |
 | merchant | forge | 否 | merchant.json | 商人，以物易物（破烂换药草） |
 | priest | theatre | 是 | priest.json | 守光祭司，光明路线引导者 |
@@ -357,9 +358,11 @@ HUD 栏背景使用独立的 `OrthographicCamera` + `ShapeRenderer` 绘制，按
 
 ### 6.3 对话系统
 
+![对话界面](screenshots/dialogue.png)
+
 #### 6.3.1 数据驱动
 
-对话数据以 JSON 格式存储在 `assets/dialogue/<npcId>.json`（共 8 个文件，scholar 有普通和中立两个版本），由 `DialogueLoader` 加载为 `DialogueTree`（对话节点树）结构。每个节点包含：
+对话数据以 JSON 格式存储在 `assets/dialogue/<npcId>.json`（共 10 个文件，含 guard 三状态变体 + scholar 双版本），由 `DialogueLoader` 加载为 `DialogueTree`（对话节点树）结构。每个节点包含：
 
 ```json
 {
@@ -405,6 +408,8 @@ HUD 栏背景使用独立的 `OrthographicCamera` + `ShapeRenderer` 绘制，按
 ---
 
 ### 6.4 战斗系统
+
+![弹幕战斗](screenshots/combat.png)
 
 游戏提供两种战斗模式（通过 `CombatSystem` 接口切换），默认为 Undertale 弹幕模式。
 
@@ -587,8 +592,10 @@ if (balance-book && guard-medal && refused-priest && refused-follower
 |------|------|------|----------|
 | LIGHT | 光明结局 | 你携光明宝石步入王座大厅，Realm 的记忆被重新点亮。 | 金色光晕 |
 | SHADOW | 暗影结局 | 暗影吞噬了王座，编年史者在沉默中离去。 | 暗红滤镜 + 灰烬粒子 |
-| NEUTRAL | 中立结局 | 你触碰了王座，却知晓它不属于你。你已走过光暗两端，了解 Realm 的一切。你选择等待永恒之王，以编年史者之名辅佐左右。 | 蓝色粒子 |
-| FAKE | 虚幻结局 | 王座空无一物，你所追寻的一切不过是泡影。 | 灰色 + 灰烬飘落 |
+| NEUTRAL | 中立结局 | 你触碰了王座，却知晓它不属于你。你已走过光明与暗影的两端，了解 Realm 的一切。你选择等待——等待那最终之人成为永恒的王，而你，将以编年史者之名，辅佐左右。 | 蓝色粒子 |
+| FAKE | …… | 似蜉蝣于天地，如沧海之一粟。王座没有任何回应。你没有留下任何痕迹，没有人记得你来过。 | 灰色 + 灰烬飘落 |
+
+![FAKE 结局](screenshots/ending-fake.png)
 
 ---
 
@@ -603,17 +610,20 @@ if (balance-book && guard-medal && refused-priest && refused-follower
 | `playerName` | String | 玩家姓名 |
 | `currentRoomId` | String | 当前房间 ID |
 | `playerX`, `playerY` | float | 玩家像素坐标 |
-| `facing` | Direction | 玩家朝向 |
-| `entryDirection` | Direction | 入口方向（影响读档后 spawn） |
-| `hp`, `maxWeight`, `reputation` | int | 玩家属性 |
-| `inventory` | List\<Item\> | 背包内容 |
+| `facing` | String | 玩家朝向（字符串：down/up/left/right） |
+| `entryDirection` | String | 入口方向（字符串：north/south/east/west/default） |
+| `hp`, `maxHp` | int | 玩家当前 HP / 最大 HP |
+| `maxWeight` | double | 负重上限 |
+| `reputation` | int | 声望值 |
+| `inventory` | List\<String\> | 背包（物品 ID 列表） |
 | `unlockedLocks` | Set\<String\> | 已解锁门锁 |
-| `defeatedNpcs` | Set\<String\> | 已击败 NPC |
-| `exploredRoomIds` | Set\<String\> | 已探索房间 |
-| `roomHistory` | Deque\<String\> | 房间历史栈（支持 moveBack） |
-| `allRoomItems` | Map\<String, List\<Item\>\> | 所有房间的物品状态 |
-| `playerFlags` | Map\<String, String\> | 玩家标记（影响结局判定） |
 | `questStates` | Map\<String, String\> | 任务状态 |
+| `defeatedNpcs` | Set\<String\> | 已击败 NPC |
+| `sparedNpcs` | Set\<String\> | 已饶恕 NPC（MERCY 和解） |
+| `exploredRoomIds` | Set\<String\> | 已探索房间 |
+| `roomHistory` | List\<String\> | 房间历史栈（支持 moveBack） |
+| `roomItems` | Map\<String, List\<String\>\> | 所有房间的物品状态（roomId → 物品ID列表） |
+| `playerFlags` | Set\<String\> | 玩家标记（影响结局判定） |
 
 #### 6.8.2 存取流程
 
@@ -660,6 +670,8 @@ if (balance-book && guard-medal && refused-priest && refused-follower
 |------|----------|------|
 | **背包面板** | I 键 | 物品列表（含名称/重量/效果描述），选中物品显示详情，支持 U 键使用。被动装备显示「被动」标签 |
 | **世界地图** | M 键 | 节点图式渲染 15 房间的拓扑连接，`WorldMapRenderer` 根据 `WorldMapTopology` 坐标矩阵绘制，已探索房间高亮 |
+
+![世界地图](screenshots/worldmap.png)
 | **暂停菜单** | ESC 键 | 继续游戏 / 保存 / 读档 / 返回标题 |
 | **对话 UI** | 自动触发 | 底部 28% 暗色面板 + 橙色边框 + NPC/玩家立绘区 + 选项数字 |
 | **遭遇菜单** | 靠近 NPC 按 E | 3 选项：1=交谈 / 2=UT 战斗 / 3=离开 |
@@ -672,7 +684,7 @@ if (balance-book && guard-medal && refused-priest && refused-follower
 `GameAudio` 管理全部音频播放，具备容错回退机制：
 
 - **4 首音乐音轨**（WAV）：标题画面 / 探索 / 地下城 / 战斗，根据场景自动切换
-- **12+ 音效**（OGG）：点击、脚步、冲刺、攻击、拾取、开门、存档、读档、错误提示等
+- **20 音效**（OGG）：点击、脚步、冲刺、攻击、拾取、开门、存档、读档、错误提示等
 - **程序化回退**：音效文件缺失时，自动使用波形合成（正弦波/方波/三角波/噪声波）生成替代音效
 - **音频来源**：Kenney（CC0）、Juhani Junkala（CC0）
 
@@ -694,20 +706,20 @@ if (balance-book && guard-medal && refused-priest && refused-follower
 
 ## 七、测试覆盖
 
-全部 80 个测试覆盖 Engine 和 Infra 层，无需图形环境即可运行，CI 在每个 push 上自动执行：
+全部 88 个测试覆盖 Engine 和 Infra 层，无需图形环境即可运行，CI 在每个 push 上自动执行：
 
 | 测试类 | 数量 | 覆盖范围 |
 |--------|------|----------|
 | `GameEngineTest` | 26 | 移动（四方向）、传送、门锁、物品拾取/丢弃/使用、cookie 食用、负重边界、传送解析 |
 | `GameEngineDialogueQuestTest` | 10 | 对话触发、对话动作解锁、任务进度更新、结局判定流程、存档往返 |
-| `CombatEngineTest` | 14 | 攻击/防御/ACT技能/阶段切换/逃跑/死亡/锈剑被动/隐士战斗 |
-| `EndingEvaluatorTest` | 13 | LIGHT/SHADOW/NEUTRAL/FAKE 四结局全部路径 + 边界条件 |
-| `EndingFlowTest` | 5 | 完整通关流程端到端验证 |
+| `CombatEngineTest` | 19 | 攻击/防御/ACT技能/阶段切换/逃跑/死亡/锈剑被动/隐士战斗/MERCY/弹幕 |
+| `EndingEvaluatorTest` | 14 | LIGHT/SHADOW/NEUTRAL/FAKE 四结局全部路径 + 边界条件 |
+| `EndingFlowTest` | 7 | 完整通关流程端到端验证 |
 | `WorldTopologyTest` | 7 | 全部 15 房间双向出口正确性、可达性验证 |
 | `CombatLoaderTest` | 2 | guard + hermit 战斗 JSON 正确加载与解析 |
 | `DialogueLoaderTest` | 2 | 对话 JSON 加载、节点树构建与选项解析 |
 | `SaveGameServiceTest` | 1 | 存档序列化往返完整性 |
-| **合计** | **80** | `mvn test` 全部通过 |
+| **合计** | **88** | `mvn test` 全部通过 |
 
 ---
 
@@ -728,7 +740,7 @@ mvn clean compile exec:java
 # 仅编译
 mvn compile
 
-# 运行全部测试（80 个）
+# 运行全部测试（88 个）
 mvn test
 
 # 打包胖 JAR（含全部依赖）
@@ -749,7 +761,7 @@ java -jar target/zuul-1.0-SNAPSHOT-jar-with-dependencies.jar
 | 内容 | 格式 | 位置 | 说明 |
 |------|------|------|------|
 | 地图 | `.tmx` (Tiled) | `assets/maps/` | 15 张地图，含墙壁/装饰/对象图层 |
-| 对话 | `.json` | `assets/dialogue/` | 8 个对话文件，节点树 + 选项 + 动作 |
+| 对话 | `.json` | `assets/dialogue/` | 10 个对话文件，节点树 + 选项 + 动作 |
 | 战斗 | `.json` | `assets/combat/` | 6 个文件，NPC 属性 + 技能 + ACT 选项 + 台词阈值 |
 | 物品效果 | effect 字符串 | `WorldFactory.java` + `UseEffectRegistry` | 策略模式，新增物品仅需注册 effect |
 | 音频 | `.wav` / `.ogg` | `assets/audio/` | 音乐 + 音效 + 程序化波形合成回退 |
@@ -763,21 +775,22 @@ java -jar target/zuul-1.0-SNAPSHOT-jar-with-dependencies.jar
 
 ```
 ├── pom.xml                          # Maven 配置（依赖/插件/主类）
-├── CLAUDE.md                        # Claude Code 项目指南
 ├── README.md                        # 本文件
 │
 ├── src/main/java/cn/edu/whut/sept/zuul/
-│   ├── client/                      # 客户端层（24 类）
+│   ├── client/                      # 客户端层（26 类）
 │   │   ├── RpgMain.java            # LibGDX Game 入口，持有 SpriteBatch / Fonts / Audio
 │   │   ├── DesktopLauncher.java    # LWJGL3 启动器，窗口配置
-│   │   ├── screen/                 # 屏幕：GameScreen / TitleScreen / CameraController
-│   │   ├── ui/                     # UI：HudRenderer / DialogueUi / EncounterUi /
-│   │   │                           #      InventoryPanel / InventoryInputHandler /
-│   │   │                           #      WorldMapRenderer / WorldMapTopology / GameUiSkin
-│   │   ├── render/                 # 渲染：UtCombatRenderer / PlayerRenderer / NpcRenderer /
-│   │   │                           #        InteractionRenderer
-│   │   └── GameAudio.java         # 音频系统（音乐 + 音效 + 程序化合成）
-│   ├── engine/                      # 引擎层（25 类，零 LibGDX 引用）
+│   │   ├── screen/                 # 屏幕与输入：GameScreen / TitleScreen / CameraController /
+│   │   │                           #   DialogueUi / EncounterUi / HudRenderer / InteractionRenderer /
+│   │   │                           #   InventoryPanel / InventoryInputHandler /
+│   │   │                           #   ItemPlaceholderManager / NpcPlaceholderManager /
+│   │   │                           #   PlayerMovementController / RoomController
+│   │   ├── ui/                     # UI：GameUiSkin / UiDrawUtils / GameFonts / TextureFactory /
+│   │   │                           #      WorldMapRenderer / WorldMapTopology
+│   │   ├── render/                 # 渲染：UtCombatRenderer / PlayerRenderer / NpcRenderer / CombatFx
+│   │   └── audio/                  # 音频：GameAudio（音乐 + 音效 + 程序化合成）
+│   ├── engine/                      # 引擎层（32 类，零 LibGDX 引用）
 │   │   ├── GameEngine.java         # 核心引擎（40+ 公开方法）
 │   │   ├── UndertaleCombatEngine.java  # UT 弹幕战斗（五阶段 + 4 弹幕模式 + 节奏攻击）
 │   │   ├── UndertaleCombatPhase.java   # 战斗阶段枚举（MENU/FIGHT_BAR/ACT_TEXT/ENEMY_TURN/RESULT）
@@ -790,29 +803,29 @@ java -jar target/zuul-1.0-SNAPSHOT-jar-with-dependencies.jar
 │   │   ├── DialogueActionExecutor.java  # 对话动作解析
 │   │   ├── ItemManager.java        # 物品拾取/丢弃/使用 + 负重检查
 │   │   ├── Bullet.java / BulletPattern.java  # 弹幕实体与模式
-│   │   └── effect/                 # 效果策略：UseEffect 接口 + UseEffectRegistry
-│   ├── domain/                      # 领域模型层（9 类，纯 POJO）
+│   │   └── effect/                 # 效果策略：UseEffect 接口 + UseEffectRegistry + CombatActionRegistry
+│   ├── domain/                      # 领域模型层（10 类，纯 POJO）
 │   │   ├── Player.java             # 玩家：姓名/HP/负重/声望/背包
 │   │   ├── Room.java               # 房间：ID/描述/锁/传送/出口/物品
 │   │   ├── Item.java               # 物品：ID/名称/重量/effect 字符串
 │   │   ├── Direction.java          # 方向枚举（NORTH/SOUTH/EAST/WEST/DEFAULT）
 │   │   ├── RoomScene.java          # TMX 场景元数据 + spawn 匹配
-│   │   ├── Dialogue.java / DialogueNode.java / DialogueTree.java  # 对话树模型
+│   │   ├── Dialogue.java / DialogueNode.java / DialogueOption.java / DialogueTree.java  # 对话树模型
 │   │   └── NpcCombatDef.java       # NPC 战斗属性 + BattleLine 台词
 │   └── infra/                       # 基础设施层（6 类）
 │       ├── WorldFactory.java        # 世界构建：15 房间 + 物品 + 连接
-│       ├── GameState.java           # 可序列化游戏状态快照（14 字段）
+│       ├── GameState.java           # 可序列化游戏状态快照（19 字段）
 │       ├── SaveGameService.java    # Java 序列化存档服务
 │       ├── CombatLoader.java        # 战斗 JSON 加载 + battleLines 解析
 │       ├── DialogueLoader.java      # 对话 JSON 加载
 │       └── GameLogger.java          # 统一日志
 │
-├── src/test/java/                   # 测试（80 个）
+├── src/test/java/                   # 测试（88 个）
 │   ├── GameEngineTest.java          # 26 测试
 │   ├── GameEngineDialogueQuestTest.java  # 10 测试
-│   ├── CombatEngineTest.java        # 14 测试
-│   ├── EndingEvaluatorTest.java     # 13 测试
-│   ├── EndingFlowTest.java          # 5 测试
+│   ├── CombatEngineTest.java        # 19 测试
+│   ├── EndingEvaluatorTest.java     # 14 测试
+│   ├── EndingFlowTest.java          # 7 测试
 │   ├── WorldTopologyTest.java       # 7 测试
 │   ├── CombatLoaderTest.java        # 2 测试
 │   ├── DialogueLoaderTest.java      # 2 测试
@@ -820,12 +833,15 @@ java -jar target/zuul-1.0-SNAPSHOT-jar-with-dependencies.jar
 │
 ├── assets/                           # 游戏资源
 │   ├── maps/                        # 15 张 TMX 地图
-│   ├── dialogue/                    # 8 个对话 JSON
+│   ├── map_bg/                      # 15 张房间背景图（JPG）
+│   ├── dialogue/                    # 10 个对话 JSON（含 guard 三个状态变体）
 │   ├── combat/                      # 6 个战斗 JSON（guard/hermit/priest/follower/apprentice/golem）
-│   ├── audio/music/ + sfx/          # WAV 音乐 + OGG 音效
+│   ├── audio/music/ + sfx/          # WAV 音乐 + OGG 音效（20 个）
 │   ├── fonts/                       # Fusion Pixel Font (game.ttf)
 │   ├── role/                        # Pixelfrog 精灵表
+│   ├── npc/                         # NPC 精灵与立绘（22 个 PNG）
 │   ├── ui/kenney-rpg/               # Kenney RPG UI 九宫格皮肤
+│   ├── ui/generated/                # 程序化生成的 UI 图标
 │   ├── tilesets/                    # realm-tiles.png（自制 tileset）
 │   ├── kenney_tiny-dungeon/         # Kenney Tiny Dungeon 瓦片（CC0）
 │   └── CREDITS.md                   # 素材来源与许可
@@ -834,13 +850,26 @@ java -jar target/zuul-1.0-SNAPSHOT-jar-with-dependencies.jar
 │   ├── 01-需求规格说明书.md
 │   ├── 02-软件设计说明书.md
 │   ├── 03-项目计划与三人分工.md
+│   ├── 04-roomId规范与接口约定.md
+│   ├── 05-美术资源设计说明书.md
 │   ├── 07-当前开发进度.md
 │   ├── 08-地图结构规格.md
-│   ├── 11-三个结局.md
+│   ├── 08-房间地图视觉描述.md
+│   ├── 09-房间像素视觉描述.md
+│   ├── 10-当前地图与实体资源提示词.md
+│   ├── 11-结局.md
+│   ├── 12-视频拍摄脚本.md
+│   ├── 12-过场动画.md
+│   ├── 13-GitHub-Issues任务清单.md
+│   ├── 14-结局CG美术需求.md
+│   ├── 15-收尾Issues.md
+│   ├── coding-standards.md
 │   └── ...
 │
-└── .github/workflows/               # CI/CD
-    └── maven.yml                    # 每次 push 自动 mvn test
+├── .github/                          # CI/CD
+│   ├── workflows/maven.yml           # 每次 push 自动 mvn test
+│   └── pull_request_template.md      # PR 模板
+└── checkstyle.xml                    # 代码风格检查
 ```
 
 ---
