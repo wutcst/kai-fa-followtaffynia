@@ -5,7 +5,8 @@ import cn.edu.whut.sept.zuul.domain.Item;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * 模拟完整通关路径，验证走到王座前互动后正确判定结局。

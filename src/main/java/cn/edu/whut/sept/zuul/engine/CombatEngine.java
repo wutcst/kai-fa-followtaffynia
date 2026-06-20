@@ -1,6 +1,5 @@
 package cn.edu.whut.sept.zuul.engine;
 
-import cn.edu.whut.sept.zuul.domain.Item;
 import cn.edu.whut.sept.zuul.domain.NpcCombatDef;
 import cn.edu.whut.sept.zuul.domain.NpcCombatDef.NpcSkill;
 import cn.edu.whut.sept.zuul.domain.Player;

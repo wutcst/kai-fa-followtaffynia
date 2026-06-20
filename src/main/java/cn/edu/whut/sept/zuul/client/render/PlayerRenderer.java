@@ -52,8 +52,15 @@ public class PlayerRenderer implements Disposable
         }
 
         /** 素材文件名中的方向后缀 */
-        public String assetName() {
-            switch (this) { case N: return "up"; case S: return "down"; case E: return "right"; case W: return "left"; default: return "down"; }
+        public String assetName()
+        {
+            switch (this) {
+                case N: return "up";
+                case S: return "down";
+                case E: return "right";
+                case W: return "left";
+                default: return "down";
+            }
         }
     }
 

@@ -1,5 +1,5 @@
 # Chronicle of the Lost Realms — CI
-# 每次 push / PR 自动编译 + 运行全部测试（80 个）
+# 每次 push / PR 自动执行代码规范检查、编译、88 项测试和打包
 
 name: Java CI
 

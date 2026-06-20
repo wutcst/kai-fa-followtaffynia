@@ -636,6 +636,10 @@ public class UndertaleCombatEngine implements CombatSystem
         soulY = clamp(soulY + dy * SOUL_SPEED * delta, SOUL_RADIUS, 1f - SOUL_RADIUS);
     }
 
-    private boolean hasItem(String itemId) { return player.getInventory().stream().anyMatch(i -> itemId.equals(i.getItemId())); }
+    private boolean hasItem(String itemId)
+    {
+        return player.getInventory().stream()
+            .anyMatch(item -> itemId.equals(item.getItemId()));
+    }
     private static float clamp(float v, float min, float max) { return Math.max(min, Math.min(max, v)); }
 }
