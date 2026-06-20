@@ -1,5 +1,10 @@
 package cn.edu.whut.sept.zuul.engine;
 
+/**
+ * Chronicle of the Lost Realms — 游戏逻辑核心。
+ * 成员B（dcr_coof）负责：GameEngine / UndertaleCombatEngine / EndingEvaluator / 测试 / CI
+ */
+
 import cn.edu.whut.sept.zuul.domain.Dialogue;
 import cn.edu.whut.sept.zuul.domain.Direction;
 import cn.edu.whut.sept.zuul.domain.Item;
