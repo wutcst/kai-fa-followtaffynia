@@ -82,65 +82,65 @@ public final class WorldFactory
         // -- outside: 主门外广场 --
         Room outside = createRoom("outside", "outside the main entrance of the university");
         setSpawns(outside, 15,8, 15,3, 15,13, 27,8, 3,8);
-        outside.addItem(createItem("welcome-note", "Welcome Note",
-            "A crumpled welcome note.", 1, null));
+        outside.addItem(createItem("welcome-note", "欢迎纸条",
+            "一张皱巴巴的欢迎纸条。", 1, null));
 
         // -- theatre: 讲堂 --
         Room theatre = createRoom("theatre", "in a lecture theater");
         setSpawns(theatre, 15,8, 15,2, 15,13, 27,8, 3,8);
-        theatre.addItem(createItem("torch", "Torch",
-            "A flickering torch. Useful in dark places.", 3, "light"));
+        theatre.addItem(createItem("torch", "火把",
+            "一支摇曳的火把。", 3, "light"));
 
         // -- pub: 酒馆 --
         Room pub = createRoom("pub", "in the campus pub");
         setSpawns(pub, 15,8, 15,2, 15,13, 27,8, 3,8);
-        pub.addItem(createItem("ale-mug", "Ale Mug",
-            "A half-empty mug of ale.", 2, null));
+        pub.addItem(createItem("ale-mug", "半杯酒",
+            "半杯残酒。", 2, null));
 
         // -- lab: 机房 --
         Room lab = createRoom("lab", "in a computing lab");
         setSpawns(lab, 15,8, 15,3, 15,14, 27,8, 3,8);
-        lab.addItem(createItem("key-vault", "Rusty Key",
-            "A rusty key, inscribed 'Vault'.", 1, "unlock:vault-door"));
+        lab.addItem(createItem("key-vault", "锈钥匙",
+            "一把锈迹斑斑的钥匙，刻着「金库」。", 1, "unlock:vault-door"));
 
         // -- office: 行政办公室 --
         Room office = createRoom("office", "in the computing admin office");
         setSpawns(office, 15,8, 15,8, 15,8, 15,8, 3,8);
-        office.addItem(createItem("key-guard", "Iron Key",
-            "A heavy iron key, marked 'Guard Gate'.", 2, "unlock:guard-gate"));
+        office.addItem(createItem("key-guard", "铁钥匙",
+            "一把沉重的铁钥匙，标着「守卫之门」。", 2, "unlock:guard-gate"));
 
         // -- library: 图书馆 --
         Room library = createRoom("library", "in an ancient library");
         setSpawns(library, 15,8, 15,3, 15,14, 27,8, 3,8);
-        library.addItem(createItem("ancient-tome", "Ancient Tome",
-            "A heavy tome bound in cracked leather.", 15, "lore"));
+        library.addItem(createItem("ancient-tome", "古书",
+            "一本厚重古书，皮面已经龟裂。", 15, "lore"));
 
         // -- cellar: 地窖 --
         Room cellar = createRoom("cellar", "in a dark, damp cellar");
         setSpawns(cellar, 15,8, 15,3, 15,13, 27,8, 3,8);
-        cellar.addItem(createItem("old-barrel", "Old Barrel",
-            "A rotting barrel. It might contain something.", 20, null));
+        cellar.addItem(createItem("old-barrel", "旧木桶",
+            "一个腐烂的木桶。说不定里面藏着什么。", 20, null));
 
         // -- vault: 金库（上锁） --
         Room vault = createRoom("vault", "in a gleaming vault");
         vault.setLockId("vault-door");
         setSpawns(vault, 15,8, 27,8, 27,8, 27,8, 4,8);
-        vault.addItem(createItem("gem-light", "Light Gem",
-            "A radiant gem pulsing with pure light.", 5, "light:full"));
-        vault.addItem(createItem("gold-coins", "Gold Coins",
-            "A small pile of gold coins.", 10, null));
+        vault.addItem(createItem("gem-light", "光之宝石",
+            "散发着纯净光芒的宝石。", 5, "light:full"));
+        vault.addItem(createItem("gold-coins", "金币",
+            "一小堆金币。", 10, null));
 
         // -- hidden-shrine: 隐士神龛 --
         Room hiddenShrine = createRoom("hidden-shrine", "in a hidden shrine");
         setSpawns(hiddenShrine, 15,8, 15,3, 15,13, 27,8, 3,8);
-        hiddenShrine.addItem(createItem("crystal-shard", "Crystal Shard",
-            "A fragment of crystal that hums softly.", 3, "reputation:+5"));
+        hiddenShrine.addItem(createItem("crystal-shard", "水晶碎片",
+            "一块微微颤动的水晶碎片。", 3, "reputation:+5"));
 
         // -- garden: 庭院 --
         Room garden = createRoom("garden", "in a serene garden");
         setSpawns(garden, 15,8, 15,3, 15,13, 27,8, 3,8);
-        garden.addItem(createItem("healing-herb", "Healing Herb",
-            "A fragrant herb that restores vitality.", 2, "heal:20"));
+        garden.addItem(createItem("healing-herb", "治愈草药",
+            "一株散发着清香的草药。", 2, "heal:20"));
 
         // -- guard-room: 守卫哨站 --
         Room guardRoom = createRoom("guard-room", "in a guard station");
@@ -150,10 +150,10 @@ public final class WorldFactory
         // -- armory: 军械库 --
         Room armory = createRoom("armory", "in the armory");
         setSpawns(armory, 15,8, 15,3, 15,13, 27,8, 3,8);
-        armory.addItem(createItem("sword-rusty", "Rusty Sword",
-            "An old sword, still sharp enough.", 25, null));
-        armory.addItem(createItem("shield-wooden", "Wooden Shield",
-            "A battered wooden shield.", 18, null));
+        armory.addItem(createItem("sword-rusty", "锈剑",
+            "一把旧剑，仍然锋利。", 25, null));
+        armory.addItem(createItem("shield-wooden", "木盾",
+            "一面破旧的木盾。", 18, null));
 
         // -- forge: 铁匠铺 --
         Room forge = createRoom("forge", "in a blazing forge");

@@ -764,57 +764,50 @@ public class GameEngine
     {
         switch (itemId) {
             case "torch":
-                return new Item("torch", "Torch",
-                    "A flickering torch. Useful in dark places.", 1, "light");
+                return new Item("torch", "火把",
+                    "一支摇曳的火把，在暗处能照亮前路。", 1, "light");
             case "key-vault":
-                return new Item("key-vault", "Rusty Key",
-                    "A rusty key, inscribed 'Vault'.", 0.5, "unlock:vault-door");
+                return new Item("key-vault", "锈钥匙",
+                    "一把锈迹斑斑的钥匙，刻着「金库」。", 0.5, "unlock:vault-door");
             case "key-guard":
-                return new Item("key-guard", "Iron Key",
-                    "A heavy iron key, marked 'Guard Gate'.", 0.5, "unlock:guard-gate");
+                return new Item("key-guard", "铁钥匙",
+                    "一把沉重的铁钥匙，标着「守卫之门」。", 0.5, "unlock:guard-gate");
             case "gem-light":
-                return new Item("gem-light", "Light Gem",
-                    "A radiant gem pulsing with pure light.", 3, "light:full");
+                return new Item("gem-light", "光之宝石",
+                    "散发着纯净光芒的宝石，Realm的核心碎片。", 3, "light:full");
             case "gold-coins":
-                return new Item("gold-coins", "Gold Coins",
-                    "A small pile of gold coins. The merchant might find these interesting.",
-                    0.5, "barter");
+                return new Item("gold-coins", "金币",
+                    "一小堆金币。商人可能会感兴趣。", 0.5, "barter");
             case "ancient-tome":
-                return new Item("ancient-tome", "Ancient Tome",
-                    "A heavy tome bound in cracked leather. A collector would pay handsomely.",
-                    6, "barter");
+                return new Item("ancient-tome", "古书",
+                    "一本厚重古书，皮面已经龟裂。收藏家会出高价。", 6, "barter");
             case "old-barrel":
-                return new Item("old-barrel", "Old Barrel",
-                    "A rotting barrel. Maybe someone can make use of it.", 8, "barter");
+                return new Item("old-barrel", "旧木桶",
+                    "一个腐烂的木桶。说不定有人能派上用场。", 8, "barter");
             case "warp-dust":
-                return new Item("warp-dust", "Warp Dust",
-                    "Fine dust that sparkles with teleport energy. A curious trinket.",
-                    0.5, "barter");
+                return new Item("warp-dust", "传送粉",
+                    "闪烁着传送能量的细粉，一件奇妙的小东西。", 0.5, "barter");
             case "ale-mug":
-                return new Item("ale-mug", "Ale Mug",
-                    "A half-empty mug of ale. The merchant collects these.",
-                    0.1, "barter");
+                return new Item("ale-mug", "半杯酒",
+                    "半杯残酒。商人喜欢收集这些小玩意。", 0.1, "barter");
             case "welcome-note":
-                return new Item("welcome-note", "Welcome Note",
-                    "A crumpled welcome note. Worth something to the right person.",
-                    0.1, "barter");
+                return new Item("welcome-note", "欢迎纸条",
+                    "一张皱巴巴的欢迎纸条。或许对某些人有价值。", 0.1, "barter");
             case "crystal-shard":
-                return new Item("crystal-shard", "Crystal Shard",
-                    "A fragment of crystal that hums softly.", 0.5, "reputation:+5");
+                return new Item("crystal-shard", "水晶碎片",
+                    "一块微微颤动的水晶碎片。", 0.5, "reputation:+5");
             case "healing-herb":
-                return new Item("healing-herb", "Healing Herb",
-                    "A fragrant herb that restores vitality.", 0.5, "heal:20");
+                return new Item("healing-herb", "治愈草药",
+                    "一株散发着清香的草药，能恢复活力。", 0.5, "heal:20");
             case "sword-rusty":
-                return new Item("sword-rusty", "Rusty Sword",
-                    "An old sword, still sharp enough. Adds damage in combat while held.",
-                    15, "passive:UT战斗攻击+8，回合制攻击+5（背包中持有即生效）");
+                return new Item("sword-rusty", "锈剑",
+                    "一把旧剑，仍然锋利。持有即可在战斗中提升攻击。", 15, "passive:UT战斗攻击+8，回合制攻击+5（持有即生效）");
             case "shield-wooden":
-                return new Item("shield-wooden", "Wooden Shield",
-                    "A battered wooden shield. Reduces damage taken while held.",
-                    14, "passive:受到攻击伤害-3（背包中持有即生效）");
+                return new Item("shield-wooden", "木盾",
+                    "一面破旧的木盾。持有即可减少受到的伤害。", 14, "passive:受到攻击伤害-3（持有即生效）");
             case "magic-cookie":
-                return new Item("magic-cookie", "Magic Cookie",
-                    "A glowing cookie. Eating it makes you feel stronger.", 0.5, "maxWeight:+20");
+                return new Item("magic-cookie", "魔法饼干",
+                    "一块微微发光的饼干。吃下去会让人感觉更强大。", 0.5, "maxWeight:+20");
             case "light-mark":
                 return new Item("light-mark", "光明印记",
                     "守光祭司赐予的印记，蕴含秩序之力。", 0.5, "reputation:+3");
