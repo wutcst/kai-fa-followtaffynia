@@ -301,8 +301,15 @@ public class CombatFx
     /** 敌人血条显示比例（缓动后）。未初始化时回退到 actual。 */
     public float enemyBarRatio(float actual) { return enemyBarShown >= 0f ? enemyBarShown : actual; }
     public float playerBarRatio(float actual) { return playerBarShown >= 0f ? playerBarShown : actual; }
-    public float enemyBarShakeX() { return enemyBarShake > 0f ? MathUtils.sin(shakeSeed * 5f) * 3f * enemyBarShake : 0f; }
-    public float playerBarShakeX() { return playerBarShake > 0f ? MathUtils.sin(shakeSeed * 5f) * 3f * playerBarShake : 0f; }
+    public float enemyBarShakeX()
+    {
+        return enemyBarShake > 0f ? MathUtils.sin(shakeSeed * 5f) * 3f * enemyBarShake : 0f;
+    }
+
+    public float playerBarShakeX()
+    {
+        return playerBarShake > 0f ? MathUtils.sin(shakeSeed * 5f) * 3f * playerBarShake : 0f;
+    }
 
     // ================= 渲染 =================
 

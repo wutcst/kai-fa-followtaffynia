@@ -185,11 +185,24 @@ cn.edu.whut.sept.zuul
 2. **声明依赖**：新类需要哪些其他对象？写进构造函数
 3. **实现**：控制类不超过 300 行，方法不超过 40 行
 4. **集成**：在 GameScreen / GameEngine 等编排类中添加字段和初始化
-5. **验证**：`mvn compile` 通过 + 运行游戏测试
+5. **验证**：`mvn checkstyle:check` 与 `mvn verify` 均通过；涉及 UI 或玩法时再运行游戏测试
 
 ---
 
-## 七、当前项目结构速查
+## 七、自动化质量门禁
+
+每次提交到 `master`、`feature/**` 或面向 `master` 的 Pull Request，GitHub Actions 会自动执行：
+
+1. 编译 Java 源码
+2. Checkstyle 规范检查
+3. 88 项 JUnit 测试
+4. Maven 胖 JAR 打包与产物上传
+
+Checkstyle 与 Maven `verify` 生命周期绑定，任一 error 级违规都会返回非零退出码并阻断 CI。当前规则覆盖命名、行长、未使用导入、星号导入、空块、修饰符顺序、字符串比较以及 `equals/hashCode` 一致性。测试方法允许使用 `场景_预期结果` 形式的下划线命名。
+
+---
+
+## 八、当前项目结构速查
 
 ```
 69 个源文件，8330 行

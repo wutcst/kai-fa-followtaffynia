@@ -1,7 +1,6 @@
 package cn.edu.whut.sept.zuul.client.screen;
 
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
-import com.badlogic.gdx.math.Rectangle;
 
 /**
  * 玩家移动控制器 —— 从 GameScreen 提取。
