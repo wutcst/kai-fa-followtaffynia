@@ -93,7 +93,7 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.3.1</version>
                 <configuration>
-                    <configLocation>docs/checkstyle.xml</configLocation>
+                    <configLocation>checkstyle.xml</configLocation>
                     <failOnViolation>false</failOnViolation>
                 </configuration>
             </plugin>
