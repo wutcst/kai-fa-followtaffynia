@@ -66,6 +66,11 @@ public class InventoryInputHandler
             return "背包为空";
         }
         Item selected = items.get(panel.getInspectIndex());
+        if (engine.isInCombat()) {
+            engine.useCombatItem(selected.getItemId());
+            panel.close();
+            return null;
+        }
         String msg = engine.tryUseItem(selected.getItemId());
         panel.exitInspect();
         panel.clampSelection();
