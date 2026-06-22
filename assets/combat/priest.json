@@ -33,7 +33,7 @@
   "onDefeat": {
     "reputation": 3,
     "spawnItem": "light-mark",
-    "markDefeated": true,
+    "markDefeated": false,
     "spar": true
   },
   "actOptions": {

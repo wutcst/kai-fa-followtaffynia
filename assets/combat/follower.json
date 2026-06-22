@@ -37,7 +37,7 @@
   "onDefeat": {
     "reputation": -5,
     "spawnItem": "shadow-pact",
-    "markDefeated": true,
+    "markDefeated": false,
     "spar": true
   },
   "actOptions": {
