@@ -227,7 +227,8 @@ public class GameEngine
 
     public EncounterMenu startNpcEncounter(String npcId)
     {
-        return combatManager.startNpcEncounter(npcId);
+        boolean sparPassed = hasFlag("passed-" + npcId);
+        return combatManager.startNpcEncounter(npcId, sparPassed);
     }
 
     public void leaveEncounter()
@@ -281,6 +282,13 @@ public class GameEngine
                 LOG.info("Combat loot: " + spawn.getItemId()
                     + " added to player inventory");
             }
+        }
+        // spar 胜利后设置标记，防止重复刷试炼
+        if (def != null && def.spar && !combatManager.wasSpared()
+            && getLastCombatOutcome() == CombatOutcome.VICTORY)
+        {
+            setFlag("passed-" + def.npcId);
+            LOG.info("spar completed: " + def.npcId);
         }
     }
 
@@ -496,6 +504,13 @@ public class GameEngine
         {
             return dialogueManager.talkNpcWithStart("apprentice", "greeting_balance");
         }
+        // 试炼/切磋通过后的对话
+        if (hasFlag("passed-priest") && "priest".equals(npcId))
+            return dialogueManager.talkNpc("priest_post_trial");
+        if (hasFlag("passed-follower") && "follower".equals(npcId))
+            return dialogueManager.talkNpc("follower_post_trial");
+        if (hasFlag("passed-apprentice") && "apprentice".equals(npcId))
+            return dialogueManager.talkNpc("apprentice_post_spar");
         return dialogueManager.talkNpc(npcId);
     }
 

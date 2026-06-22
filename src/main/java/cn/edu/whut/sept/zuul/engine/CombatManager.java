@@ -67,13 +67,13 @@ public class CombatManager
         return activeCombat;
     }
 
-    public EncounterMenu startNpcEncounter(String npcId)
+    public EncounterMenu startNpcEncounter(String npcId, boolean sparPassed)
     {
         leaveEncounter();
         encounterNpcId = npcId;
         boolean isDefeated = defeatedNpcs.contains(npcId);
         boolean canTalk = !isDefeated;
-        boolean canFight = !"merchant".equals(npcId) && !isDefeated;
+        boolean canFight = !"merchant".equals(npcId) && !isDefeated && !sparPassed;
         return new EncounterMenu(npcId, canTalk, canFight, true);
     }
 

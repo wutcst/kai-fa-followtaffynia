@@ -61,6 +61,14 @@ public class EncounterUi
     {
         EncounterMenu menu = engine.startNpcEncounter(npcId);
         if (menu == null) return;
+        // 只能交流不能战斗时——直接进入对话，不弹遭遇菜单
+        if (menu.canTalk && !menu.canFight) {
+            Dialogue d = engine.talkNpc(npcId);
+            dialogueUi.startDialogue(d);
+            encounterMenu = null;
+            encounterMenuOpen = false;
+            return;
+        }
         encounterMenu = menu;
         encounterMenuOpen = true;
         dialogueUi.clear();
