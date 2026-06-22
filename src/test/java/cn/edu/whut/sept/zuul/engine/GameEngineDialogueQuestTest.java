@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GameEngineDialogueQuestTest
@@ -112,6 +114,38 @@ class GameEngineDialogueQuestTest
         assertTrue(engine.isLockUnlocked("guard-gate"));
         assertTrue(engine.getDefeatedNpcs().contains("guard"));
         assertEquals(CombatOutcome.VICTORY, engine.getLastCombatOutcome());
+        assertNull(engine.startNpcEncounter("guard"), "死亡 NPC 不应再次创建遭遇菜单");
+    }
+
+    @Test
+    void guardMercyKeepsGateLockedAndGuardAlive()
+    {
+        int reputationBefore = engine.getPlayer().getReputation();
+        engine.getPlayer().setHp(9999);
+        engine.startCombat("guard", CombatMode.UNDERTALE);
+        UndertaleCombatEngine combat = (UndertaleCombatEngine) engine.getCombatSystem();
+        assertNotNull(combat);
+
+        combat.dismissBattleLine();
+        combat.selectMercy();
+        combat.dismissBattleLine();
+        combat.updateEnemyTurn(6f);
+        assertEquals(UndertaleCombatPhase.MENU, combat.getPhase());
+
+        combat.selectMercy();
+        combat.dismissBattleLine();
+        engine.applyCombatOutcome();
+
+        assertFalse(engine.isLockUnlocked("guard-gate"), "MERCY 不应开启守卫之门");
+        assertFalse(engine.getDefeatedNpcs().contains("guard"), "MERCY 不算杀死守卫");
+        assertTrue(engine.getSparedNpcs().contains("guard"), "守卫应保持存活的仁慈状态");
+        assertEquals(reputationBefore, engine.getPlayer().getReputation(),
+            "MERCY 不应应用击杀声望惩罚");
+
+        EncounterMenu menu = engine.startNpcEncounter("guard");
+        assertNotNull(menu, "MERCY 后守卫仍应留在原地并可交互");
+        assertTrue(menu.canTalk);
+        assertTrue(menu.canFight);
     }
 
     @Test

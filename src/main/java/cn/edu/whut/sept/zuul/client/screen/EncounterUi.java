@@ -57,21 +57,38 @@ public class EncounterUi
         activeCombatSnapshot = engine.startCombat(npcId, CombatMode.UNDERTALE);
     }
 
-    public void openMenu(String npcId)
+    public boolean openMenu(String npcId)
     {
         EncounterMenu menu = engine.startNpcEncounter(npcId);
-        if (menu == null) return;
+        if (menu == null) {
+            closeMenu();
+            return false;
+        }
         // 只能交流不能战斗时——直接进入对话，不弹遭遇菜单
         if (menu.canTalk && !menu.canFight) {
             Dialogue d = engine.talkNpc(npcId);
             dialogueUi.startDialogue(d);
             encounterMenu = null;
             encounterMenuOpen = false;
-            return;
+            return d != null;
+        }
+        // 没有任何可执行动作时不要创建一个无法退出的空菜单。
+        if (!menu.canTalk && !menu.canFight) {
+            closeMenu();
+            return false;
         }
         encounterMenu = menu;
         encounterMenuOpen = true;
         dialogueUi.clear();
+        activeCombatSnapshot = null;
+        return true;
+    }
+
+    public void closeMenu()
+    {
+        engine.leaveEncounter();
+        encounterMenu = null;
+        encounterMenuOpen = false;
         activeCombatSnapshot = null;
     }
 

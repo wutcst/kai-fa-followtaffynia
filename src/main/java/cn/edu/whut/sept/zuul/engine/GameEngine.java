@@ -43,7 +43,7 @@ public class GameEngine
     private final Set<String> exploredRoomIds;
     private final Set<String> unlockedLocks;
     private final Set<String> defeatedNpcs;
-    /** 被仁慈/认输化解的 NPC（dealt-with 但非击杀，渲染为已离去而非尸体） */
+    /** 被仁慈化解的 NPC（不算击杀，仍留在场景中） */
     private final Set<String> sparedNpcs;
     private final Set<String> playerFlags;
     /** 非持久——进入vault时若golem未死则自动触发战斗 */
@@ -179,6 +179,13 @@ public class GameEngine
         if (flag != null && !flag.isEmpty()) {
             playerFlags.add(flag);
             LOG.info("playerFlags: set " + flag);
+        }
+    }
+
+    public void clearFlag(String flag)
+    {
+        if (flag != null && playerFlags.remove(flag)) {
+            LOG.info("playerFlags: cleared " + flag);
         }
     }
 
