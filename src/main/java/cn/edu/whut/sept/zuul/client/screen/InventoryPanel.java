@@ -60,6 +60,13 @@ public class InventoryPanel
         inventoryScrollOffset = 0;
     }
 
+    public void open() {
+        inventoryOpen = true;
+        inventoryInspectMode = false;
+        inventoryInspectIndex = 0;
+        inventoryScrollOffset = 0;
+    }
+
     public void close() {
         inventoryOpen = false;
         inventoryInspectMode = false;

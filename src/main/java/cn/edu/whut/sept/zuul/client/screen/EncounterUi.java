@@ -180,12 +180,6 @@ public class EncounterUi
                     ut.selectAct(actId);
                 }
             }
-            else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
-                for (Item it : engine.getPlayer().getInventory()) {
-                    ut.selectItem(it.getItemId());
-                    break;
-                }
-            }
             else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_4) && ut.canMercy()) ut.selectMercy();
         } else if (phase == UndertaleCombatPhase.FIGHT_BAR) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER) || Gdx.input.isKeyJustPressed(Input.Keys.SPACE))

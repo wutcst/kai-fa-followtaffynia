@@ -407,6 +407,18 @@ public class GameScreen implements Screen
                 hud.drawFooter(w, actionMessage);
             }
         }
+        if (utCombatActive && inventory.isOpen()) {
+            float w = CameraController.DESIGN_W;
+            float h = CameraController.DESIGN_H;
+            inventory.setWorldViewportHeight(camera.getWorldViewportHeight());
+            float pw = draw.grid(Math.min(520f, w - 96f));
+            float ph = draw.grid(inventory.inventoryPanelHeight());
+            float px = draw.grid((w - pw) / 2f);
+            float py = draw.grid(Math.max(112f, h - 64f - ph - 16f));
+            uiSkin.drawWindow(batch, px, py, pw, ph);
+            uiSkin.drawInset(batch, px + 24f, py + 48f, pw - 48f, ph - 84f);
+            inventory.render(px, py, pw, ph);
+        }
         batch.end();
 
         if (worldMapOpen) drawWorldMap(delta);
@@ -885,6 +897,37 @@ public class GameScreen implements Screen
     private void handleUtCombatTurn(float delta)
     {
         UndertaleCombatEngine ut = utRenderer.utEngine(engine);
+
+        // 战斗中背包打开时：处理背包输入，屏蔽战斗输入
+        if (inventory.isOpen()) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                inventory.close();
+                actionMessage = "背包已关闭";
+                game.getAudio().play(Cue.MENU_CLOSE);
+                return;
+            }
+            String msg = inventoryInput.handleInput();
+            if (msg != null) {
+                actionMessage = msg;
+                game.getAudio().play(isFailureMessage(msg) ? Cue.ERROR : Cue.USE);
+            }
+            return;
+        }
+
+        // 按 3 打开背包选择道具（仅在 MENU 阶段）
+        if (ut != null && ut.getPhase() == UndertaleCombatPhase.MENU
+            && !ut.isShowingBattleLine()
+            && Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
+            if (engine.getPlayer().getInventory().isEmpty()) {
+                actionMessage = "背包为空";
+                return;
+            }
+            inventory.open();
+            actionMessage = "选择战斗道具：↑↓ 浏览，Enter 使用";
+            game.getAudio().play(Cue.MENU_OPEN);
+            return;
+        }
+
         combatFx.update(delta);
         // 命中顿帧：hitstop 期间冻结战斗推进（输入 delta 置 0）
         float fxDelta = combatFx.isHitstop() ? 0f : delta;

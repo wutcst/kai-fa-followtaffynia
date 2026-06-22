@@ -266,6 +266,14 @@ public class GameEngine
         return combatManager.combatAction(action, itemIdOrNull);
     }
 
+    /** UT 战斗中使用道具：委托给 UT 引擎的 selectItem。 */
+    public void useCombatItem(String itemId)
+    {
+        if (isUndertaleCombat()) {
+            ((UndertaleCombatEngine) getCombatSystem()).selectItem(itemId);
+        }
+    }
+
     public void applyCombatOutcome()
     {
         combatManager.applyCombatOutcome();
