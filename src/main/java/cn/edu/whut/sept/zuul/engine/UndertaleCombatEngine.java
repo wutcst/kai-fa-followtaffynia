@@ -100,6 +100,7 @@ public class UndertaleCombatEngine implements CombatSystem
     private float soulX, soulY;
     private final List<String> log;
     private boolean spared;
+    private boolean sparEnded;
 
     // 重力/平台模式状态
     private boolean gravityMode;
@@ -143,7 +144,7 @@ public class UndertaleCombatEngine implements CombatSystem
     @Override
     public CombatOutcome getOutcome()
     {
-        if (spared || mercyExited) return CombatOutcome.VICTORY;
+        if (spared || mercyExited || sparEnded) return CombatOutcome.VICTORY;
         if (player.isDead()) return CombatOutcome.DEFEAT;
         if (npcHp <= 0) return CombatOutcome.VICTORY;
         return CombatOutcome.ONGOING;
@@ -377,7 +378,7 @@ public class UndertaleCombatEngine implements CombatSystem
             && npcHp <= npcMaxHp / 2)
         {
             phase = UndertaleCombatPhase.RESULT;
-            spared = true;  // 切磋不标记为击败
+            sparEnded = true;
             phaseMessage = def.displayName + " 认输了！\"你确实很强——这枚勋章，是你应得的。\"";
             return;
         }

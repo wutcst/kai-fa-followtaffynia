@@ -314,9 +314,9 @@ class CombatEngineTest
                 default: guard = 1000; break;   // RESULT
             }
         }
-        // 认输后应结束为胜利（修复：之前 spared 未置位导致卡在 RESULT 阶段）
+        // 认输后应结束为胜利
         assertEquals(CombatOutcome.VICTORY, ut.getOutcome(), "切磋 NPC 认输应结束为胜利，而非卡死");
-        assertTrue(ut.wasSpared(), "认输应记为仁慈化解（spared）");
+        // spar 投降不算 spared——物品正常掉落，由 markDefeated 控制是否消失
     }
 
     @Test
