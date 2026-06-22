@@ -87,6 +87,11 @@ public class DialogueUi
 
     public void startDialogue(Dialogue d)
     {
+        // accepted-* 只是一条“一次性开战请求”，不能跨对话、存档或战斗长期残留。
+        // 开始一次新对话时先清掉旧请求；若玩家本次重新选择试炼，动作会再次设置它。
+        if (d != null) {
+            engine.clearFlag(combatRequestFlag(d.getNpcId()));
+        }
         activeDialogue = d;
         playerLastChoice = null;
         dialoguePages.clear();
@@ -175,7 +180,7 @@ public class DialogueUi
                 playerLastChoice = null;
                 engine.endDialogue();
                 // 检查是否需要自动触发战斗
-                pendingCombatNpcId = resolvePendingCombat(endedNpcId);
+                pendingCombatNpcId = consumePendingCombatRequest(endedNpcId);
                 actionMessage.setLength(0);
                 actionMessage.append(pendingCombatNpcId != null ? "准备战斗！" : "对话结束。");
                 return;
@@ -243,15 +248,23 @@ public class DialogueUi
     }
 
     /** 根据对话结束时的 flag 判断是否自动开战。 */
-    private String resolvePendingCombat(String npcId)
+    String consumePendingCombatRequest(String npcId)
     {
-        if (npcId == null) return null;
-        if ("priest".equals(npcId) && engine.hasFlag("accepted-priest-trial")
-            && !engine.getDefeatedNpcs().contains("priest")) return "priest";
-        if ("follower".equals(npcId) && engine.hasFlag("accepted-follower-trial")
-            && !engine.getDefeatedNpcs().contains("follower")) return "follower";
-        if ("apprentice".equals(npcId) && engine.hasFlag("accepted-apprentice-spar")
-            && !engine.getDefeatedNpcs().contains("apprentice")) return "apprentice";
+        String requestFlag = combatRequestFlag(npcId);
+        if (requestFlag == null || !engine.hasFlag(requestFlag)) return null;
+
+        // 无论是否允许开战都消费请求，保证结束/离开/闲聊后不会重复触发。
+        engine.clearFlag(requestFlag);
+        if (engine.getDefeatedNpcs().contains(npcId)
+            || engine.hasFlag("passed-" + npcId)) return null;
+        return npcId;
+    }
+
+    private String combatRequestFlag(String npcId)
+    {
+        if ("priest".equals(npcId)) return "accepted-priest-trial";
+        if ("follower".equals(npcId)) return "accepted-follower-trial";
+        if ("apprentice".equals(npcId)) return "accepted-apprentice-spar";
         return null;
     }
 

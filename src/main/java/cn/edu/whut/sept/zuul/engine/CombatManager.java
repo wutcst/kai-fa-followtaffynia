@@ -70,8 +70,12 @@ public class CombatManager
     public EncounterMenu startNpcEncounter(String npcId, boolean sparPassed)
     {
         leaveEncounter();
-        encounterNpcId = npcId;
         boolean isDefeated = defeatedNpcs.contains(npcId);
+        if (isDefeated) {
+            LOG.info("startNpcEncounter: ignored defeated NPC " + npcId);
+            return null;
+        }
+        encounterNpcId = npcId;
         boolean canTalk = !isDefeated;
         boolean canFight = !"merchant".equals(npcId) && !isDefeated && !sparPassed;
         return new EncounterMenu(npcId, canTalk, canFight, true);
@@ -153,10 +157,11 @@ public class CombatManager
 
     private void applyCombatVictory(NpcCombatDef def)
     {
-        if (def.onDefeatReputation != 0) {
-            player.setReputation(player.getReputation() + def.onDefeatReputation);
-        }
-        if (def.onDefeatUnlock != null && !def.onDefeatUnlock.isEmpty()) {
+        // MERCY 只结束战斗，不应用“击败”奖励/惩罚，也不能解锁守卫之门。
+        if (!lastWasSpared) {
+            if (def.onDefeatReputation != 0) {
+                player.setReputation(player.getReputation() + def.onDefeatReputation);
+            }
             String lockId = def.onDefeatUnlock;
             if (lockId != null && !lockId.isEmpty()) {
                 unlockedLocks.add(lockId);
@@ -170,7 +175,7 @@ public class CombatManager
         if (lastWasSpared) {
             sparedNpcs.add(def.npcId);
             LOG.info("sparedNpcs: added " + def.npcId);
-            onLastMessage.accept(def.displayName + " 放下了戒备，离开了。");
+            onLastMessage.accept(def.displayName + " 接受了你的仁慈，停止了战斗。");
         } else {
             onLastMessage.accept("你击败了 " + def.displayName + "。");
         }

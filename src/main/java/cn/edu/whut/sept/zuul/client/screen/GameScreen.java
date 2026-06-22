@@ -908,9 +908,14 @@ public class GameScreen implements Screen
         } else if (engine.getPlayer().getHp() < beforeHp) {
             game.getAudio().playThrottled(Cue.HIT, 120L);
         }
-        // 战斗刚结束：立即清理特效，避免红心/粒子残留到对话或探索
-        if (!engine.isInCombat()) combatFx.clear();
-        lastFrameInDialogueOrCombat = true;
+        // 战斗刚结束：立即清理特效并刷新 NPC，避免已死亡实体仍可交互。
+        if (!engine.isInCombat()) {
+            combatFx.clear();
+            room.rebuildNpcs();
+            lastFrameInDialogueOrCombat = false;
+        } else {
+            lastFrameInDialogueOrCombat = true;
+        }
     }
 
     private void handleInput(float delta)
@@ -929,7 +934,7 @@ public class GameScreen implements Screen
                 return;
             }
             if (encounterUi.isMenuOpen()) {
-                engine.leaveEncounter();
+                encounterUi.closeMenu();
                 actionMessage = "已关闭遭遇菜单";
                 game.getAudio().play(Cue.MENU_CLOSE);
                 return;
@@ -997,6 +1002,10 @@ public class GameScreen implements Screen
                 }
                 if (engine.getPlayer().getHp() < beforeHp) {
                     game.getAudio().play(Cue.HIT);
+                }
+                if (!engine.isInCombat()) {
+                    room.rebuildNpcs();
+                    lastFrameInDialogueOrCombat = false;
                 }
                 return;
             }
@@ -1088,9 +1097,18 @@ public class GameScreen implements Screen
 
             String npcId = npcManager.findNearbyNpcId(playerX, playerY, PLAYER_W, PLAYER_H);
             if (npcId != null) {
-                encounterUi.openMenu(npcId);
-                actionMessage = "遇到 " + npcId + "。按 1 交流 / 2 战斗 / 3 离开";
-                game.getAudio().play(Cue.MENU_OPEN);
+                boolean opened = encounterUi.openMenu(npcId);
+                if (!opened) {
+                    room.rebuildNpcs();
+                    actionMessage = "这里已没有可互动的对象。";
+                    game.getAudio().play(Cue.ERROR);
+                } else if (encounterUi.isMenuOpen()) {
+                    actionMessage = "遇到 " + npcId + "。按 1 交流 / 2 战斗 / 3 离开";
+                    game.getAudio().play(Cue.MENU_OPEN);
+                } else {
+                    actionMessage = dialogueUi.formatDialogue(dialogueUi.getActiveDialogue());
+                    game.getAudio().play(Cue.CLICK);
+                }
             } else {
                 String itemId = itemManager.findNearbyItemId(playerX, playerY, PLAYER_W, PLAYER_H);
                 if (itemId != null) {
