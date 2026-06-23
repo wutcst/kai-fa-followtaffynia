@@ -5,7 +5,7 @@
 [![Java 8+](https://img.shields.io/badge/Java-8+-f89820?style=flat-square&logo=openjdk&logoColor=white)](https://adoptium.net/)
 [![Maven](https://img.shields.io/badge/Maven-Build-c71a36?style=flat-square&logo=apachemaven&logoColor=white)](https://maven.apache.org/)
 [![LibGDX 1.12.1](https://img.shields.io/badge/LibGDX-1.12.1-e74c3c?style=flat-square)](https://libgdx.com/)
-[![Tests 88/88](https://img.shields.io/badge/tests-88/88-brightgreen?style=flat-square)](https://junit.org/junit5/)
+[![Tests 92/92](https://img.shields.io/badge/tests-92/92-brightgreen?style=flat-square)](https://junit.org/junit5/)
 
 ---
 
@@ -17,7 +17,7 @@
 
 项目的核心创新在于将原本纯文本交互的 Zuul 框架，彻底改造为具备图形化客户端、弹幕战斗、多线叙事和完整存档机制的现代 RPG 游戏。
 
-**技术成果**：15 张 TMX 地图 | 8 个 NPC（6 可战斗） | 20 种物品 | 3 条任务线 | 4 种结局 | 88 个单元测试 | 完整存档/读档
+**技术成果**：15 张 TMX 地图 | 8 个 NPC（6 可战斗） | 20 种物品 | 3 条任务线 | 4 种结局 | 92 个单元测试 | 完整存档/读档
 
 ---
 
@@ -26,8 +26,8 @@
 | 成员 | 负责模块 | 主要产出 |
 |------|----------|----------|
 | dcr_coof | 世界与地图 | 15 张 TMX 地图（30×15 格，手绘 tileset）；房间拓扑连接；8 个 NPC 的对话 JSON 与战斗 JSON；TMX 对象层 NPC/出口/生成点/传送阵/王座配置；物品放置；tileset 制作 |
-| huayif | 引擎与玩法 | GameEngine 全部 API（40+ 公开方法）；Undertale 弹幕战斗引擎（五阶段 + 4 种弹幕模式 + 节奏攻击 + MERCY 双连 + 战斗台词）；QuestManager（3 条任务线）；EndingEvaluator（4 结局多条件判定）；物品效果策略模式；DialogueActionExecutor；88 个单元测试 |
-| PercyGeza | 客户端与存档 | LibGDX 屏幕体系（TitleScreen / GameScreen / EndingScreen）；CameraController 设计分辨率系统（1280×720 双摄像机）；HudRenderer（顶栏 5 区 + 底栏日志/按键提示）；DialogueUi（对话状态机 + 选项分支）；EncounterUi（遭遇菜单 1交谈/2战斗/3离开）；InventoryPanel（背包面板）；WorldMapRenderer（世界地图）；SaveGameService（Java 序列化存档）；GameUiSkin（Kenney RPG 九宫格皮肤）；GameAudio（音频 + 程序化波形合成回退）；PlayerRenderer / NpcRenderer（精灵渲染） |
+| huayif | 引擎与玩法 | GameEngine 全部 API（40+ 公开方法）；Undertale 弹幕战斗引擎（五阶段 + 4 种弹幕模式 + 节奏攻击 + MERCY 双连 + 战斗台词）；QuestManager（3 条任务线）；EndingEvaluator（4 结局多条件判定）；物品效果策略模式；DialogueActionExecutor；92 个单元测试 |
+| PercyGeza | 客户端与存档 | LibGDX 屏幕体系（TitleScreen / GameScreen / EndingScreen）；CameraController 设计分辨率系统（1280×720 双摄像机）；HudRenderer（顶栏 5 区 + 底栏日志/按键提示）；DialogueUi（对话状态机 + 选项分支）；EncounterUi（遭遇菜单 1交谈/2战斗/3离开）；InventoryPanel（背包面板）；WorldMapRenderer（世界地图）；SaveGameService（多槽位 Java 序列化存档）+ SaveLoadMenu（槽位选择面板）；GameUiSkin（Kenney RPG 九宫格皮肤）；GameAudio（音频 + 程序化波形合成回退）；PlayerRenderer / NpcRenderer（精灵渲染） |
 
 **分支策略**：三人分别维护 `feature/worldAndMap`、`feature/engineAndPlay`、`feature/clientAndDocu` 三个特性分支，按里程碑分阶段合入 `master`。提交遵循 `feat(world)` / `feat(engine)` / `feat(client)` / `test` / `docs` 前缀规范。
 
@@ -103,11 +103,14 @@ armory → 西 → garden → 南 → guard-room → 和平通行 → 南 → th
 
 ### 存档操作
 
-| 按键 | 功能 |
-|------|------|
-| F5 | 快速保存（保存至 `saves/slot1.sav`） |
-| F9 | 快速读取（恢复上次保存的游戏状态） |
-| T | 返回标题画面 |
+| 按键 | 功能 | 说明 |
+|------|------|------|
+| F5 | 打开存档槽位面板（保存模式） | 弹出 5 个槽位选择界面，显示各槽位存档时间/玩家名/所在房间 |
+| F9 | 打开存档槽位面板（读取模式） | 弹出 5 个槽位选择界面，选择存档后恢复游戏状态 |
+| L | 读取存档 | 标题画面与死亡画面可用，直接打开读取面板 |
+| T | 返回标题画面 | — |
+
+> 槽位面板中 ↑↓/数字键选择槽位，Enter 确认，Esc 取消。面板打开期间暂停游戏世界逻辑。
 
 ### 遭遇菜单
 
@@ -167,7 +170,7 @@ armory → 西 → garden → 南 → guard-room → 和平通行 → 南 → th
 - Client 通过 `GameEngine` 公开 API 操作游戏状态，**绝不**直接修改 Room / Player 字段
 - Engine 不导入任何 LibGDX 类（`com.badlogic.gdx.*`），可脱离图形界面独立运行和测试
 - Domain 为纯 POJO，不含任何业务逻辑或框架依赖
-- 88 个单元测试全部覆盖 Engine 和 Infra 层，无需图形环境即可运行
+- 92 个单元测试全部覆盖 Engine 和 Infra 层，无需图形环境即可运行
 
 ### 5.2 GameEngine API 接口
 
@@ -625,11 +628,29 @@ if (balance-book && guard-medal && refused-priest && refused-follower
 | `roomItems` | Map\<String, List\<String\>\> | 所有房间的物品状态（roomId → 物品ID列表） |
 | `playerFlags` | Set\<String\> | 玩家标记（影响结局判定） |
 
-#### 6.8.2 存取流程
+#### 6.8.2 多槽位架构
 
-- **保存（F5）**：`SaveGameService.save(engine.captureState())` → 序列化写入 `saves/slot1.sav`
-- **读取（F9）**：`SaveGameService.load()` → 反序列化 → `engine.restoreState(state)` → `GameScreen.loadRoom()` + 设置玩家坐标/spawn
-- **容错**：无存档时读档提示「没有可用的存档」
+`SaveGameService` 支持最多 **5 个独立存档槽位**（`slot1.sav` ~ `slot5.sav`），通过槽位 API 管理：
+
+| 方法 | 说明 |
+|------|------|
+| `slotPath(slot)` | 返回指定槽位（1..5）的文件路径 |
+| `save(slot, state)` / `load(slot)` | 按槽位保存 / 读取 |
+| `hasSave(slot)` / `hasAnySave()` | 检查指定槽位 / 任意槽位是否有存档 |
+| `describe(slot)` / `describeAll()` | 读取槽位概要信息（不加载完整 GameState） |
+
+`SlotInfo` 内部类存储单个槽位的概要信息——槽位号、存档时间（取自文件修改时间）、玩家名、所在房间。`describeAll()` 一次性读取全部 5 个槽位的概要，避免全量反序列化占用内存。损坏存档通过 `isCorrupt()` / `isLoadable()` 检测并提示。
+
+旧的无参方法（`save()` / `load()` / `hasSave()`）默认映射到 1 号槽位，保证向后兼容。
+
+#### 6.8.3 存取流程
+
+- **保存（F5）**：弹出 `SaveLoadMenu`（SAVE 模式）→ 显示 5 个槽位及已有存档的时间和角色信息 → ↑↓/数字键选择 → Enter 确认写入 → `SaveGameService.save(slot, engine.captureState())`
+- **读取（F9 / L）**：弹出 `SaveLoadMenu`（LOAD 模式）→ 选择槽位 → `SaveGameService.load(slot)` → `engine.restoreState(state)` → `GameScreen.loadRoom()` + 设置玩家坐标/spawn
+- **菜单渲染**：`SaveLoadMenu` 复用 `GameUiSkin` 木窗皮肤，与暂停菜单风格一致。面板打开时暂停世界逻辑（冻结玩家移动、NPC 交互等）
+- **标题画面**：有存档时显示「按 L 读取存档」，按 L 直接打开读取面板
+- **死亡画面**：底部提示「F9 / L 读档」，可直接读取存档继续游戏
+- **容错**：空槽位显示为空，损坏存档标记为已损坏并禁止读取；无存档时提示「暂无存档」
 
 ---
 
@@ -706,7 +727,7 @@ if (balance-book && guard-medal && refused-priest && refused-follower
 
 ## 七、测试覆盖
 
-全部 88 个测试覆盖 Engine 和 Infra 层，无需图形环境即可运行，CI 在每个 push 上自动执行：
+全部 92 个测试覆盖 Engine 和 Infra 层，无需图形环境即可运行，CI 在每个 push 上自动执行：
 
 | 测试类 | 数量 | 覆盖范围 |
 |--------|------|----------|
@@ -718,8 +739,8 @@ if (balance-book && guard-medal && refused-priest && refused-follower
 | `WorldTopologyTest` | 7 | 全部 15 房间双向出口正确性、可达性验证 |
 | `CombatLoaderTest` | 2 | guard + hermit 战斗 JSON 正确加载与解析 |
 | `DialogueLoaderTest` | 2 | 对话 JSON 加载、节点树构建与选项解析 |
-| `SaveGameServiceTest` | 1 | 存档序列化往返完整性 |
-| **合计** | **88** | `mvn test` 全部通过 |
+| `SaveGameServiceTest` | 5 | 存档序列化往返完整性、多槽位独立存储、槽位边界校验、SlotInfo 概要信息与时间格式化 |
+| **合计** | **92** | `mvn test` 全部通过 |
 
 ---
 
@@ -740,7 +761,7 @@ mvn clean compile exec:java
 # 仅编译
 mvn compile
 
-# 运行全部测试（88 个）
+# 运行全部测试（92 个）
 mvn test
 
 # 打包胖 JAR（含全部依赖）
@@ -820,7 +841,7 @@ java -jar target/zuul-1.0-SNAPSHOT-jar-with-dependencies.jar
 │       ├── DialogueLoader.java      # 对话 JSON 加载
 │       └── GameLogger.java          # 统一日志
 │
-├── src/test/java/                   # 测试（88 个）
+├── src/test/java/                   # 测试（92 个）
 │   ├── GameEngineTest.java          # 26 测试
 │   ├── GameEngineDialogueQuestTest.java  # 10 测试
 │   ├── CombatEngineTest.java        # 19 测试
@@ -904,5 +925,5 @@ java -jar target/zuul-1.0-SNAPSHOT-jar-with-dependencies.jar
 ---
 
 <p align="center">
-  <i>一个 Zuul 骨架 + LibGDX 皮囊 + Undertale 灵魂的小地牢。</i>
+  <i>一个 Zuul 骨架 + LibGDX 皮肤 + Undertale 灵魂的地牢rpg游戏。</i>
 </p>
