@@ -4,6 +4,7 @@ import cn.edu.whut.sept.zuul.client.RpgMain;
 import cn.edu.whut.sept.zuul.client.audio.GameAudio.Cue;
 import cn.edu.whut.sept.zuul.client.audio.GameAudio.Track;
 import cn.edu.whut.sept.zuul.client.ui.GameUiSkin;
+import cn.edu.whut.sept.zuul.client.ui.UiDrawUtils;
 import cn.edu.whut.sept.zuul.engine.GameEngine;
 import cn.edu.whut.sept.zuul.infra.GameState;
 import cn.edu.whut.sept.zuul.infra.SaveGameService;
@@ -39,6 +40,8 @@ public class TitleScreen implements Screen
     private final GameUiSkin uiSkin;
     private final GlyphLayout layout;
     private final CameraController camera;
+    private final UiDrawUtils draw;
+    private final SaveLoadMenu saveLoadMenu;
     private final InputAdapter inputAdapter;
     private String playerName;
     private String statusMessage;
@@ -55,13 +58,20 @@ public class TitleScreen implements Screen
         this.uiSkin = new GameUiSkin();
         this.layout = new GlyphLayout();
         this.camera = new CameraController();
+        this.draw = new UiDrawUtils(font, smallFont, uiSkin, this.layout,
+            LIGHT_TEXT, DARK_TEXT, UI_GRID);
+        this.saveLoadMenu = new SaveLoadMenu(font, smallFont, uiSkin, draw, camera,
+            batch, shapes, game.getAudio());
         this.playerName = DEFAULT_NAME;
-        this.statusMessage = SaveGameService.hasSave() ? "按 L 读取存档" : "暂无存档";
+        this.statusMessage = SaveGameService.hasAnySave() ? "按 L 读取存档" : "暂无存档";
         this.inputAdapter = new InputAdapter()
         {
             @Override
             public boolean keyTyped(char character)
             {
+                if (saveLoadMenu.isOpen()) {
+                    return false;
+                }
                 if (character >= 32 && playerName.length() < MAX_NAME_LENGTH) {
                     playerName += character;
                     return true;
@@ -72,6 +82,9 @@ public class TitleScreen implements Screen
             @Override
             public boolean keyDown(int keycode)
             {
+                if (saveLoadMenu.isOpen()) {
+                    return false;
+                }
                 if (keycode == Input.Keys.BACKSPACE && playerName.length() > 0) {
                     playerName = playerName.substring(0, playerName.length() - 1);
                     game.getAudio().playThrottled(Cue.CLICK, 40L);
@@ -83,8 +96,12 @@ public class TitleScreen implements Screen
                     return true;
                 }
                 if (keycode == Input.Keys.L) {
-                    game.getAudio().play(Cue.LOAD);
-                    loadGame();
+                    if (SaveGameService.hasAnySave()) {
+                        saveLoadMenu.open(SaveLoadMenu.Mode.LOAD);
+                    } else {
+                        statusMessage = "暂无存档";
+                        game.getAudio().play(Cue.ERROR);
+                    }
                     return true;
                 }
                 return false;
@@ -105,6 +122,13 @@ public class TitleScreen implements Screen
     {
         if (screenChanged) {
             return;
+        }
+
+        if (saveLoadMenu.isOpen()) {
+            handleSaveLoadMenu();
+            if (screenChanged) {
+                return;
+            }
         }
 
         camera.applyFullViewport();
@@ -142,6 +166,10 @@ public class TitleScreen implements Screen
         drawCenteredSmall("直接输入文字修改姓名", centerX, panelY + 136f);
         drawCenteredSmall(statusMessage, centerX, panelY + 42f);
         batch.end();
+
+        if (saveLoadMenu.isOpen()) {
+            saveLoadMenu.render();
+        }
     }
 
     private void drawTitleBackdrop(float width, float height)
@@ -220,15 +248,27 @@ public class TitleScreen implements Screen
         switchToGame(new GameScreen(game, batch, engine));
     }
 
-    private void loadGame()
+    /** 处理槽位面板返回的操作（确认读取 / 取消）。 */
+    private void handleSaveLoadMenu()
+    {
+        SaveLoadMenu.Result result = saveLoadMenu.handleInput();
+        if (result.type == SaveLoadMenu.ResultType.CONFIRM) {
+            loadGame(result.slot);
+        } else if (result.type == SaveLoadMenu.ResultType.CANCEL) {
+            statusMessage = "按 L 读取存档";
+        }
+    }
+
+    private void loadGame(int slot)
     {
         try {
-            GameState state = SaveGameService.load();
+            GameState state = SaveGameService.load(slot);
             GameEngine engine = new GameEngine(state.getPlayerName());
             engine.restoreState(state);
-            Gdx.app.log(LOG_TAG, "Loaded game from title: " + SaveGameService.defaultSavePath());
+            Gdx.app.log(LOG_TAG, "Loaded game from title slot " + slot);
+            game.getAudio().play(Cue.LOAD);
             switchToGame(new GameScreen(game, batch, engine,
-                state.getPlayerX(), state.getPlayerY(), "已读取存档", state.getFacing()));
+                state.getPlayerX(), state.getPlayerY(), "已读取存档 " + slot, state.getFacing()));
         } catch (Exception e) {
             Gdx.app.error(LOG_TAG, "Load from title failed", e);
             statusMessage = "读档失败: " + e.getClass().getSimpleName();

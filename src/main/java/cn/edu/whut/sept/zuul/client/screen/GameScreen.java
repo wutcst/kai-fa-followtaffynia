@@ -93,6 +93,7 @@ public class GameScreen implements Screen
     private final InventoryPanel inventory;
     private final InventoryInputHandler inventoryInput;
     private final HudRenderer hud;
+    private final SaveLoadMenu saveLoadMenu;
 
     // player state
     private float playerX, playerY;
@@ -171,6 +172,8 @@ public class GameScreen implements Screen
         this.inventory = new InventoryPanel(engine, batch, font, smallFont, uiSkin, layout, draw);
         this.inventoryInput = new InventoryInputHandler(inventory, engine);
         this.hud = new HudRenderer(engine, batch, font, smallFont, uiSkin, draw);
+        this.saveLoadMenu = new SaveLoadMenu(font, smallFont, uiSkin, draw, camera,
+            batch, shapes, game.getAudio());
         this.actionMessage = initialStatus;
         this.lastObservedHp = engine.getPlayer().getHp();
         this.feedbackFlashColor = new Color(1f, 1f, 1f, 0f);
@@ -287,7 +290,7 @@ public class GameScreen implements Screen
         if (screenChanged) return;
         updateMusic();
 
-        if (!paused) {
+        if (!paused && !saveLoadMenu.isOpen()) {
             if (room.getExitCooldown() > 0f) room.setExitCooldown(room.getExitCooldown() - delta);
             if (roomBannerTimer > 0f) roomBannerTimer -= delta;
             movement.update(delta);
@@ -422,6 +425,7 @@ public class GameScreen implements Screen
         batch.end();
 
         if (worldMapOpen) drawWorldMap(delta);
+        if (saveLoadMenu.isOpen()) saveLoadMenu.render();
         drawShopPopup();
         drawFeedbackFlash();
     }
@@ -969,6 +973,12 @@ public class GameScreen implements Screen
             return;
         }
 
+        // 存读档槽位面板打开时完全接管输入（游戏处于暂停状态）
+        if (saveLoadMenu.isOpen()) {
+            handleSaveLoadMenu();
+            return;
+        }
+
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             if (worldMapOpen) {
                 worldMapOpen = false;
@@ -1058,8 +1068,8 @@ public class GameScreen implements Screen
             room.rebuildNpcs();
         }
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) saveGame();
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F9)) { loadGame(); return; }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) { saveLoadMenu.open(SaveLoadMenu.Mode.SAVE); return; }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F9)) { saveLoadMenu.open(SaveLoadMenu.Mode.LOAD); return; }
         if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
             inventory.toggle();
             actionMessage = inventory.isOpen()
@@ -1190,8 +1200,8 @@ public class GameScreen implements Screen
 
     private void handlePauseInput()
     {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) saveGame();
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F9)) loadGame();
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) { saveLoadMenu.open(SaveLoadMenu.Mode.SAVE); return; }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F9)) { saveLoadMenu.open(SaveLoadMenu.Mode.LOAD); return; }
         if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
             game.getAudio().play(Cue.CLICK);
             switchToTitle();
@@ -1228,15 +1238,30 @@ public class GameScreen implements Screen
 
     // ==================== save / load / world map ====================
 
-    private void saveGame()
+    /** 处理槽位面板返回的操作（确认保存 / 确认读取 / 取消）。 */
+    private void handleSaveLoadMenu()
+    {
+        SaveLoadMenu.Result result = saveLoadMenu.handleInput();
+        if (result.type == SaveLoadMenu.ResultType.CONFIRM) {
+            if (result.mode == SaveLoadMenu.Mode.SAVE) {
+                saveGame(result.slot);
+            } else {
+                loadGame(result.slot);
+            }
+        } else if (result.type == SaveLoadMenu.ResultType.CANCEL) {
+            actionMessage = "已关闭存档菜单";
+        }
+    }
+
+    private void saveGame(int slot)
     {
         try {
             GameState state = engine.captureState();
             state.setPlayerX(playerX);
             state.setPlayerY(playerY);
             state.setFacing(movement.getFacing());
-            SaveGameService.save(state);
-            actionMessage = "已保存到 " + SaveGameService.defaultSavePath();
+            SaveGameService.save(slot, state);
+            actionMessage = "已保存到存档 " + slot;
             game.getAudio().play(Cue.SAVE);
             flash(0.45f, 0.9f, 0.55f, 0.13f);
         } catch (Exception e) {
@@ -1246,16 +1271,16 @@ public class GameScreen implements Screen
         }
     }
 
-    private void loadGame()
+    private void loadGame(int slot)
     {
         try {
-            GameState state = SaveGameService.load();
+            GameState state = SaveGameService.load(slot);
             GameEngine loaded = new GameEngine(state.getPlayerName());
             loaded.restoreState(state);
             screenChanged = true;
             game.getAudio().play(Cue.LOAD);
             game.setScreen(new GameScreen(game, batch, loaded,
-                state.getPlayerX(), state.getPlayerY(), "已读取存档", state.getFacing()));
+                state.getPlayerX(), state.getPlayerY(), "已读取存档 " + slot, state.getFacing()));
             deferDispose();
         } catch (Exception e) {
             actionMessage = "读档失败: " + e.getClass().getSimpleName();
@@ -1533,6 +1558,14 @@ public class GameScreen implements Screen
         }
         gameOverAlpha = Math.min(1f, gameOverAlpha + delta * 1.25f);
 
+        // 死亡画面上打开读档槽位面板时，由其接管输入与渲染
+        if (saveLoadMenu.isOpen()) {
+            handleSaveLoadMenu();
+            if (screenChanged) return;
+            saveLoadMenu.render();
+            return;
+        }
+
         camera.applyFullViewport();
         float w = CameraController.DESIGN_W;
         float h = CameraController.DESIGN_H;
@@ -1580,7 +1613,7 @@ public class GameScreen implements Screen
         layout.setText(smallFont, body);
         smallFont.draw(batch, body, cx - layout.width / 2f, panelY + panelH - 82f);
 
-        String hint = SaveGameService.hasSave()
+        String hint = SaveGameService.hasAnySave()
             ? "F9 / L 读档    T 返回标题"
             : "暂无存档    T 返回标题";
         smallFont.setColor(1f, 0.74f, 0.32f, gameOverAlpha);
@@ -1594,9 +1627,9 @@ public class GameScreen implements Screen
         batch.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F9)
-            || Gdx.input.isKeyJustPressed(Input.Keys.L)) {
-            loadGame();
+        if ((Gdx.input.isKeyJustPressed(Input.Keys.F9)
+            || Gdx.input.isKeyJustPressed(Input.Keys.L)) && SaveGameService.hasAnySave()) {
+            saveLoadMenu.open(SaveLoadMenu.Mode.LOAD);
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
             game.getAudio().play(Cue.CLICK);
             switchToTitle();
